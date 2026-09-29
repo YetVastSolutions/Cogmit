@@ -9,10 +9,12 @@ import { useAuth } from "./AuthProvider";
 
 export function HeaderControls({
   isAuthenticated,
-  displayName
+  displayName,
+  currentUserId
 }: {
   isAuthenticated: boolean;
   displayName?: string;
+  currentUserId?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -101,6 +103,16 @@ export function HeaderControls({
                 >
                   My Cogs
                 </Link>
+                {currentUserId && (
+                  <Link
+                    href={`/cogmits/${currentUserId}`}
+                    className="block w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    role="menuitem"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    My Cogmits
+                  </Link>
+                )}
                 <Link
                   href="/myCogs/deletedCogs"
                   className="block w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted hover:text-foreground transition-colors"

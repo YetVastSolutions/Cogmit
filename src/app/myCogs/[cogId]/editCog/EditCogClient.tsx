@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Select, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { saveRootCog, createProjectAndMoveCog } from "./actions";
+import { HistoryModal } from "./HistoryModal";
+import { saveRootCog, createProjectAndMoveCog, moveCogToDestination } from "./actions";
 import { createNewRootCog, createProjectAction } from "@/app/myCogs/newCog/actions";
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
-import { ProjectDropdown } from "@/components/ProjectDropdown";
 import { DeleteCogButton } from "@/components/DeleteCogButton";
+import { X, History, Trash2 } from "lucide-react";
+import { CogActionRow } from "@/components/CogActionRow";
+import { PublishCogmitModal, PublishState } from "@/components/PublishCogmitModal";
 
 export type EditCogMode = "new" | "existing";
 
@@ -40,12 +42,54 @@ export function EditCogClient({
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [publishState, setPublishState] = useState<PublishState>("idle");
+  const [publishUrl, setPublishUrl] = useState<string>("");
+  const [publishError, setPublishError] = useState<string>("");
+  const [createdCogId, setCreatedCogId] = useState<string | null>(null);
+
   const handleSavePrivate = async () => {
     await submit(false);
   };
 
   const handlePublishPublic = async () => {
-    await submit(true);
+    if (!title) {
+      setError("Title is required");
+      return;
+    }
+    setError(null);
+    setPublishModalOpen(true);
+    setPublishState("publishing");
+    setPublishError("");
+    setPublishUrl("");
+    setIsPending(true);
+
+    try {
+      let result;
+      if (mode === "new") {
+        result = await createNewRootCog(title, project || "No Parent Project", content, true);
+        if (result.success) {
+          setCreatedCogId(result.cogId);
+        }
+      } else {
+        result = await saveRootCog(cogId!, title, project || "No Parent Project", content, true);
+      }
+
+      if (result.success) {
+        const origin = window.location.origin;
+        const publicUrl = `${origin}/cogmits/${result.author}/${result.cogmitId}/${result.slug}`;
+        setPublishUrl(publicUrl);
+        setPublishState("success");
+      } else {
+        setPublishError(result.error || "Failed to publish Cogmit");
+        setPublishState("error");
+      }
+    } catch (err: any) {
+      setPublishError(err.message || "An unexpected error occurred");
+      setPublishState("error");
+    } finally {
+      setIsPending(false);
+    }
   };
 
   const submit = async (isPublic: boolean) => {
@@ -114,58 +158,53 @@ export function EditCogClient({
           </Button>
         }
         metadataContent={metadataContent}
-        control1Content={
-          <ProjectDropdown 
+        actionRowContent={
+          <CogActionRow
+            mode="edit"
             project={project}
-            setProject={setProject}
+            projectEnabled={true}
             projects={projects}
-            onCreateProject={async (name) => {
+            onMoveProject={async (name, isNew) => {
               if (mode === "new") {
-                const res = await createProjectAction(name);
-                if (res.success) {
-                  router.refresh();
+                if (isNew) {
+                  const res = await createProjectAction(name);
+                  if (res.success) {
+                    router.refresh();
+                  }
+                  return res;
+                } else {
+                  return { success: true };
                 }
-                return res;
               } else {
-                const res = await createProjectAndMoveCog(cogId!, name);
-                if (res.success) {
-                  router.refresh();
+                if (isNew) {
+                  const res = await createProjectAndMoveCog(cogId!, name);
+                  if (res.success) {
+                    setProject(name);
+                    router.refresh();
+                  }
+                  return res;
+                } else {
+                  const res = await moveCogToDestination(cogId!, name, isNew);
+                  if (res.success) {
+                    setProject(name);
+                    router.refresh();
+                  }
+                  return res;
                 }
-                return res;
               }
             }}
+            shareEnabled={false}
+            cogInEnabled={true}
+            onCogIn={handleSavePrivate}
+            isCogInPending={isPending}
+            editCogEnabled={true}
+            onEditCog={() => {}}
+            cogmitEnabled={true}
+            onCogmit={handlePublishPublic}
+            optionsEnabled={mode === "existing" && !!cogId}
+            cogId={cogId}
+            deleteEnabled={mode === "existing"}
           />
-        }
-        control2Content={
-          mode === "existing" ? (
-            <Select disabled value="versions">
-              <SelectTrigger className="w-full h-10 disabled:opacity-50">
-                <SelectValue placeholder="Versions" />
-              </SelectTrigger>
-            </Select>
-          ) : null
-        }
-        control3Content={
-          <Button 
-            className="w-full bg-[#4B0084] hover:bg-[#3A0066] text-white hover:text-white" 
-            variant="secondary" 
-            onClick={handleSavePrivate} 
-            disabled={isPending}
-          >
-            Save in Private
-          </Button>
-        }
-        control4Content={
-          <div className="flex w-full gap-2 min-w-0">
-            <Button 
-              className={mode === "new" ? "w-full bg-[#FFFF11] hover:bg-[#e6e60f] text-black shrink-0" : "w-[75%] bg-[#FFFF11] hover:bg-[#e6e60f] text-black shrink-0"}
-              onClick={handlePublishPublic} 
-              disabled={isPending}
-            >
-              Publish
-            </Button>
-            {mode === "existing" && cogId && <DeleteCogButton cogId={cogId} disabled={isPending} />}
-          </div>
         }
       >
         {error && (
@@ -181,6 +220,23 @@ export function EditCogClient({
         />
       </CogWorkspaceShell>
 
+      <PublishCogmitModal
+        open={publishModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPublishModalOpen(false);
+            if (publishState === "success") {
+              if (mode === "new" && createdCogId) {
+                router.push(`/myCogs/${createdCogId}/viewCog`);
+              }
+            }
+          }
+        }}
+        state={publishState}
+        publicUrl={publishUrl}
+        errorMessage={publishError}
+        onRetry={handlePublishPublic}
+      />
     </>
   );
 }

@@ -5,6 +5,7 @@ interface CogWorkspaceShellProps {
   titleContent: ReactNode;
   actionContent: ReactNode;
   metadataContent?: ReactNode;
+  actionRowContent?: ReactNode;
   control1Content?: ReactNode;
   control2Content?: ReactNode;
   control3Content?: ReactNode;
@@ -16,6 +17,7 @@ export function CogWorkspaceShell({
   titleContent,
   actionContent,
   metadataContent,
+  actionRowContent,
   control1Content,
   control2Content,
   control3Content,
@@ -43,15 +45,19 @@ export function CogWorkspaceShell({
           </div>
         )}
 
-        {/* ROW 3: Options (4 controls) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
-          {/* Mobile: Row 1 - Project | Versions */}
-          <div className="w-full min-w-0 order-1 sm:order-1">{control1Content}</div>
-          <div className="w-full min-w-0 order-2 sm:order-2">{control2Content}</div>
-          {/* Mobile: Row 2 - Save/Edit | Publish */}
-          <div className="w-full min-w-0 order-3 sm:order-3">{control3Content}</div>
-          <div className="w-full min-w-0 order-4 sm:order-4">{control4Content}</div>
-        </div>
+        {/* ROW 3: Actions */}
+        {actionRowContent ? (
+          <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full">
+            {actionRowContent}
+          </div>
+        ) : (
+          <div className="flex w-full items-center justify-between gap-[3.33%]">
+            <div className="w-[25%] min-w-0">{control1Content}</div>
+            <div className="w-[25%] min-w-0">{control2Content}</div>
+            <div className="w-[20%] min-w-0">{control3Content}</div>
+            <div className="w-[20%] min-w-0">{control4Content}</div>
+          </div>
+        )}
       </div>
 
       {/* SCROLLABLE CONTENT AREA */}

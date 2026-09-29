@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { deleteRootCog } from "@/app/myCogs/actions";
 import { useRouter } from "next/navigation";
 
-export function DeleteCogButton({ cogId, disabled }: { cogId: string, disabled?: boolean }) {
+export function DeleteCogButton({ cogId, disabled, className, children }: { cogId: string, disabled?: boolean, className?: string, children?: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
@@ -26,13 +26,13 @@ export function DeleteCogButton({ cogId, disabled }: { cogId: string, disabled?:
   return (
     <>
       <Button
-        className="w-[25%] bg-destructive hover:bg-destructive/90 text-destructive-foreground shrink-0"
+        className={className || "w-[25%] bg-destructive hover:bg-destructive/90 text-destructive-foreground shrink-0"}
         onClick={() => setIsOpen(true)}
         disabled={disabled || isDeleting}
         title="Delete Cog"
         aria-label="Delete Cog"
       >
-        <Trash2 className="w-4 h-4" />
+        {children || <Trash2 className="w-4 h-4" />}
       </Button>
 
       {isOpen && (

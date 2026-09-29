@@ -146,15 +146,17 @@ export async function createNewRootCog(title: string, project: string, content: 
       ...(indexSha ? { sha: indexSha } : {}),
     });
 
-    // 5. Update publicCogsIndex.json if isPublic
+    // 5. Update cogmitsIndex.json if isPublic
     if (isPublic) {
+      const cogmitId = `cogmit_${timestamp}`;
+
       let publicIndexObj = { cogs: [] as any[] };
       let publicIndexSha = "";
       try {
         const { data } = await octokit.rest.repos.getContent({
           owner,
           repo,
-          path: "publicCogsIndex.json",
+          path: "cogmitsIndex.json",
         });
         if (data && !Array.isArray(data) && "content" in data) {
           const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
@@ -166,21 +168,30 @@ export async function createNewRootCog(title: string, project: string, content: 
       }
       
       publicIndexObj.cogs.push({
-        id: cogId,
+        id: cogmitId,
+        sourceCogId: cogId,
         title: title,
         project: project,
         path: pathPrefix,
-        publishedAt: new Date().toISOString(),
+        publishedAt: now.toISOString(),
+        author: owner,
       });
 
       await octokit.rest.repos.createOrUpdateFileContents({
         owner,
         repo,
-        path: "publicCogsIndex.json",
-        message: `Publish ${cogId} to publicCogsIndex.json`,
+        path: "cogmitsIndex.json",
+        message: `Publish ${cogId} to cogmitsIndex.json`,
         content: Buffer.from(JSON.stringify(publicIndexObj, null, 2)).toString("base64"),
         ...(publicIndexSha ? { sha: publicIndexSha } : {}),
       });
+      return { 
+        success: true, 
+        cogId, 
+        cogmitId, 
+        slug: encodeURIComponent(title.toLowerCase().replace(/\s+/g, '-')), 
+        author: owner 
+      };
     }
 
     return { success: true, cogId };
