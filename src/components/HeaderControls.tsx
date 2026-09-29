@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { handleSignIn } from "./actions";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
 
@@ -79,12 +79,20 @@ export function HeaderControls({
             aria-haspopup="true"
             className="h-10 font-semibold px-4 sm:px-5 shrink-0"
           >
-            {displayName}
+            {displayName} <ChevronDown className="ml-1 w-4 h-4 opacity-70" />
           </Button>
 
           {isOpen && (
             <div className="absolute right-0 mt-2 w-48 origin-top-right rounded-md border border-border bg-popover shadow-md ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
               <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                <Link
+                  href="/myCogs/newCog"
+                  className="block w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  role="menuitem"
+                  onClick={() => setIsOpen(false)}
+                >
+                  + New Cog
+                </Link>
                 <Link
                   href="/myCogs"
                   className="block w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -92,6 +100,14 @@ export function HeaderControls({
                   onClick={() => setIsOpen(false)}
                 >
                   My Cogs
+                </Link>
+                <Link
+                  href="/myCogs/deletedCogs"
+                  className="block w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  role="menuitem"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Deleted Cogs
                 </Link>
                 <form onSubmit={onSignOut} className="w-full">
                   <button

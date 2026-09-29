@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Volume2 } from "lucide-react";
+import { DeleteCogButton } from "@/components/DeleteCogButton";
 
 export default async function ViewCogPage({ params }: { params: Promise<{ cogId: string }> }) {
   const session = await auth();
@@ -144,18 +145,21 @@ export default async function ViewCogPage({ params }: { params: Promise<{ cogId:
       control3Content={
         <Link
           href={`/myCogs/${decodedCogId}/editCog`}
-          className={cn(buttonVariants({ variant: "secondary" }), "w-full")}
+          className={cn(buttonVariants({ variant: "secondary" }), "w-full bg-[#4B0084] hover:bg-[#3A0066] text-white hover:text-white")}
         >
           Edit in ViewCog
         </Link>
       }
       control4Content={
-        <Button
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-          disabled
-        >
-          Publish to Public
-        </Button>
+        <div className="flex w-full gap-2 min-w-0">
+          <Button
+            className="w-[75%] bg-[#FFFF11] hover:bg-[#e6e60f] text-black shrink-0"
+            disabled
+          >
+            Publish
+          </Button>
+          <DeleteCogButton cogId={decodedCogId} disabled />
+        </div>
       }
     >
       <div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground w-full">

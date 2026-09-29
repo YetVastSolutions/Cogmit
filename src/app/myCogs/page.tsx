@@ -104,8 +104,9 @@ export default async function MyCogsPage() {
       const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
       indexObj = JSON.parse(contentStr);
 
+      const activeCogs = indexObj.cogs.filter((cog: any) => !cog.deletedAt);
       cogsWithDetails = await Promise.all(
-        indexObj.cogs.map(async (cog: any) => {
+        activeCogs.map(async (cog: any) => {
           let createdAt = null;
           let modifiedAt = null;
           let published = false; // Implementation gap: publication state does not exist in data model

@@ -187,7 +187,7 @@ export async function resolveRootCogPath(owner: string, repo: string, cogId: str
       const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
       const indexObj = JSON.parse(contentStr);
       const cogInfo = indexObj.cogs?.find((c: any) => c.id === cogId);
-      if (cogInfo && cogInfo.path) {
+      if (cogInfo && cogInfo.path && !cogInfo.deletedAt) {
         return cogInfo.path;
       }
     }
