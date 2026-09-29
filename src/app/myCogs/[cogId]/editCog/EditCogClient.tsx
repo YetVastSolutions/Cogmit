@@ -5,21 +5,26 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { saveRootCog, createProjectAndMoveCog } from "./actions";
+import { createNewRootCog, createProjectAction } from "@/app/myCogs/newCog/actions";
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
 import { ProjectDropdown } from "@/components/ProjectDropdown";
 import { DeleteCogButton } from "@/components/DeleteCogButton";
 
+export type EditCogMode = "new" | "existing";
+
 interface EditCogClientProps {
-  cogId: string;
+  mode: EditCogMode;
+  cogId?: string;
   initialTitle: string;
   initialProject: string;
   initialContent: string;
   projects: string[];
-  createdAt: string;
-  lastModified: string;
+  createdAt?: string;
+  lastModified?: string;
 }
 
 export function EditCogClient({
+  mode,
   cogId,
   initialTitle,
   initialProject,
@@ -52,11 +57,21 @@ export function EditCogClient({
     setIsPending(true);
 
     try {
-      const result = await saveRootCog(cogId, title, project || "No Parent Project", content, isPublic);
-      if (result.success) {
-        router.push(`/myCogs/${cogId}/viewCog`);
+      let result;
+      if (mode === "new") {
+        result = await createNewRootCog(title, project || "No Parent Project", content, isPublic);
+        if (result.success) {
+          router.push(`/myCogs/${result.cogId}/viewCog`);
+        } else {
+          setError(result.error || "Failed to create Cog");
+        }
       } else {
-        setError(result.error || "Failed to update Cog");
+        result = await saveRootCog(cogId!, title, project || "No Parent Project", content, isPublic);
+        if (result.success) {
+          router.push(`/myCogs/${cogId}/viewCog`);
+        } else {
+          setError(result.error || "Failed to update Cog");
+        }
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
@@ -65,12 +80,12 @@ export function EditCogClient({
     }
   };
 
-  const metadataContent = (
+  const metadataContent = mode === "existing" ? (
     <div className="flex flex-wrap gap-x-4 gap-y-1">
       {createdAt && <span>Created: {new Date(createdAt).toLocaleString()}</span>}
       {lastModified && <span>Last modified: {new Date(lastModified).toLocaleString()}</span>}
     </div>
-  );
+  ) : null;
 
   return (
     <>
@@ -88,7 +103,13 @@ export function EditCogClient({
           />
         }
         actionContent={
-          <Button variant="outline" className="w-full" onClick={() => router.push(`/myCogs/${cogId}/viewCog`)}>
+          <Button variant="outline" className="w-full" onClick={() => {
+            if (mode === "new") {
+              router.push("/myCogs");
+            } else {
+              router.push(`/myCogs/${cogId}/viewCog`);
+            }
+          }}>
             Cancel
           </Button>
         }
@@ -99,20 +120,30 @@ export function EditCogClient({
             setProject={setProject}
             projects={projects}
             onCreateProject={async (name) => {
-              const res = await createProjectAndMoveCog(cogId, name);
-              if (res.success) {
-                router.refresh();
+              if (mode === "new") {
+                const res = await createProjectAction(name);
+                if (res.success) {
+                  router.refresh();
+                }
+                return res;
+              } else {
+                const res = await createProjectAndMoveCog(cogId!, name);
+                if (res.success) {
+                  router.refresh();
+                }
+                return res;
               }
-              return res;
             }}
           />
         }
         control2Content={
-          <Select disabled value="versions">
-            <SelectTrigger className="w-full h-10 disabled:opacity-50">
-              <SelectValue placeholder="Versions" />
-            </SelectTrigger>
-          </Select>
+          mode === "existing" ? (
+            <Select disabled value="versions">
+              <SelectTrigger className="w-full h-10 disabled:opacity-50">
+                <SelectValue placeholder="Versions" />
+              </SelectTrigger>
+            </Select>
+          ) : null
         }
         control3Content={
           <Button 
@@ -127,13 +158,13 @@ export function EditCogClient({
         control4Content={
           <div className="flex w-full gap-2 min-w-0">
             <Button 
-              className="w-[75%] bg-[#FFFF11] hover:bg-[#e6e60f] text-black shrink-0" 
+              className={mode === "new" ? "w-full bg-[#FFFF11] hover:bg-[#e6e60f] text-black shrink-0" : "w-[75%] bg-[#FFFF11] hover:bg-[#e6e60f] text-black shrink-0"}
               onClick={handlePublishPublic} 
               disabled={isPending}
             >
               Publish
             </Button>
-            <DeleteCogButton cogId={cogId} disabled={isPending} />
+            {mode === "existing" && cogId && <DeleteCogButton cogId={cogId} disabled={isPending} />}
           </div>
         }
       >

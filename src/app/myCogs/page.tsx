@@ -82,7 +82,7 @@ export default async function MyCogsPage() {
             <p className="text-sm text-muted-foreground mb-4">
               You haven&apos;t created a Cog yet.
             </p>
-            <Link href="/myCogs/newCog" className="inline-flex w-full">
+            <Link href="/myCogs/new/editCog" className="inline-flex w-full">
               <Button className="w-full">Create your first Cog</Button>
             </Link>
           </div>
@@ -143,7 +143,7 @@ export default async function MyCogsPage() {
           <h1 className="text-3xl font-bold text-primary">My Cogs</h1>
           <p className="text-muted-foreground">Your private Cog workspace</p>
         </div>
-        <Link href="/myCogs/newCog">
+        <Link href="/myCogs/new/editCog">
           <Button>+ Create Cog</Button>
         </Link>
       </header>

@@ -73,7 +73,7 @@ export function CogmitDataProvisioning({
               You haven&apos;t created a Cog yet.
             </p>
             <Link
-              href="/myCogs/newCog"
+              href="/myCogs/new/editCog"
               className="inline-flex w-full"
             >
               <Button className="w-full">Create your first Cog</Button>

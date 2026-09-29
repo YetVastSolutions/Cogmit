@@ -86,7 +86,7 @@ export function HeaderControls({
             <div className="absolute right-0 mt-2 w-48 origin-top-right rounded-md border border-border bg-popover shadow-md ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
               <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                 <Link
-                  href="/myCogs/newCog"
+                  href="/myCogs/new/editCog"
                   className="block w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted hover:text-foreground transition-colors"
                   role="menuitem"
                   onClick={() => setIsOpen(false)}

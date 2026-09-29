@@ -84,6 +84,7 @@ export default async function EditCogPage({ params }: { params: Promise<{ cogId:
 
   return (
     <EditCogClient 
+      mode="existing"
       cogId={decodedCogId}
       initialTitle={rootCogInfo.title || decodedCogId}
       initialProject={rootCogInfo.project || "No Parent Project"}
