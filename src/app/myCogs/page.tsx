@@ -5,6 +5,20 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CogMetadataRow } from "@/components/CogMetadataRow";
 
+type CogIndexEntry = {
+  id: string;
+  title: string;
+  path: string;
+  project?: string;
+  deletedAt?: string;
+};
+
+type CogWithDetails = CogIndexEntry & {
+  createdAt: string | null;
+  modifiedAt: string | null;
+  published: boolean;
+};
+
 export default async function MyCogsPage() {
   const session = await auth();
   if (!session) {
@@ -91,8 +105,8 @@ export default async function MyCogsPage() {
     );
   }
 
-  let indexObj = { cogs: [] };
-  let cogsWithDetails: any[] = [];
+  let indexObj: { cogs: CogIndexEntry[] } = { cogs: [] };
+  let cogsWithDetails: CogWithDetails[] = [];
   try {
     const octokit = await getOctokit();
     const { data } = await octokit.rest.repos.getContent({
@@ -104,12 +118,12 @@ export default async function MyCogsPage() {
       const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
       indexObj = JSON.parse(contentStr);
 
-      const activeCogs = indexObj.cogs.filter((cog: any) => !cog.deletedAt);
+      const activeCogs = indexObj.cogs.filter((cog: CogIndexEntry) => !cog.deletedAt);
       cogsWithDetails = await Promise.all(
-        activeCogs.map(async (cog: any) => {
+        activeCogs.map(async (cog: CogIndexEntry) => {
           let createdAt = null;
           let modifiedAt = null;
-          let published = false; // Implementation gap: publication state does not exist in data model
+          const published = false; // Implementation gap: publication state does not exist in data model
           
           try {
             // Fetch commits for this Cog path to get GitHub-derived timestamps
@@ -125,7 +139,7 @@ export default async function MyCogsPage() {
               // Last commit in the list is the oldest (created)
               createdAt = commitsData.data[commitsData.data.length - 1].commit.committer?.date || null;
             }
-          } catch (e) {
+          } catch {
             // Ignore fetch errors for individual cogs
           }
           return { ...cog, createdAt, modifiedAt, published };
@@ -151,7 +165,7 @@ export default async function MyCogsPage() {
       <main>
         {cogsWithDetails && cogsWithDetails.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {cogsWithDetails.map((cog: any) => (
+            {cogsWithDetails.map((cog: CogWithDetails) => (
               <div key={cog.id} className="relative group">
                 <Link href={`/myCogs/${cog.id}/viewCog`} className="min-w-0 block h-full">
                   <div className="border border-border p-6 rounded-xl bg-card hover:border-yellow-500 transition-colors h-full flex flex-col gap-3 min-w-0 overflow-hidden">

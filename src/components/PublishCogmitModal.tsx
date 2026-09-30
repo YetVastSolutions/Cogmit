@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, CheckCircle2, Circle, Loader2, Copy } from "lucide-react";
+import { X, CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type PublishState = "idle" | "publishing" | "success" | "error";

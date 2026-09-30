@@ -6,7 +6,20 @@ import { Button } from "@/components/ui/button";
 import { CogMetadataRow } from "@/components/CogMetadataRow";
 import { RestoreCogButton } from "@/components/RestoreCogButton";
 
-function formatDateString(dateStr: string | null) {
+type CogIndexEntry = {
+  id: string;
+  title?: string;
+  path: string;
+  project?: string;
+  deletedAt?: string;
+};
+
+type CogWithDetails = CogIndexEntry & {
+  createdAt: string | null;
+  modifiedAt: string | null;
+};
+
+function formatDateString(dateStr: string | null | undefined) {
   if (!dateStr) return "Unknown";
   try {
     const d = new Date(dateStr);
@@ -17,7 +30,7 @@ function formatDateString(dateStr: string | null) {
       hour: "numeric",
       minute: "2-digit",
     });
-  } catch (e) {
+  } catch {
     return dateStr;
   }
 }
@@ -30,7 +43,7 @@ export default async function DeletedCogsPage() {
 
   const status = await getCogmitDataStatus();
   if (status.state === "repo_missing" || status.state === "repo_invalid") {
-    redirect("/dashboard/connect");
+    redirect("/connect");
   }
 
   if (status.state !== "ready") {
@@ -44,8 +57,8 @@ export default async function DeletedCogsPage() {
     );
   }
 
-  let indexObj = { cogs: [] };
-  let cogsWithDetails: any[] = [];
+  let indexObj: { cogs: CogIndexEntry[] } = { cogs: [] };
+  let cogsWithDetails: CogWithDetails[] = [];
   try {
     const octokit = await getOctokit();
     const { data } = await octokit.rest.repos.getContent({
@@ -57,9 +70,9 @@ export default async function DeletedCogsPage() {
       const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
       indexObj = JSON.parse(contentStr);
 
-      const deletedCogs = indexObj.cogs.filter((cog: any) => cog.deletedAt);
+      const deletedCogs = indexObj.cogs.filter((cog: CogIndexEntry) => cog.deletedAt);
       cogsWithDetails = await Promise.all(
-        deletedCogs.map(async (cog: any) => {
+        deletedCogs.map(async (cog: CogIndexEntry) => {
           let createdAt = null;
           let modifiedAt = null;
           
@@ -75,7 +88,7 @@ export default async function DeletedCogsPage() {
               modifiedAt = commitsData.data[0].commit.committer?.date || null;
               createdAt = commitsData.data[commitsData.data.length - 1].commit.committer?.date || null;
             }
-          } catch (e) {
+          } catch {
             // Ignore fetch errors
           }
           return { ...cog, createdAt, modifiedAt };
@@ -101,7 +114,7 @@ export default async function DeletedCogsPage() {
       <main>
         {cogsWithDetails && cogsWithDetails.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {cogsWithDetails.map((cog: any) => (
+            {cogsWithDetails.map((cog: CogWithDetails) => (
               <div key={cog.id} className="relative group">
                 <div className="border border-border p-6 rounded-xl bg-card transition-colors h-full flex flex-col gap-3 min-w-0 overflow-hidden opacity-80">
                   <h3 className="text-xl font-semibold text-foreground truncate pr-12">

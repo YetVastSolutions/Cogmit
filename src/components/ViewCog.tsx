@@ -20,14 +20,14 @@ export interface ViewCogProps {
   
   // Private mode options
   editUrl?: string;
-  showPublish?: boolean;
+
   deleteCogId?: string;
   cogId?: string;
   projects?: string[];
   onMoveProject?: (projectName: string, isNew: boolean) => Promise<{ success: boolean; error?: string }>;
   
   // Cogmit mode options
-  authorName?: string;
+
   authorId?: string;
   cogmitId?: string;
   shareUrl?: string;
@@ -42,12 +42,12 @@ export function ViewCog({
   lastModified,
   mode = "private",
   editUrl,
-  showPublish,
+
   deleteCogId,
   cogId,
   projects = [],
   onMoveProject,
-  authorName,
+
   authorId,
   shareUrl,
   isAuthor = false,

@@ -25,6 +25,15 @@ export function isAuthenticationRequiredError(error: unknown): error is Authenti
   return error instanceof AuthenticationRequiredError;
 }
 
+export class ServiceTokenMissingError extends Error {
+  code = "SERVICE_TOKEN_MISSING";
+
+  constructor(message = "Server is missing GITHUB_SERVICE_TOKEN") {
+    super(message);
+    this.name = "ServiceTokenMissingError";
+  }
+}
+
 export function isGitHubAuthError(error: unknown): boolean {
   if (isHttpError(error) && error.status === 401) {
     return true;
@@ -118,6 +127,42 @@ export async function getOctokit() {
   return octokit;
 }
 
+/**
+ * Creates an Octokit instance for anonymous public reads,
+ * using a server-side only service token.
+ */
+export async function getAnonymousOctokit() {
+  const token = process.env.GITHUB_SERVICE_TOKEN;
+
+  if (!token) {
+    throw new ServiceTokenMissingError();
+  }
+
+  const octokit = new Octokit({
+    auth: token,
+    log: {
+      debug: console.debug,
+      info: console.info,
+      warn: console.warn,
+      error: (msg: unknown, ...args: unknown[]) => {
+        if (typeof msg === "string" && msg.includes(" - 404 with id ")) {
+          return;
+        }
+        console.error(msg, ...args);
+      },
+    },
+  });
+
+  octokit.hook.error("request", async (error) => {
+    if (isGitHubAuthError(error)) {
+      throw new AuthenticationRequiredError("Service token authentication failed.");
+    }
+    throw error;
+  });
+
+  return octokit;
+}
+
 // ---------------------------------------------------------------------------
 // Repository content helpers
 // ---------------------------------------------------------------------------
@@ -128,7 +173,7 @@ export async function getOctokit() {
 export async function getRepositoryContent(owner: string, repo: string, path: string = "", ref?: string) {
   const octokit = await getOctokit();
   
-  const attemptRequest = async (retries = 2, delay = 500): Promise<any> => {
+  const attemptRequest = async (retries = 2, delay = 500): Promise<unknown> => {
     try {
       const { data } = await octokit.rest.repos.getContent({
         owner,
@@ -137,11 +182,11 @@ export async function getRepositoryContent(owner: string, repo: string, path: st
         ...(ref ? { ref } : {})
       });
       return data;
-    } catch (error: any) {
-      if (error.status === 404) {
+    } catch (error) {
+      if (isHttpError(error) && error.status === 404) {
         return null;
       }
-      if ([502, 503, 504].includes(error.status) && retries > 0) {
+      if (isHttpError(error) && [502, 503, 504].includes(error.status) && retries > 0) {
         await new Promise(resolve => setTimeout(resolve, delay));
         return attemptRequest(retries - 1, delay * 2);
       }
@@ -172,10 +217,18 @@ export class RootCogNotFoundError extends Error {
   }
 }
 
-/**
- * Resolves the authoritative path of a RootCog from cogsIndex.json.
- */
-export async function resolveRootCogPath(owner: string, repo: string, cogId: string): Promise<string> {
+export interface CogIndexEntry {
+  id: string;
+  title?: string;
+  path: string;
+  project?: string;
+  deletedAt?: string;
+  cogmitPublished?: string;
+  cogmitId?: string;
+  slug?: string;
+}
+
+export async function getRootCogIndexEntry(owner: string, repo: string, cogId: string): Promise<CogIndexEntry> {
   const octokit = await getOctokit();
   try {
     const { data } = await octokit.rest.repos.getContent({
@@ -186,18 +239,26 @@ export async function resolveRootCogPath(owner: string, repo: string, cogId: str
     if (data && !Array.isArray(data) && "content" in data) {
       const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
       const indexObj = JSON.parse(contentStr);
-      const cogInfo = indexObj.cogs?.find((c: any) => c.id === cogId);
-      if (cogInfo && cogInfo.path && !cogInfo.deletedAt) {
-        return cogInfo.path;
+      const cogInfo = indexObj.cogs?.find((c: CogIndexEntry) => c.id === cogId);
+      if (cogInfo && !cogInfo.deletedAt) {
+        return cogInfo;
       }
     }
-  } catch (error: any) {
-    if (error.status === 404) {
+  } catch (error) {
+    if (isHttpError(error) && error.status === 404) {
       throw new RootCogNotFoundError("cogsIndex.json not found");
     }
     throw error;
   }
   throw new RootCogNotFoundError();
+}
+
+/**
+ * Resolves the authoritative path of a RootCog from cogsIndex.json.
+ */
+export async function resolveRootCogPath(owner: string, repo: string, cogId: string): Promise<string> {
+  const entry = await getRootCogIndexEntry(owner, repo, cogId);
+  return entry.path;
 }
 
 // ---------------------------------------------------------------------------
@@ -737,8 +798,8 @@ export async function getProjects(): Promise<string[]> {
 
     // Sort to keep hierarchy logically ordered.
     return projects.sort((a, b) => a.localeCompare(b));
-  } catch (error: any) {
-    if (error.status !== 404 && error.status !== 409) {
+  } catch (error) {
+    if (!isHttpError(error) || (error.status !== 404 && error.status !== 409)) {
       console.error("Failed to get projects", error);
     }
     return [];

@@ -13,8 +13,8 @@ export default async function ExplorePage({ params }: { params: Promise<{ owner:
 
   const { owner, name } = await params;
 
-  let projects: any[] = [];
-  let nppCogs: any[] = [];
+  let projects: { name: string; path: string; type: string }[] = [];
+  let nppCogs: { name: string; path: string; type: string }[] = [];
   try {
     const projectsData = await getRepositoryContent(owner, name, "projects");
     if (Array.isArray(projectsData)) {

@@ -1,4 +1,4 @@
-import { auth, signIn } from "@/auth";
+import { signIn } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { CogmitDataProvisioning } from "@/components/CogmitDataProvisioning";
 import { getCogmitDataStatus, isAuthenticationRequiredError } from "@/lib/github";

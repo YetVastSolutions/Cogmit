@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+
 import { handleSignOut } from "@/components/actions";
 
 export type SessionStatus =
@@ -43,7 +43,7 @@ export function clearAuthenticatedUserData() {
     if (theme) {
       localStorage.setItem("theme", theme);
     }
-  } catch (e) {
+  } catch {
     // Ignore errors in restricted environments
   }
 }
@@ -55,7 +55,7 @@ export function AuthProvider({
   children: React.ReactNode;
   initialSession: SessionStatus | null;
 }) {
-  const router = useRouter();
+
   
   const getInitialState = (): AuthState => {
     if (!initialSession) return { status: "loading" };
@@ -76,7 +76,7 @@ export function AuthProvider({
     
     try {
       await handleSignOut(); // server-side signOut clears cookies
-    } catch (e) {
+    } catch {
       // It might throw a NEXT_REDIRECT error which is expected
     }
     
@@ -91,7 +91,7 @@ export function AuthProvider({
     setAuthState({ status: "unauthenticated" });
     try {
       await handleSignOut();
-    } catch (e) {
+    } catch {
       // It might throw a NEXT_REDIRECT error which is expected
     }
   }, []);
@@ -105,7 +105,7 @@ export function AuthProvider({
       } else {
         setAuthState({ status: "unauthenticated" });
       }
-    } catch (e) {
+    } catch {
       setAuthState({ status: "unauthenticated" });
     }
   }, []);

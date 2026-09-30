@@ -22,9 +22,9 @@ export default async function NPPCogPage({ params }: { params: Promise<{ owner: 
   
   try {
     const fileData = await getRepositoryContent(owner, name, `${cogPath}/rootCog.md`);
-    if (fileData && !Array.isArray(fileData) && "content" in fileData) {
+    if (fileData && !Array.isArray(fileData) && typeof fileData === "object" && "content" in fileData && typeof fileData.content === "string") {
       content = Buffer.from(fileData.content, "base64").toString("utf8");
-      sha = fileData.sha;
+      sha = "sha" in fileData && typeof fileData.sha === "string" ? fileData.sha : "";
     }
   } catch (error) {
     if (error && typeof error === "object" && "name" in error && error.name === "AuthenticationRequiredError") {
@@ -47,12 +47,12 @@ export default async function NPPCogPage({ params }: { params: Promise<{ owner: 
       });
       revalidatePath(`/repo/${owner}/${name}/cog/${cogId}`);
       return { success: true };
-    } catch (error: any) {
+    } catch (error) {
       if (error && typeof error === "object" && "name" in error && error.name === "AuthenticationRequiredError") {
         redirect("/login");
       }
       console.error("Failed to save cog", error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   };
 

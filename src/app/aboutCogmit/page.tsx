@@ -8,14 +8,10 @@ export default async function AboutCogmitPage() {
   const dataDir = path.join(process.cwd(), "public", "sample-cog", "cogmit-about");
 
   let content = "";
-  let rootCogInfo: any = {};
-
+  
   try {
     content = await fs.readFile(path.join(dataDir, "rootCog.md"), "utf-8");
-    rootCogInfo = JSON.parse(
-      await fs.readFile(path.join(dataDir, "rootCogInfo.json"), "utf-8")
-    );
-  } catch (error) {
+  } catch {
     return (
       <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-8 bg-background">
         <h1 className="text-3xl font-bold text-destructive mb-4">
@@ -28,13 +24,13 @@ export default async function AboutCogmitPage() {
     );
   }
 
-  const createdAt = rootCogInfo.createdAt || "";
-  const lastModified = rootCogInfo.updatedAt || "";
-  const title = rootCogInfo.title || "About Cogmit";
-  const projectValue = rootCogInfo.project || "No Parent Project";
+  const createdAt = "";
+  const lastModified = "";
+  const title = "About Cogmit";
+  const projectValue = "No Parent Project";
 
   const session = await auth();
-  const currentUsername = session?.user?.name || (session?.user as any)?.login || "";
+  const currentUsername = session?.user?.name || (session?.user as { login?: string })?.login || "";
   const authorId = "Cogmit";
   const isAuthor = currentUsername === authorId;
 

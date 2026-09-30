@@ -3,12 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { HistoryModal } from "./HistoryModal";
+
 import { saveRootCog, createProjectAndMoveCog, moveCogToDestination } from "./actions";
 import { createNewRootCog, createProjectAction } from "@/app/myCogs/newCog/actions";
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
-import { DeleteCogButton } from "@/components/DeleteCogButton";
-import { X, History, Trash2 } from "lucide-react";
+
 import { CogActionRow } from "@/components/CogActionRow";
 import { PublishCogmitModal, PublishState } from "@/components/PublishCogmitModal";
 
@@ -69,7 +68,7 @@ export function EditCogClient({
       if (mode === "new") {
         result = await createNewRootCog(title, project || "No Parent Project", content, true);
         if (result.success) {
-          setCreatedCogId(result.cogId);
+          setCreatedCogId(result.cogId || null);
         }
       } else {
         result = await saveRootCog(cogId!, title, project || "No Parent Project", content, true);
@@ -84,8 +83,8 @@ export function EditCogClient({
         setPublishError(result.error || "Failed to publish Cogmit");
         setPublishState("error");
       }
-    } catch (err: any) {
-      setPublishError(err.message || "An unexpected error occurred");
+    } catch (err) {
+      setPublishError(err instanceof Error ? err.message : "An unexpected error occurred");
       setPublishState("error");
     } finally {
       setIsPending(false);
@@ -117,8 +116,8 @@ export function EditCogClient({
           setError(result.error || "Failed to update Cog");
         }
       }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setIsPending(false);
     }

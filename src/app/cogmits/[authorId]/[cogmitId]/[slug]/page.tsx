@@ -1,4 +1,4 @@
-import { getOctokit } from "@/lib/github";
+import { getAnonymousOctokit } from "@/lib/github";
 import { Octokit } from "@octokit/rest";
 import { auth } from "@/auth";
 import { ViewCog } from "@/components/ViewCog";
@@ -14,14 +14,22 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
   let hasGithubToken = false;
   
   try {
-    octokit = await getOctokit();
+    octokit = await getAnonymousOctokit();
     hasGithubToken = true;
-  } catch (error: any) {
-    if (error.name === "AuthenticationRequiredError") {
+  } catch (error) {
+    if (error instanceof Error && error.name === "ServiceTokenMissingError") {
       return (
         <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-8 bg-background">
-          <h1 className="text-3xl font-bold text-destructive mb-4">Authentication Required</h1>
-          <p className="text-muted-foreground">You must be logged in to access this Cogmit.</p>
+          <h1 className="text-3xl font-bold text-destructive mb-4">Server Configuration Error</h1>
+          <p className="text-muted-foreground">The server is missing the required GITHUB_SERVICE_TOKEN to serve public Cogmits.</p>
+        </div>
+      );
+    }
+    if (error instanceof Error && error.name === "AuthenticationRequiredError") {
+      return (
+        <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-8 bg-background">
+          <h1 className="text-3xl font-bold text-destructive mb-4">GitHub Authentication Failed</h1>
+          <p className="text-muted-foreground">The server&apos;s service token could not authenticate with GitHub.</p>
         </div>
       );
     }
@@ -42,14 +50,14 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
       repo: repoName,
     });
     defaultBranch = repoInfo.data.default_branch;
-  } catch (error: any) {
+  } catch (error) {
     console.error("GitHub repository access diagnostic", {
       owner: decodedAuthorId,
       repo: repoName,
       hasGithubToken: hasGithubToken,
       authenticationSource: "existing application GitHub auth",
-      errorStatus: error?.status,
-      errorMessage: error?.message,
+      errorStatus: (error as { status?: number })?.status,
+      errorMessage: error instanceof Error ? error.message : undefined,
     });
     return (
       <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-8 bg-background">
@@ -58,20 +66,20 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
     );
   }
 
-  // 2. Fetch cogmitsIndex.json
-  let publicIndexObj = { cogs: [] as any[] };
+  // 2. Fetch cogsIndex.json
+  let publicIndexObj = { cogs: [] as { id: string, path?: string, project?: string, title?: string, cogmitId?: string, slug?: string, cogmitPublished?: string }[] };
   try {
     console.log("Diagnostic Log:", {
       authorId: decodedAuthorId,
       repoName,
       branchRef: defaultBranch,
-      indexPath: "cogmitsIndex.json"
+      indexPath: "cogsIndex.json"
     });
 
     const { data } = await octokit.rest.repos.getContent({
       owner: decodedAuthorId,
       repo: repoName,
-      path: "cogmitsIndex.json",
+      path: "cogsIndex.json",
       ref: defaultBranch,
     });
 
@@ -81,12 +89,12 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
     } else {
       throw new Error("Invalid content format");
     }
-  } catch (error: any) {
-    console.error("Diagnostic Log: Index read failed", { error: error?.message || error });
+  } catch (error) {
+    console.error("Diagnostic Log: Index read failed", { error: error instanceof Error ? error.message : String(error) });
     return (
       <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-8 bg-background">
         <h1 className="text-3xl font-bold text-destructive mb-4">Index Error</h1>
-        <p className="text-muted-foreground">The author's Cogmit index could not be read.</p>
+        <p className="text-muted-foreground">The author&apos;s Cogmit index could not be read.</p>
       </div>
     );
   }
@@ -96,7 +104,9 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
   let project = "";
   let title = decodedCogmitId;
 
-  const cogInfo = publicIndexObj.cogs?.find((c: any) => c.id === decodedCogmitId);
+  const cogInfo = publicIndexObj.cogs?.find(
+    (c) => c.cogmitId === decodedCogmitId && c.cogmitPublished && c.slug === slug
+  );
   if (cogInfo && cogInfo.path) {
     cogPath = cogInfo.path;
     project = cogInfo.project || "No Parent Project";
@@ -125,18 +135,7 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
       content = Buffer.from(mdData.content, "base64").toString("utf8");
     }
 
-    const { data: infoData } = await octokit.rest.repos.getContent({
-      owner: decodedAuthorId,
-      repo: repoName,
-      path: `${cogPath}/rootCogInfo.json`,
-      ref: defaultBranch,
-    });
-    if (infoData && !Array.isArray(infoData) && "content" in infoData) {
-      const infoObj = JSON.parse(Buffer.from(infoData.content, "base64").toString("utf8"));
-      if (infoObj.title) {
-        title = infoObj.title;
-      }
-    }
+
   } catch (error) {
     console.error("Failed to load public cogmit content", error);
   }
@@ -144,7 +143,7 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
   // TODO: we can configure NEXT_PUBLIC_BASE_URL or just use a relative string for the share URL if needed
   const shareUrl = typeof window !== 'undefined' ? window.location.href : `https://cogmit.yvs.app/cogmits/${decodedAuthorId}/${decodedCogmitId}/${slug}`;
 
-  const currentUsername = session?.user?.name || (session?.user as any)?.login || "";
+  const currentUsername = session?.user?.name || (session?.user as { login?: string })?.login || "";
   const isAuthor = currentUsername === decodedAuthorId;
 
   return (

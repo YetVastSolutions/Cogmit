@@ -88,8 +88,8 @@ export function ProjectHierarchyModal({ currentProject, projects, onSave, classN
       } else {
         setError(res.error || "Failed to move project.");
       }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setIsSaving(false);
     }

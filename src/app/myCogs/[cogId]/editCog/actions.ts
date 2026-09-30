@@ -30,7 +30,7 @@ export async function saveRootCog(
     let cogPath = "";
     try {
       cogPath = await resolveRootCogPath(owner, repo, cogId);
-    } catch (e: any) {
+    } catch {
       return { success: false, error: "Cog not found in index" };
     }
 
@@ -45,7 +45,7 @@ export async function saveRootCog(
       if (mdData && !Array.isArray(mdData) && "sha" in mdData) {
         mdSha = mdData.sha;
       }
-    } catch(e) {}
+    } catch {}
 
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
@@ -56,36 +56,8 @@ export async function saveRootCog(
       ...(mdSha ? { sha: mdSha } : {}),
     });
 
-    // 2. Update rootCogInfo.json
-    let infoSha = "";
-    let infoObj = {} as any;
-    try {
-      const { data: infoData } = await octokit.rest.repos.getContent({
-        owner,
-        repo,
-        path: `${cogPath}/rootCogInfo.json`,
-      });
-      if (infoData && !Array.isArray(infoData) && "content" in infoData) {
-        infoSha = infoData.sha;
-        infoObj = JSON.parse(Buffer.from(infoData.content, "base64").toString("utf8"));
-      }
-    } catch(e) {}
-
-    infoObj.title = title;
-    infoObj.project = project;
-
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path: `${cogPath}/rootCogInfo.json`,
-      message: `Update ${cogId} rootCogInfo.json`,
-      content: Buffer.from(JSON.stringify(infoObj, null, 2)).toString("base64"),
-      ...(infoSha ? { sha: infoSha } : {}),
-    });
-
-    // 3. Update cogsIndex.json (if title changed)
-    // To update cogsIndex.json, we must fetch it first
-    let indexObj = { cogs: [] as any[] };
+    // 2. Update cogsIndex.json
+    let indexObj = { cogs: [] as { id: string, title?: string, path?: string, project?: string, cogmitPublished?: string, cogmitId?: string, slug?: string }[] };
     let indexSha = "";
     try {
       const { data: indexData } = await octokit.rest.repos.getContent({
@@ -97,82 +69,65 @@ export async function saveRootCog(
         indexSha = indexData.sha;
         indexObj = JSON.parse(Buffer.from(indexData.content, "base64").toString("utf-8"));
       }
-    } catch(e) {}
+    } catch {}
     
-    const indexCog = indexObj.cogs?.find((c: any) => c.id === cogId);
-    if (indexCog && indexCog.title !== title) {
-      indexCog.title = title;
+    const indexCog = indexObj.cogs?.find((c) => c.id === cogId);
+    let indexUpdated = false;
+    let outCogmitId = indexCog?.cogmitId;
+    let outSlug = indexCog?.slug;
+
+    if (indexCog) {
+      if (indexCog.title !== title) {
+        indexCog.title = title;
+        indexUpdated = true;
+      }
+      const actualProject = project !== "No Parent Project" ? project : undefined;
+      if (indexCog.project !== actualProject) {
+        indexCog.project = actualProject;
+        indexUpdated = true;
+      }
+
+      if (isPublic) {
+        const now = new Date();
+        if (!indexCog.cogmitPublished) {
+          const timestamp = now.toISOString().replace(/[-:T]/g, "").slice(0, 14);
+          outCogmitId = `cogmit_${timestamp}`;
+        }
+        outSlug = encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+        
+        indexCog.cogmitPublished = now.toISOString();
+        indexCog.cogmitId = outCogmitId;
+        indexCog.slug = outSlug;
+        indexUpdated = true;
+      }
+    }
+
+    if (indexUpdated) {
       await octokit.rest.repos.createOrUpdateFileContents({
         owner,
         repo,
         path: "cogsIndex.json",
-        message: `Update cogsIndex.json with new title for ${cogId}`,
+        message: `Update cogsIndex.json for ${cogId}`,
         content: Buffer.from(JSON.stringify(indexObj, null, 2)).toString("base64"),
         ...(indexSha ? { sha: indexSha } : {}),
       });
     }
 
-    // 4. Update cogmitsIndex.json if isPublic
-    if (isPublic) {
-      const now = new Date();
-      const timestamp = now.toISOString().replace(/[-:T]/g, "").slice(0, 14);
-      const cogmitId = `cogmit_${timestamp}`;
-
-      let publicIndexObj = { cogs: [] as any[] };
-      let publicIndexSha = "";
-      try {
-        const { data } = await octokit.rest.repos.getContent({
-          owner,
-          repo,
-          path: "cogmitsIndex.json",
-        });
-        if (data && !Array.isArray(data) && "content" in data) {
-          const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
-          publicIndexObj = JSON.parse(contentStr);
-          publicIndexSha = data.sha;
-        }
-      } catch (e: any) {
-        if (e.status !== 404) throw e;
-      }
-      
-      const existingPublicCog = publicIndexObj.cogs.find((c: any) => c.sourceCogId === cogId);
-      if (existingPublicCog) {
-        existingPublicCog.title = title;
-        existingPublicCog.project = project;
-      } else {
-        publicIndexObj.cogs.push({
-          id: cogmitId,
-          sourceCogId: cogId,
-          title: title,
-          project: project,
-          path: cogPath,
-          publishedAt: now.toISOString(),
-          author: owner,
-        });
-      }
-
-      await octokit.rest.repos.createOrUpdateFileContents({
-        owner,
-        repo,
-        path: "cogmitsIndex.json",
-        message: `Publish/Update ${cogId} in cogmitsIndex.json`,
-        content: Buffer.from(JSON.stringify(publicIndexObj, null, 2)).toString("base64"),
-        ...(publicIndexSha ? { sha: publicIndexSha } : {}),
-      });
+    if (isPublic && outCogmitId && outSlug) {
       revalidatePath(`/myCogs/${cogId}/viewCog`);
       return { 
         success: true, 
-        cogmitId, 
-        slug: encodeURIComponent(title.toLowerCase().replace(/\s+/g, '-')), 
+        cogmitId: outCogmitId, 
+        slug: outSlug, 
         author: owner 
       };
     }
 
     revalidatePath(`/myCogs/${cogId}/viewCog`);
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to update RootCog", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : "Failed to update RootCog" };
   }
 }
 
@@ -206,7 +161,7 @@ export async function createProjectAndMoveCog(
     const defaultBranch = await getDefaultBranch(owner, repo);
     
     // 1. Get current index and find cog
-    let indexObj = { cogs: [] as any[] };
+    let indexObj = { cogs: [] as { id: string, title?: string, path?: string, project?: string, cogmitPublished?: string, cogmitId?: string, slug?: string }[] };
     let indexData;
     try {
       const res = await octokit.rest.repos.getContent({
@@ -215,7 +170,7 @@ export async function createProjectAndMoveCog(
         path: "cogsIndex.json",
       });
       indexData = res.data;
-    } catch(e: any) {
+    } catch {
       return { success: false, error: "cogsIndex.json could not be read." };
     }
     
@@ -226,7 +181,7 @@ export async function createProjectAndMoveCog(
       return { success: false, error: "cogsIndex.json missing or invalid" };
     }
 
-    const indexCog = indexObj.cogs?.find((c: any) => c.id === cogId);
+    const indexCog = indexObj.cogs?.find((c) => c.id === cogId);
     if (!indexCog) {
       return { success: false, error: "Unable to create the project because the current Cog could not be located in GitHub." };
     }
@@ -234,7 +189,7 @@ export async function createProjectAndMoveCog(
     let oldPath;
     try {
       oldPath = await resolveRootCogPath(owner, repo, cogId);
-    } catch(e: any) {
+    } catch {
       return { success: false, error: "Unable to create the project because the current Cog could not be located in GitHub." };
     }
 
@@ -245,7 +200,7 @@ export async function createProjectAndMoveCog(
     }
 
     // 2. Fetch old cog files to move them
-    let oldFiles: any[] = [];
+    let oldFiles: { name: string, type: string, sha: string }[] = [];
     try {
       const { data: dirData } = await octokit.rest.repos.getContent({
         owner,
@@ -257,8 +212,8 @@ export async function createProjectAndMoveCog(
       } else {
         return { success: false, error: "Current RootCog path mismatch (not a directory)" };
       }
-    } catch (e: any) {
-      if (e.status === 404) {
+    } catch (e) {
+      if (e && typeof e === "object" && "status" in e && e.status === 404) {
         return { success: false, error: "RootCog no longer exists at old path" };
       }
       throw e;
@@ -272,8 +227,8 @@ export async function createProjectAndMoveCog(
         path: newPath,
       });
       return { success: false, error: "Target RootCog already exists at destination" };
-    } catch (e: any) {
-      if (e.status !== 404) throw e;
+    } catch (e) {
+      if (e && typeof e === "object" && "status" in e && e.status !== 404) throw e;
     }
 
     // Ensure target projectData doesn't already exist to avoid silently overwriting, 
@@ -286,8 +241,8 @@ export async function createProjectAndMoveCog(
         path: `projects/${projectName}/projectData.json`,
       });
       return { success: false, error: "Project already exists" };
-    } catch (e: any) {
-      if (e.status !== 404) throw e;
+    } catch (e) {
+      if (e && typeof e === "object" && "status" in e && e.status !== 404) throw e;
     }
 
     // 4. Create blobs and tree
@@ -299,7 +254,7 @@ export async function createProjectAndMoveCog(
         ref: `heads/${defaultBranch}`,
       });
       baseCommitSha = refData.object.sha;
-    } catch(e: any) {
+    } catch {
       return { success: false, error: "Unable to create the project because the repository branch could not be resolved." };
     }
     
@@ -310,7 +265,7 @@ export async function createProjectAndMoveCog(
     });
     const baseTreeSha = commitData.tree.sha;
 
-    const treeUpdates: any[] = [];
+    const treeUpdates: { path: string, mode: "100644" | "100755" | "040000" | "160000" | "120000", sha: string | null }[] = [];
 
     // Delete old files, create new files pointing to same blobs
     for (const file of oldFiles) {
@@ -321,25 +276,9 @@ export async function createProjectAndMoveCog(
           sha: null, // delete
         });
         
-        let newFileContentSha = file.sha;
+        const newFileContentSha = file.sha;
         
-        // If it's rootCogInfo.json, we must also update the project field!
-        if (file.name === "rootCogInfo.json") {
-          const { data: oldInfoData } = await octokit.rest.repos.getContent({ owner, repo, path: `${oldPath}/rootCogInfo.json` });
-          if (oldInfoData && !Array.isArray(oldInfoData) && "content" in oldInfoData) {
-            const infoStr = Buffer.from(oldInfoData.content, "base64").toString("utf-8");
-            const infoObj = JSON.parse(infoStr);
-            infoObj.project = projectName;
-            
-            const { data: newInfoBlob } = await octokit.rest.git.createBlob({
-              owner,
-              repo,
-              content: JSON.stringify(infoObj, null, 2),
-              encoding: "utf-8",
-            });
-            newFileContentSha = newInfoBlob.sha;
-          }
-        }
+
         
         treeUpdates.push({
           path: `${newPath}/${file.name}`,
@@ -408,9 +347,9 @@ export async function createProjectAndMoveCog(
     revalidatePath(`/myCogs/${cogId}/viewCog`);
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Structural operation failed", error);
-    if (error.status && [502, 503, 504].includes(error.status)) {
+    if (error && typeof error === "object" && "status" in error && typeof error.status === "number" && [502, 503, 504].includes(error.status)) {
       return { success: false, error: "GitHub is temporarily unavailable. Please try again." };
     }
     return { success: false, error: "Failed to create project and move cog" };
@@ -453,7 +392,7 @@ export async function getCogHistory(cogId: string) {
     }));
 
     return { success: true, history };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to fetch cog history", error);
     return { success: false, error: "Failed to load history." };
   }
@@ -493,7 +432,7 @@ export async function moveCogToDestination(
     const defaultBranch = await getDefaultBranch(owner, repo);
     
     // 1. Get current index and find cog
-    let indexObj = { cogs: [] as any[] };
+    let indexObj = { cogs: [] as { id: string, title?: string, path?: string, project?: string, cogmitPublished?: string, cogmitId?: string, slug?: string }[] };
     let indexData;
     try {
       const res = await octokit.rest.repos.getContent({
@@ -502,7 +441,7 @@ export async function moveCogToDestination(
         path: "cogsIndex.json",
       });
       indexData = res.data;
-    } catch(e: any) {
+    } catch {
       return { success: false, error: "cogsIndex.json could not be read." };
     }
     
@@ -513,7 +452,7 @@ export async function moveCogToDestination(
       return { success: false, error: "cogsIndex.json missing or invalid" };
     }
 
-    const indexCog = indexObj.cogs?.find((c: any) => c.id === cogId);
+    const indexCog = indexObj.cogs?.find((c) => c.id === cogId);
     if (!indexCog) {
       return { success: false, error: "Unable to move because the current Cog could not be located in GitHub." };
     }
@@ -521,7 +460,7 @@ export async function moveCogToDestination(
     let oldPath;
     try {
       oldPath = await resolveRootCogPath(owner, repo, cogId);
-    } catch(e: any) {
+    } catch {
       return { success: false, error: "Unable to move because the current Cog could not be located in GitHub." };
     }
 
@@ -532,7 +471,7 @@ export async function moveCogToDestination(
     }
 
     // 2. Fetch old cog files to move them
-    let oldFiles: any[] = [];
+    let oldFiles: { name: string, type: string, sha: string }[] = [];
     try {
       const { data: dirData } = await octokit.rest.repos.getContent({
         owner,
@@ -544,8 +483,8 @@ export async function moveCogToDestination(
       } else {
         return { success: false, error: "Current RootCog path mismatch (not a directory)" };
       }
-    } catch (e: any) {
-      if (e.status === 404) {
+    } catch (e) {
+      if (e && typeof e === "object" && "status" in e && e.status === 404) {
         return { success: false, error: "RootCog no longer exists at old path" };
       }
       throw e;
@@ -559,8 +498,8 @@ export async function moveCogToDestination(
         path: newPath,
       });
       return { success: false, error: "Target RootCog already exists at destination" };
-    } catch (e: any) {
-      if (e.status !== 404) throw e;
+    } catch (e) {
+      if (e && typeof e === "object" && "status" in e && e.status !== 404) throw e;
     }
 
     // 4. If isNew, ensure project doesn't exist
@@ -572,8 +511,8 @@ export async function moveCogToDestination(
           path: `projects/${destProjectName}/projectData.json`,
         });
         return { success: false, error: "Project already exists" };
-      } catch (e: any) {
-        if (e.status !== 404) throw e;
+      } catch (e) {
+        if (e && typeof e === "object" && "status" in e && e.status !== 404) throw e;
       }
     }
 
@@ -586,7 +525,7 @@ export async function moveCogToDestination(
         ref: `heads/${defaultBranch}`,
       });
       baseCommitSha = refData.object.sha;
-    } catch(e: any) {
+    } catch {
       return { success: false, error: "Unable to move because the repository branch could not be resolved." };
     }
     
@@ -597,7 +536,7 @@ export async function moveCogToDestination(
     });
     const baseTreeSha = commitData.tree.sha;
 
-    const treeUpdates: any[] = [];
+    const treeUpdates: { path: string, mode: "100644" | "100755" | "040000" | "160000" | "120000", sha: string | null }[] = [];
 
     // Delete old files, create new files pointing to same blobs
     for (const file of oldFiles) {
@@ -608,25 +547,9 @@ export async function moveCogToDestination(
           sha: null, // delete
         });
         
-        let newFileContentSha = file.sha;
+        const newFileContentSha = file.sha;
         
-        // If it's rootCogInfo.json, we must also update the project field!
-        if (file.name === "rootCogInfo.json") {
-          const { data: oldInfoData } = await octokit.rest.repos.getContent({ owner, repo, path: `${oldPath}/rootCogInfo.json` });
-          if (oldInfoData && !Array.isArray(oldInfoData) && "content" in oldInfoData) {
-            const infoStr = Buffer.from(oldInfoData.content, "base64").toString("utf-8");
-            const infoObj = JSON.parse(infoStr);
-            infoObj.project = destProjectName;
-            
-            const { data: newInfoBlob } = await octokit.rest.git.createBlob({
-              owner,
-              repo,
-              content: JSON.stringify(infoObj, null, 2),
-              encoding: "utf-8",
-            });
-            newFileContentSha = newInfoBlob.sha;
-          }
-        }
+
         
         treeUpdates.push({
           path: `${newPath}/${file.name}`,
@@ -697,9 +620,9 @@ export async function moveCogToDestination(
     revalidatePath(`/myCogs/${cogId}/viewCog`);
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Structural operation failed", error);
-    if (error.status && [502, 503, 504].includes(error.status)) {
+    if (error && typeof error === "object" && "status" in error && typeof error.status === "number" && [502, 503, 504].includes(error.status)) {
       return { success: false, error: "GitHub is temporarily unavailable. Please try again." };
     }
     return { success: false, error: "Failed to move cog" };

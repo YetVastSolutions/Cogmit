@@ -34,9 +34,9 @@ export function CogEditor({
           setStatus("Error");
           setErrorMessage(result.error || "An unknown error occurred.");
         }
-      } catch (err: any) {
+      } catch (err) {
         setStatus("Error");
-        setErrorMessage(err.message || "Failed to save.");
+        setErrorMessage(err instanceof Error ? err.message : "Failed to save.");
       }
     });
   };

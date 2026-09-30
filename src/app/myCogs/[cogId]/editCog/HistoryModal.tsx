@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { getCogHistory } from "./actions";
-import { History, X } from "lucide-react";
+import { X, History } from "lucide-react";
 import Link from "next/link";
 
 export type CogHistoryEntry = {
@@ -29,7 +29,7 @@ export function HistoryModal({ cogId, className, children }: HistoryModalProps) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -39,26 +39,26 @@ export function HistoryModal({ cogId, className, children }: HistoryModalProps) 
       } else {
         setError(res.error || "Failed to load history.");
       }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
-  };
+  }, [cogId]);
 
   useEffect(() => {
     if (open) {
-      fetchHistory();
+      const load = async () => {
+        await fetchHistory();
+      };
+      load();
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === "Escape") setOpen(false);
       };
       window.addEventListener("keydown", handleKeyDown);
       return () => window.removeEventListener("keydown", handleKeyDown);
-    } else {
-      setHistory([]);
-      setError(null);
     }
-  }, [open, cogId]);
+  }, [open, fetchHistory]);
 
   return (
     <>
@@ -122,7 +122,10 @@ export function HistoryModal({ cogId, className, children }: HistoryModalProps) 
                         </p>
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                           {entry.authorAvatarUrl && (
-                            <img src={entry.authorAvatarUrl} alt={entry.authorName || "Author"} className="h-6 w-6 rounded-full" />
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={entry.authorAvatarUrl} alt={entry.authorName || "Author"} className="h-6 w-6 rounded-full" />
+                            </>
                           )}
                           <div className="flex items-center space-x-1">
                             <span>{entry.authorName}</span>

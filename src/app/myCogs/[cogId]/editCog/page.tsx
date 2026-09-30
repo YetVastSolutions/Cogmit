@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { getRepositoryContent, getOctokit, getCogmitDataStatus, getProjects, resolveRootCogPath } from "@/lib/github";
+import { getRepositoryContent, getOctokit, getCogmitDataStatus, getProjects, getRootCogIndexEntry, CogIndexEntry } from "@/lib/github";
 import { redirect } from "next/navigation";
 import { EditCogClient } from "./EditCogClient";
 
@@ -20,9 +20,11 @@ export default async function EditCogPage({ params }: { params: Promise<{ cogId:
   const { owner, repo } = status;
   
   let cogPath = "";
+  let cogIndexEntry: CogIndexEntry | undefined = undefined;
   
   try {
-    cogPath = await resolveRootCogPath(owner, repo, decodedCogId);
+    cogIndexEntry = await getRootCogIndexEntry(owner, repo, decodedCogId);
+    cogPath = cogIndexEntry.path;
   } catch (error) {
     console.error("Failed to read cogsIndex.json", error);
   }
@@ -37,28 +39,21 @@ export default async function EditCogPage({ params }: { params: Promise<{ cogId:
   }
 
   let content = "";
-  let rootCogInfo: any = {};
   
   try {
     const fileData = await getRepositoryContent(owner, repo, `${cogPath}/rootCog.md`);
-    if (fileData && !Array.isArray(fileData) && "content" in fileData) {
+    if (fileData && !Array.isArray(fileData) && typeof fileData === "object" && "content" in fileData && typeof fileData.content === "string") {
       content = Buffer.from(fileData.content, "base64").toString("utf8");
     }
-
-    const infoData = await getRepositoryContent(owner, repo, `${cogPath}/rootCogInfo.json`);
-    if (infoData && !Array.isArray(infoData) && "content" in infoData) {
-      rootCogInfo = JSON.parse(Buffer.from(infoData.content, "base64").toString("utf8"));
-    }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
+  } catch (error) {
     if (error && typeof error === "object" && "name" in error && "AuthenticationRequiredError" === error.name) {
       redirect("/login");
     }
     console.error("Failed to load cog content", error);
   }
 
-  let createdAt = rootCogInfo.createdAt || "";
-  let lastModified = rootCogInfo.updatedAt || "";
+  let createdAt = "";
+  let lastModified = "";
 
   try {
     const octokit = await getOctokit();
@@ -86,8 +81,8 @@ export default async function EditCogPage({ params }: { params: Promise<{ cogId:
     <EditCogClient 
       mode="existing"
       cogId={decodedCogId}
-      initialTitle={rootCogInfo.title || decodedCogId}
-      initialProject={rootCogInfo.project || "No Parent Project"}
+      initialTitle={cogIndexEntry?.title || decodedCogId}
+      initialProject={cogIndexEntry?.project || "No Parent Project"}
       initialContent={content}
       projects={projects}
       createdAt={createdAt}

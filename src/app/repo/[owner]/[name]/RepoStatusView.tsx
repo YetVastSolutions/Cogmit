@@ -103,8 +103,8 @@ export function RepoStatusView({
           <Button onClick={handleInitiate} disabled={isPending}>
             {isPending ? "Creating…" : "Create my Cogmit repository"}
           </Button>
-          <Link href="/dashboard">
-            <Button variant="outline">Back to Dashboard</Button>
+          <Link href="/connect">
+            <Button variant="outline">Back to Connect</Button>
           </Link>
         </div>
       </div>

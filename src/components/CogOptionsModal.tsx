@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, X, History, Trash2 } from "lucide-react";
+import { MoreHorizontal, X, Trash2 } from "lucide-react";
 import { HistoryModal } from "@/app/myCogs/[cogId]/editCog/HistoryModal";
 import { DeleteCogButton } from "@/components/DeleteCogButton";
 import { cn } from "@/lib/utils";

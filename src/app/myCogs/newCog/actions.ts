@@ -33,8 +33,8 @@ export async function createProjectAction(projectName: string) {
     try {
       await octokit.rest.repos.getContent({ owner, repo, path: `projects/${projectName}/projectData.json` });
       return { success: false, error: "Project already exists" };
-    } catch (e: any) {
-      if (e.status !== 404) throw e;
+    } catch (e) {
+      if (e && typeof e === "object" && "status" in e && e.status !== 404) throw e;
     }
 
     const projectDataObj = {
@@ -51,7 +51,7 @@ export async function createProjectAction(projectName: string) {
     });
     
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to create project", error);
     return { success: false, error: "Failed to create project" };
   }
@@ -87,33 +87,10 @@ export async function createNewRootCog(title: string, project: string, content: 
       content: Buffer.from(content || `# ${title}\n\n`).toString("base64"),
     });
 
-    // 2. Create rootCogInfo.json
-    const info = {
-      id: cogId,
-      title: title,
-      project: project,
-      createdAt: new Date().toISOString(),
-    };
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path: `${pathPrefix}/rootCogInfo.json`,
-      message: `Create ${cogId} rootCogInfo.json`,
-      content: Buffer.from(JSON.stringify(info, null, 2)).toString("base64"),
-    });
 
-    // 3. Create children.json
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path: `${pathPrefix}/children.json`,
-      message: `Create ${cogId} children.json`,
-      content: Buffer.from(JSON.stringify([], null, 2)).toString("base64"),
-    });
 
-    // 4. Update cogsIndex.json
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let indexObj = { cogs: [] as any[] };
+    // 2. Update cogsIndex.json
+    let indexObj: { cogs: { id: string, title?: string, path: string, project?: string, cogmitPublished?: string, cogmitId?: string, slug?: string }[] } = { cogs: [] };
     let indexSha = "";
     try {
       const { data } = await octokit.rest.repos.getContent({
@@ -126,15 +103,23 @@ export async function createNewRootCog(title: string, project: string, content: 
         indexObj = JSON.parse(contentStr);
         indexSha = data.sha;
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (e: any) {
-      if (e.status !== 404) throw e;
+    } catch (e) {
+      if (e && typeof e === "object" && "status" in e && e.status !== 404) throw e;
     }
+
+    const cogmitId = `cogmit_${timestamp}`;
+    const slug = encodeURIComponent(title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
 
     indexObj.cogs.push({
       id: cogId,
       title: title,
       path: pathPrefix,
+      project: project !== "No Parent Project" ? project : undefined,
+      ...(isPublic ? {
+        cogmitPublished: now.toISOString(),
+        cogmitId: cogmitId,
+        slug: slug
+      } : {})
     });
 
     await octokit.rest.repos.createOrUpdateFileContents({
@@ -146,58 +131,19 @@ export async function createNewRootCog(title: string, project: string, content: 
       ...(indexSha ? { sha: indexSha } : {}),
     });
 
-    // 5. Update cogmitsIndex.json if isPublic
     if (isPublic) {
-      const cogmitId = `cogmit_${timestamp}`;
-
-      let publicIndexObj = { cogs: [] as any[] };
-      let publicIndexSha = "";
-      try {
-        const { data } = await octokit.rest.repos.getContent({
-          owner,
-          repo,
-          path: "cogmitsIndex.json",
-        });
-        if (data && !Array.isArray(data) && "content" in data) {
-          const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
-          publicIndexObj = JSON.parse(contentStr);
-          publicIndexSha = data.sha;
-        }
-      } catch (e: any) {
-        if (e.status !== 404) throw e;
-      }
-      
-      publicIndexObj.cogs.push({
-        id: cogmitId,
-        sourceCogId: cogId,
-        title: title,
-        project: project,
-        path: pathPrefix,
-        publishedAt: now.toISOString(),
-        author: owner,
-      });
-
-      await octokit.rest.repos.createOrUpdateFileContents({
-        owner,
-        repo,
-        path: "cogmitsIndex.json",
-        message: `Publish ${cogId} to cogmitsIndex.json`,
-        content: Buffer.from(JSON.stringify(publicIndexObj, null, 2)).toString("base64"),
-        ...(publicIndexSha ? { sha: publicIndexSha } : {}),
-      });
       return { 
         success: true, 
         cogId, 
         cogmitId, 
-        slug: encodeURIComponent(title.toLowerCase().replace(/\s+/g, '-')), 
+        slug, 
         author: owner 
       };
     }
 
     return { success: true, cogId };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to create new RootCog", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }

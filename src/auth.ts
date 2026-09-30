@@ -29,7 +29,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session }) {
       // Send properties to the client, like an access_token from a provider.
       // But actually, we shouldn't send the accessToken to the client for security.
       // We will only use it server-side in our Server Actions.

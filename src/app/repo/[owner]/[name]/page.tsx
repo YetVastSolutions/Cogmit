@@ -21,8 +21,8 @@ export default async function RepoPage({ params }: { params: Promise<{ owner: st
     try {
       await octokit.rest.repos.get({ owner, repo: name });
       repoExists = true;
-    } catch (e: any) {
-      if (e.status !== 404) throw e;
+    } catch (e) {
+      if (e && typeof e === "object" && "status" in e && e.status !== 404) throw e;
     }
 
     if (repoExists) {
@@ -43,10 +43,10 @@ export default async function RepoPage({ params }: { params: Promise<{ owner: st
           <p className="text-muted-foreground">Cogmit Repository Status</p>
         </div>
         <Link 
-          href="/dashboard"
+          href="/connect"
           className={cn(buttonVariants({ variant: "outline" }))}
         >
-          Back to Dashboard
+          Back to Connect
         </Link>
       </header>
       

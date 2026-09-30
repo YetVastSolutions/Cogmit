@@ -45,14 +45,17 @@ export function HeaderControls({
 
   // Restore theme on mount
   useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    if (stored === "dark") {
-      document.documentElement.classList.add("dark");
-      setTheme("dark");
-    } else if (stored === "light") {
-      document.documentElement.classList.remove("dark");
-      setTheme("light");
-    }
+    const initTheme = () => {
+      const stored = localStorage.getItem("theme");
+      if (stored === "dark") {
+        document.documentElement.classList.add("dark");
+        setTheme("dark");
+      } else if (stored === "light") {
+        document.documentElement.classList.remove("dark");
+        setTheme("light");
+      }
+    };
+    initTheme();
   }, []);
 
   const onSignOut = async (e: React.FormEvent) => {
