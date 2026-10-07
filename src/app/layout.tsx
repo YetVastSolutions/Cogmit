@@ -16,6 +16,9 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Cogmit",
   description: "GitHub-native cognition repository",
+  icons: {
+    icon: "/cogmitLogo.png",
+  },
 };
 
 import { checkSessionStatus } from "@/lib/auth-actions";
