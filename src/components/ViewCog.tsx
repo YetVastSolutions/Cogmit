@@ -6,7 +6,7 @@ import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Volume2, User, Share, Heart, MessageSquare, BookPlus } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn, formatTimestamp } from "@/lib/utils";
 import { CogActionRow } from "@/components/CogActionRow";
 import { MarqueeContent } from "@/components/MarqueeContent";
 
@@ -62,16 +62,16 @@ export function ViewCog({
   
   const staticItems = [
     <span key="published" className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium text-black ${isPublished ? "bg-[#FFFF11]" : "bg-green-500"}`}>
-      {isPublished ? `Published ${new Date(published).toLocaleString()}` : "Not published"}
+      {isPublished ? `Published ${formatTimestamp(published)}` : "Not published"}
     </span>
   ];
 
   const marqueeItems = [
     lastModified ? (
-      <span key="2">Cog last modified: {new Date(lastModified).toLocaleString()}</span>
+      <span key="2">Cog last modified: {formatTimestamp(lastModified)}</span>
     ) : null,
     createdAt ? (
-      <span key="3">Cog created: {new Date(createdAt).toLocaleString()}</span>
+      <span key="3">Cog created: {formatTimestamp(createdAt)}</span>
     ) : null,
   ].filter(Boolean) as React.ReactNode[];
 
@@ -136,8 +136,13 @@ export function ViewCog({
             cogInEnabled={false}
             editCogEnabled={true}
             editUrl={editUrl}
-            cogmitEnabled={false}
+            cogmitEnabled={true}
             cogmitVisible={showCogmit}
+            cogmitTooltip={
+              showCogmit
+                ? "Last Cog in wasn't published as Cogmit.\nTo share last published cogmit Please share from My Cogmits"
+                : undefined
+            }
             optionsEnabled={true}
             cogId={cogId}
             deleteEnabled={!!deleteCogId} // Only allow delete if they have the right

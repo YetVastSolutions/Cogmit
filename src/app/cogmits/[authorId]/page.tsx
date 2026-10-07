@@ -1,6 +1,7 @@
 import { Octokit } from "@octokit/rest";
 
 import Link from "next/link";
+import { formatTimestamp } from "@/lib/utils";
 
 export default async function AuthorCogmitsPage({ params }: { params: Promise<{ authorId: string }> }) {
   const { authorId } = await params;
@@ -133,7 +134,7 @@ export default async function AuthorCogmitsPage({ params }: { params: Promise<{ 
                   {/* Since cogmitsIndex doesn't store project implicitly, we omit it or change this */}
                 </div>
                 <div className="mt-auto text-xs text-muted-foreground/70">
-                  {cogmit.publishedAt ? new Date(cogmit.publishedAt).toLocaleString() : "Unknown date"}
+                  {formatTimestamp(cogmit.publishedAt)}
                 </div>
               </Link>
             );

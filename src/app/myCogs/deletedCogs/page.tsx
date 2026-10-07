@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CogMetadataRow } from "@/components/CogMetadataRow";
 import { RestoreCogButton } from "@/components/RestoreCogButton";
+import { formatTimestamp } from "@/lib/utils";
 
 type CogIndexEntry = {
   id: string;
@@ -19,21 +20,7 @@ type CogWithDetails = CogIndexEntry & {
   modifiedAt: string | null;
 };
 
-function formatDateString(dateStr: string | null | undefined) {
-  if (!dateStr) return "Unknown";
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateStr;
-  }
-}
+
 
 export default async function DeletedCogsPage() {
   const session = await auth();
@@ -123,7 +110,7 @@ export default async function DeletedCogsPage() {
                   
                   <div className="mt-auto flex flex-col gap-2 min-w-0">
                     <CogMetadataRow className="text-sm text-muted-foreground font-medium">
-                      <span>Deleted: {formatDateString(cog.deletedAt)}</span>
+                      <span>Deleted: {formatTimestamp(cog.deletedAt)}</span>
                       <span className="opacity-50">|</span>
                       <span>Project: {cog.project || "NPPCog"}</span>
                     </CogMetadataRow>

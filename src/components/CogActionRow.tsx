@@ -37,6 +37,7 @@ interface CogActionRowProps {
   cogmitVisible?: boolean;
   onCogmit?: () => void;
   isCogmitPending?: boolean;
+  cogmitTooltip?: React.ReactNode;
   
   // Options
   optionsEnabled: boolean;
@@ -50,7 +51,7 @@ export function CogActionRow({
   shareEnabled, shareVisible = true, onShare,
   cogInEnabled, onCogIn, isCogInPending,
   editCogEnabled, editUrl, onEditCog,
-  cogmitEnabled, cogmitVisible = true, onCogmit, isCogmitPending,
+  cogmitEnabled, cogmitVisible = true, onCogmit, isCogmitPending, cogmitTooltip,
   optionsEnabled, cogId, deleteEnabled
 }: CogActionRowProps) {
   const [isPinned, setIsPinned] = useState(false);
@@ -135,14 +136,21 @@ export function CogActionRow({
 
         {/* Cogmit */}
         {cogmitVisible && (
-          <Button 
-            className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none bg-[#FFFF11] hover:bg-[#e6e60f] text-black"
-            disabled={!cogmitEnabled || isCogmitPending}
-            onClick={onCogmit}
-          >
-            <span className="hidden md:inline whitespace-nowrap">Cogmit</span>
-            <Megaphone className="w-4 h-4 md:ml-2 shrink-0" />
-          </Button>
+          <div className={cn("relative group", cogmitTooltip && "cursor-help inline-block")}>
+            <Button 
+              className={cn("shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none bg-[#FFFF11] hover:bg-[#e6e60f] text-black", cogmitTooltip && "cursor-help pointer-events-auto")}
+              disabled={!cogmitEnabled || isCogmitPending}
+              onClick={onCogmit}
+            >
+              <span className="hidden md:inline whitespace-nowrap">Cogmit</span>
+              <Megaphone className="w-4 h-4 md:ml-2 shrink-0" />
+            </Button>
+            {cogmitTooltip && (
+              <div className="absolute right-0 top-full mt-2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-pre-wrap z-50 shadow-md border border-border w-max max-w-[250px] text-left">
+                {cogmitTooltip}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Options */}

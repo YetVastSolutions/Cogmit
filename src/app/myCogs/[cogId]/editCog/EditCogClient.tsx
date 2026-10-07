@@ -22,6 +22,7 @@ import {
 } from "@/lib/publish-actions";
 
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
+import { formatTimestamp } from "@/lib/utils";
 
 import { CogActionRow } from "@/components/CogActionRow";
 import { MarqueeContent } from "@/components/MarqueeContent";
@@ -529,16 +530,16 @@ export function EditCogClient({
   
   const staticItems = [
     <span key="published" className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium text-black ${isPublished ? "bg-[#FFFF11]" : "bg-green-500"}`}>
-      {isPublished ? `Published ${new Date(published).toLocaleString()}` : "Not published"}
+      {isPublished ? `Published ${formatTimestamp(published)}` : "Not published"}
     </span>
   ];
 
   const marqueeItems = [
     lastModified ? (
-      <span key="2">Cog last modified: {new Date(lastModified).toLocaleString()}</span>
+      <span key="2">Cog last modified: {formatTimestamp(lastModified)}</span>
     ) : null,
     createdAt ? (
-      <span key="3">Cog created: {new Date(createdAt).toLocaleString()}</span>
+      <span key="3">Cog created: {formatTimestamp(createdAt)}</span>
     ) : null,
   ].filter(Boolean) as React.ReactNode[];
 

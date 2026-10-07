@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getCogHistory } from "./actions";
 import { X, History } from "lucide-react";
 import Link from "next/link";
+import { formatTimestamp } from "@/lib/utils";
 
 export type CogHistoryEntry = {
   sha: string;
@@ -135,7 +136,7 @@ export function HistoryModal({ cogId, className, children }: HistoryModalProps) 
                           </div>
                         </div>
                         <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                          <span>{entry.date ? new Date(entry.date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'Unknown date'}</span>
+                          <span>{formatTimestamp(entry.date)}</span>
                           <span>&middot;</span>
                           <span className="font-mono">{entry.shortSha}</span>
                         </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { MarqueeContent } from "@/components/MarqueeContent";
+import { formatTimestamp } from "@/lib/utils";
 
 type CogIndexEntry = {
   id: string;
@@ -25,21 +26,6 @@ export default async function MyCogsPage() {
   const session = await auth();
   if (!session) {
     redirect("/login");
-  }
-
-  function formatDateString(isoString: string | null | undefined) {
-    if (!isoString) return "Unknown";
-    const d = new Date(isoString);
-    if (isNaN(d.getTime())) return "Unknown";
-
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const day = d.getDate();
-    const month = months[d.getMonth()];
-    const year = d.getFullYear();
-    const hours = d.getHours().toString().padStart(2, "0");
-    const minutes = d.getMinutes().toString().padStart(2, "0");
-
-    return `${day} ${month} ${year}, ${hours}:${minutes}`;
   }
 
   const status = await getCogmitDataStatus();
@@ -187,10 +173,10 @@ export default async function MyCogsPage() {
                         ]}
                         items={[
                           cog.cogmitPublished ? (
-                            <span key="3">Latest Cogmit published: {new Date(cog.cogmitPublished).toLocaleString()}</span>
+                            <span key="3">Latest Cogmit published: {formatTimestamp(cog.cogmitPublished)}</span>
                           ) : null,
-                          <span key="4">Modified: {formatDateString(cog.modifiedAt)}</span>,
-                          <span key="5">Created: {formatDateString(cog.createdAt)}</span>
+                          <span key="4">Modified: {formatTimestamp(cog.modifiedAt)}</span>,
+                          <span key="5">Created: {formatTimestamp(cog.createdAt)}</span>
                         ].filter(Boolean) as React.ReactNode[]} 
                       />
                     </div>
