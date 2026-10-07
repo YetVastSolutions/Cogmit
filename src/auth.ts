@@ -8,7 +8,12 @@ declare module "next-auth" {
   }
 }
 
+if (!process.env.AUTH_SECRET && process.env.NODE_ENV !== "production") {
+  console.warn("⚠️ AUTH_SECRET is not defined. Please ensure it is set in your .env.local file.");
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET,
   providers: [
     GitHub({
       clientId: process.env.AUTH_GITHUB_ID,

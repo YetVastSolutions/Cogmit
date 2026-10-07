@@ -16,19 +16,14 @@ A ChildCog is a Cog nested beneath a RootCog or another ChildCog. It represents 
 
 ## How is a Cog structured?
 
-In the repository, a RootCog is represented by a directory containing exactly three files:
+In the repository, a RootCog is represented by a directory containing exactly two files:
 - `rootCog.md`
 - `rootCogInfo.json`
-- `children.json`
 
 ## Content versus metadata
 
 The file `rootCog.md` contains the human-readable Markdown content. 
 The file `rootCogInfo.json` contains the necessary metadata to identify and organize the Cog within the system.
-
-## ChildCogs
-
-The file `children.json` contains the RootCog's ChildCog collection, allowing Cogs to form a structured hierarchy.
 
 ## GitHub-backed model
 

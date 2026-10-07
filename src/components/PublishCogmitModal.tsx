@@ -1,15 +1,36 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X, CheckCircle2, Circle, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React, { useEffect, useState } from "react";
+import {
+  CheckCircle2,
+  Circle,
+  Clipboard,
+  ExternalLink,
+  Loader2,
+  X,
+} from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 export type PublishState = "idle" | "publishing" | "success" | "error";
+
+export type PublishStepStatus =
+  | "pending"
+  | "active"
+  | "completed"
+  | "error";
+
+export interface PublishStep {
+  id: string;
+  label: string;
+  status: PublishStepStatus;
+}
 
 interface PublishCogmitModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   state: PublishState;
+  activeStep?: string;
+  steps?: PublishStep[];
   publicUrl?: string;
   errorMessage?: string;
   onRetry?: () => void;
@@ -19,131 +40,206 @@ export function PublishCogmitModal({
   open,
   onOpenChange,
   state,
+  activeStep,
+  steps = [],
   publicUrl,
   errorMessage,
-  onRetry
+  onRetry,
 }: PublishCogmitModalProps) {
   const [copied, setCopied] = useState(false);
-  const [clipboardError, setClipboardError] = useState(false);
 
   useEffect(() => {
-    if (state === "success" && publicUrl) {
-      navigator.clipboard.writeText(publicUrl).then(() => {
-        setCopied(true);
-        setClipboardError(false);
-      }).catch(() => {
-        setClipboardError(true);
-      });
+    if (!open) {
+      setCopied(false);
     }
-  }, [state, publicUrl]);
+  }, [open]);
 
   if (!open) return null;
 
-  const handleCopy = () => {
-    if (publicUrl) {
-      navigator.clipboard.writeText(publicUrl).then(() => {
-        setCopied(true);
-        setClipboardError(false);
-        setTimeout(() => setCopied(false), 2000);
-      }).catch(() => {
-        setClipboardError(true);
-      });
-    }
+  const preventClose = state === "publishing";
+
+  const resolvedActiveStep =
+    activeStep ||
+    steps.find((step) => step.status === "active")?.id;
+
+  const handleClose = () => {
+    if (preventClose) return;
+    onOpenChange(false);
   };
 
-  const preventClose = state === "publishing";
-  const handleClose = () => {
-    if (!preventClose) {
-      onOpenChange(false);
+  const handleCopy = async () => {
+    if (!publicUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopied(true);
+
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 1500);
+    } catch {
+      setCopied(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={handleClose}>
-      <div 
-        className="bg-background border border-border rounded-lg shadow-lg w-full max-w-md p-6 relative flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {!preventClose && (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="publish-cogmit-title"
+    >
+      <div className="w-full max-w-lg rounded-lg border bg-background shadow-xl">
+        <div className="flex items-center justify-between border-b px-5 py-4">
+          <h2
+            id="publish-cogmit-title"
+            className="text-lg font-semibold"
+          >
+            {state === "success"
+              ? "Cogmit Published"
+              : state === "error"
+                ? "Publication Failed"
+                : "Publishing Cogmit"}
+          </h2>
+
           <button
+            type="button"
             onClick={handleClose}
-            className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            disabled={preventClose}
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
             aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
-        )}
-        
-        <h2 className="text-xl font-semibold mb-6">
-          {state === "idle" || state === "publishing" ? "Publish Cogmit" : 
-           state === "success" ? "Cogmit Published" : 
-           "Unable to publish Cogmit"}
-        </h2>
-        
-        {state === "publishing" && (
-          <div className="space-y-4">
-            <p className="text-muted-foreground mb-4">Preparing your Cogmit...</p>
-            <ul className="space-y-3">
-              <li className="flex items-center gap-3">
-                <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                <span>Save publication</span>
-              </li>
-              <li className="flex items-center gap-3 text-muted-foreground">
-                <Circle className="w-5 h-5" />
-                <span>Generate share link</span>
-              </li>
-              <li className="flex items-center gap-3 text-muted-foreground">
-                <Circle className="w-5 h-5" />
-                <span>Copy share link</span>
-              </li>
-            </ul>
-          </div>
-        )}
+        </div>
 
-        {state === "success" && publicUrl && (
-          <div className="space-y-6">
-            <p className="text-muted-foreground">Your Cogmit is now publicly shareable.</p>
-            
-            <div className="p-3 bg-muted rounded-md text-sm font-mono break-all border border-border">
-              {publicUrl}
-            </div>
+        <div className="space-y-5 px-5 py-5">
+          {(state === "publishing" ||
+            state === "error" ||
+            state === "success") &&
+            steps.length > 0 && (
+              <ul className="space-y-3">
+                {steps.map((step) => {
+                  const isActive =
+                    step.id === resolvedActiveStep &&
+                    step.status === "active";
 
-            <div className="flex items-center text-sm font-medium h-6">
-              {copied ? (
-                <span className="text-green-600 dark:text-green-500 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" /> Link copied to clipboard
-                </span>
-              ) : clipboardError ? (
-                <span className="text-muted-foreground">Copy the link below to share your Cogmit.</span>
-              ) : null}
-            </div>
+                  const isError = step.status === "error";
+                  const isCompleted = step.status === "completed";
 
-            <div className="flex gap-3 justify-end mt-4">
-              <Button variant="outline" onClick={handleCopy}>
-                Copy Link
-              </Button>
-              <Button onClick={handleClose}>
-                Done
-              </Button>
-            </div>
-          </div>
-        )}
+                  return (
+                    <li
+                      key={step.id}
+                      className="flex items-center gap-3"
+                    >
+                      {isCompleted ? (
+                        <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
+                      ) : isError ? (
+                        <X className="h-5 w-5 shrink-0 text-destructive" />
+                      ) : isActive ? (
+                        <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                      ) : (
+                        <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
+                      )}
 
-        {state === "error" && (
-          <div className="space-y-6">
-            <p className="text-destructive">
-              {errorMessage || "The Cogmit could not be published."}
-            </p>
-            <div className="flex gap-3 justify-end mt-4">
-              <Button variant="outline" onClick={onRetry}>
-                Try Again
-              </Button>
-              <Button onClick={handleClose}>
-                Close
-              </Button>
+                      <span
+                        className={
+                          isError ? "text-destructive" : ""
+                        }
+                      >
+                        {step.label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+          {state === "publishing" && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Please wait…
             </div>
-          </div>
-        )}
+          )}
+
+          {state === "success" && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                The Cogmit has been published successfully.
+              </p>
+
+              {publicUrl && (
+                <div className="rounded-md border bg-muted/40 p-3">
+                  <div className="break-all text-sm">
+                    {publicUrl}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                {publicUrl && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCopy}
+                  >
+                    <Clipboard className="mr-2 h-4 w-4" />
+                    {copied ? "Copied" : "Copy URL"}
+                  </Button>
+                )}
+
+                {publicUrl && (
+                  <a
+                    href={publicUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={buttonVariants({ variant: "default" })}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open Cogmit
+                  </a>
+                )}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {state === "error" && (
+            <div className="space-y-4">
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
+                <p className="text-sm text-destructive">
+                  {errorMessage ||
+                    "An unexpected error occurred while publishing the Cogmit."}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  onClick={onRetry}
+                  disabled={!onRetry}
+                >
+                  Try Again
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

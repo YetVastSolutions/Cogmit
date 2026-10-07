@@ -1,4 +1,3 @@
-import { getAnonymousOctokit } from "@/lib/github";
 import { Octokit } from "@octokit/rest";
 
 import Link from "next/link";
@@ -9,27 +8,9 @@ export default async function AuthorCogmitsPage({ params }: { params: Promise<{ 
   const repoName = "YVSApps_Cogmit_Data";
 
   let octokit: Octokit;
-  let hasGithubToken = false;
   try {
-    octokit = await getAnonymousOctokit();
-    hasGithubToken = true;
-  } catch (error) {
-    if (error instanceof Error && error.name === "ServiceTokenMissingError") {
-      return (
-        <div className="flex flex-col bg-background w-full max-w-[var(--page-content-max-width)] mx-auto p-8">
-          <h1 className="text-3xl font-bold text-destructive mb-4">Server Configuration Error</h1>
-          <p className="text-muted-foreground">The server is missing the required GITHUB_SERVICE_TOKEN to serve public Cogmits.</p>
-        </div>
-      );
-    }
-    if (error instanceof Error && error.name === "AuthenticationRequiredError") {
-      return (
-        <div className="flex flex-col bg-background w-full max-w-[var(--page-content-max-width)] mx-auto p-8">
-          <h1 className="text-3xl font-bold text-destructive mb-4">GitHub Authentication Failed</h1>
-          <p className="text-muted-foreground">The server&apos;s service token could not authenticate with GitHub.</p>
-        </div>
-      );
-    }
+    octokit = new Octokit();
+  } catch {
     return (
       <div className="flex flex-col bg-background w-full max-w-[var(--page-content-max-width)] mx-auto p-8">
         <h1 className="text-3xl font-bold text-destructive mb-4">Internal Error</h1>
@@ -39,23 +20,42 @@ export default async function AuthorCogmitsPage({ params }: { params: Promise<{ 
   }
 
   let defaultBranch = "";
+  let targetRepo = "";
 
   // 1. Resolve repository metadata
   try {
     const repoInfo = await octokit.rest.repos.get({
       owner: decodedAuthorId,
-      repo: repoName,
+      repo: "YVSApps_Data_Cogmits_Published",
     });
     defaultBranch = repoInfo.data.default_branch;
+    targetRepo = "YVSApps_Data_Cogmits_Published";
   } catch (error) {
-    console.error("GitHub repository access diagnostic", {
-      owner: decodedAuthorId,
-      repo: repoName,
-      hasGithubToken: hasGithubToken,
-      authenticationSource: "existing application GitHub auth",
-      errorStatus: (error as { status?: number })?.status,
-      errorMessage: error instanceof Error ? error.message : undefined,
-    });
+    if ((error as { status?: number })?.status === 404) {
+      try {
+        const repoInfo = await octokit.rest.repos.get({
+          owner: decodedAuthorId,
+          repo: "YVSApps_Data_Cogmit_Public",
+        });
+        defaultBranch = repoInfo.data.default_branch;
+        targetRepo = "YVSApps_Data_Cogmit_Public";
+      } catch (innerError) {
+        console.error("GitHub repository access diagnostic (Public Fallback)", {
+          owner: decodedAuthorId,
+          repo: "YVSApps_Data_Cogmit_Public",
+          errorStatus: (innerError as { status?: number })?.status,
+        });
+      }
+    } else {
+      console.error("GitHub repository access diagnostic (Published)", {
+        owner: decodedAuthorId,
+        repo: "YVSApps_Data_Cogmits_Published",
+        errorStatus: (error as { status?: number })?.status,
+      });
+    }
+  }
+
+  if (!targetRepo) {
     return (
       <div className="flex flex-col bg-background w-full max-w-[var(--page-content-max-width)] mx-auto p-8">
         <h1 className="text-3xl font-bold text-destructive mb-4">Repository Not Found</h1>
@@ -63,20 +63,20 @@ export default async function AuthorCogmitsPage({ params }: { params: Promise<{ 
     );
   }
 
-  // 2. Fetch cogsIndex.json
-  let publicIndexObj = { cogs: [] as { id: string, title?: string, project?: string, cogmitPublished?: string, cogmitId?: string, slug?: string }[] };
+  // 2. Fetch cogmitsIndex.json
+  let publicIndexObj = { cogmits: [] as { cogmitId?: string, id?: string, title?: string, path?: string, slug?: string, publishedAt?: string }[] };
   try {
     console.log("Diagnostic Log:", {
       authorId: decodedAuthorId,
-      repoName,
+      repoName: targetRepo,
       branchRef: defaultBranch,
-      indexPath: "cogsIndex.json"
+      indexPath: "cogmits/cogmitsIndex.json"
     });
 
     const { data } = await octokit.rest.repos.getContent({
       owner: decodedAuthorId,
-      repo: repoName,
-      path: "cogsIndex.json",
+      repo: targetRepo,
+      path: "cogmits/cogmitsIndex.json",
       ref: defaultBranch,
     });
 
@@ -96,7 +96,7 @@ export default async function AuthorCogmitsPage({ params }: { params: Promise<{ 
     );
   }
 
-  const cogmits = publicIndexObj.cogs?.filter(c => c.cogmitPublished) || [];
+  const cogmits = publicIndexObj.cogmits || [];
 
   return (
     <div className="flex flex-col bg-background w-full max-w-[var(--page-content-max-width)] mx-auto p-8">
@@ -112,17 +112,17 @@ export default async function AuthorCogmitsPage({ params }: { params: Promise<{ 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {cogmits.map((cogmit) => {
             const fallbackSlug = encodeURIComponent(
-              (cogmit.title || cogmit.id)
+              (cogmit.title || cogmit.cogmitId || cogmit.id || "")
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/(^-|-$)/g, "")
             );
             const slug = cogmit.slug || fallbackSlug;
             const linkId = cogmit.cogmitId || cogmit.id;
-            
+
             return (
-              <Link 
-                key={linkId} 
+              <Link
+                key={linkId}
                 href={`/cogmits/${decodedAuthorId}/${linkId}/${slug}`}
                 className="flex flex-col p-4 border border-border rounded-xl hover:border-primary/50 transition-colors bg-card"
               >
@@ -130,10 +130,10 @@ export default async function AuthorCogmitsPage({ params }: { params: Promise<{ 
                   {cogmit.title || "Untitled"}
                 </h2>
                 <div className="text-sm text-muted-foreground mb-4">
-                  {cogmit.project || "No Parent Project"}
+                  {/* Since cogmitsIndex doesn't store project implicitly, we omit it or change this */}
                 </div>
                 <div className="mt-auto text-xs text-muted-foreground/70">
-                  {cogmit.cogmitPublished ? new Date(cogmit.cogmitPublished).toLocaleDateString() : "Unknown date"}
+                  {cogmit.publishedAt ? new Date(cogmit.publishedAt).toLocaleString() : "Unknown date"}
                 </div>
               </Link>
             );

@@ -25,15 +25,6 @@ export function isAuthenticationRequiredError(error: unknown): error is Authenti
   return error instanceof AuthenticationRequiredError;
 }
 
-export class ServiceTokenMissingError extends Error {
-  code = "SERVICE_TOKEN_MISSING";
-
-  constructor(message = "Server is missing GITHUB_SERVICE_TOKEN") {
-    super(message);
-    this.name = "ServiceTokenMissingError";
-  }
-}
-
 export function isGitHubAuthError(error: unknown): boolean {
   if (isHttpError(error) && error.status === 401) {
     return true;
@@ -56,8 +47,10 @@ export function isGitHubAuthError(error: unknown): boolean {
 // Constants — canonical names
 // ---------------------------------------------------------------------------
 
-/** The fixed Cogmit data repository name inside the user's account. */
-export const COGMIT_REPO_NAME = "YVSApps_Cogmit_Data";
+/** Canonical Cogmit data repository names inside the user's account. */
+export const COGMIT_REPO_PUBLIC = "YVSApps_Data_Cogmit_Public";
+export const COGMIT_REPO_PRIVATE = "YVSApps_Data_Cogmit_Private";
+export const COGMIT_REPO_PUBLISHED = "YVSApps_Data_Cogmits_Published";
 
 // ---------------------------------------------------------------------------
 // Authenticated User Info
@@ -120,42 +113,6 @@ export async function getOctokit() {
   octokit.hook.error("request", async (error) => {
     if (isGitHubAuthError(error)) {
       throw new AuthenticationRequiredError();
-    }
-    throw error;
-  });
-
-  return octokit;
-}
-
-/**
- * Creates an Octokit instance for anonymous public reads,
- * using a server-side only service token.
- */
-export async function getAnonymousOctokit() {
-  const token = process.env.GITHUB_SERVICE_TOKEN;
-
-  if (!token) {
-    throw new ServiceTokenMissingError();
-  }
-
-  const octokit = new Octokit({
-    auth: token,
-    log: {
-      debug: console.debug,
-      info: console.info,
-      warn: console.warn,
-      error: (msg: unknown, ...args: unknown[]) => {
-        if (typeof msg === "string" && msg.includes(" - 404 with id ")) {
-          return;
-        }
-        console.error(msg, ...args);
-      },
-    },
-  });
-
-  octokit.hook.error("request", async (error) => {
-    if (isGitHubAuthError(error)) {
-      throw new AuthenticationRequiredError("Service token authentication failed.");
     }
     throw error;
   });
@@ -305,7 +262,7 @@ export async function listUserRepositories(perPage: number = 50) {
 }
 
 /**
- * Checks whether the canonical YVSApps_Cogmit_Data repository exists inside
+ * Checks whether the canonical YVSApps_Data_Cogmit_* repository exists inside
  * the authenticated user's account.
  *
  * Returns the repository object if found, or `null` if not.
@@ -313,18 +270,28 @@ export async function listUserRepositories(perPage: number = 50) {
 export async function detectCogmitRepository() {
   const octokit = await getOctokit();
   const user = await getAuthenticatedUser();
+  
   try {
     const { data } = await octokit.rest.repos.get({
       owner: user.login,
-      repo: COGMIT_REPO_NAME,
+      repo: COGMIT_REPO_PRIVATE,
     });
     return data;
   } catch (error: unknown) {
-    if (isHttpError(error) && error.status === 404) {
-      return null;
-    }
-    throw error;
+    if (!isHttpError(error) || error.status !== 404) throw error;
   }
+
+  try {
+    const { data } = await octokit.rest.repos.get({
+      owner: user.login,
+      repo: COGMIT_REPO_PUBLIC,
+    });
+    return data;
+  } catch (error: unknown) {
+    if (!isHttpError(error) || error.status !== 404) throw error;
+  }
+  
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -343,29 +310,138 @@ export type CogmitDataStatus =
  *   1. Does YVSApps_Cogmit_Data exist?
  *   2. Does YVSApps_Cogmit_Data contain a valid Cogmit structure?
  */
+export async function reconcileArchitecture(owner: string, isPrivate: boolean) {
+  const sourceRepo = isPrivate ? COGMIT_REPO_PRIVATE : COGMIT_REPO_PUBLIC;
+  
+  // Reconcile Source Repo
+  await reconcileRepoStructure(owner, sourceRepo, true);
+
+  if (isPrivate) {
+    const pubRepo = COGMIT_REPO_PUBLISHED;
+    try {
+      await (await getOctokit()).rest.repos.get({ owner, repo: pubRepo });
+    } catch (err: unknown) {
+      if (isHttpError(err) && err.status === 404) {
+        // Recreate it!
+        await (await getOctokit()).rest.repos.createForAuthenticatedUser({
+          name: pubRepo,
+          description: "Published Cogmits",
+          private: false,
+          auto_init: false,
+        });
+      } else {
+        throw err;
+      }
+    }
+    // Reconcile Published Repo
+    await reconcileRepoStructure(owner, pubRepo, false);
+  }
+}
+
+async function reconcileRepoStructure(owner: string, repo: string, isSource: boolean) {
+  const octokit = await getOctokit();
+
+  const ensureFile = async (path: string, content: string, message: string) => {
+    try {
+      await octokit.rest.repos.getContent({ owner, repo, path });
+    } catch (err: unknown) {
+      if (isHttpError(err) && (err.status === 404 || err.status === 409)) {
+        try {
+          await octokit.rest.repos.createOrUpdateFileContents({
+            owner,
+            repo,
+            path,
+            message,
+            content: Buffer.from(content).toString("base64"),
+          });
+        } catch (createErr: unknown) {
+           console.error(`GitHub reconciliation failure\noperation: create ${path}\nowner: ${owner}\nrepository: ${repo}\npath: ${path}\nbranch: default\nstatus: ${isHttpError(createErr) ? createErr.status : "unknown"}\nmessage: ${createErr instanceof Error ? createErr.message : String(createErr)}`);
+           throw createErr;
+        }
+      } else {
+        throw err;
+      }
+    }
+  };
+
+  if (isSource) {
+    await ensureFile("README.md", README_CONTENT, "Initial commit: Create README.md");
+    const initialIndex = { cogs: [] };
+    await ensureFile("cogsIndex.json", JSON.stringify(initialIndex, null, 2), "Initial commit: Create cogsIndex.json");
+    await ensureFile("projects/.gitkeep", "", "Initial commit: Create projects directory");
+    await ensureFile("NPPCogs/.gitkeep", "", "Initial commit: Create NPPCogs directory");
+    await ensureFile("deletedCogs/.gitkeep", "", "Initial commit: Create deletedCogs directory");
+    
+    if (repo === COGMIT_REPO_PUBLIC) {
+      await ensureFile("cogmits/.gitkeep", "", "Initial commit: Create cogmits directory");
+      const initialPubIndex = { cogmits: [] };
+      await ensureFile("cogmits/cogmitsIndex.json", JSON.stringify(initialPubIndex, null, 2), "Initial commit: Create cogmitsIndex.json");
+    }
+  } else {
+    await ensureFile("README.md", "# Published Cogmits\n\nThis repository contains published Cogmits.", "Initial commit: Create README.md");
+    const initialPubIndex = { cogmits: [] };
+    await ensureFile("cogmits/.gitkeep", "", "Initial commit: Create cogmits directory");
+    await ensureFile("cogmits/cogmitsIndex.json", JSON.stringify(initialPubIndex, null, 2), "Initial commit: Create cogmitsIndex.json");
+  }
+}
+
 export async function getCogmitDataStatus(): Promise<CogmitDataStatus> {
   const user = await getAuthenticatedUser();
   const owner = user.login;
+  const octokit = await getOctokit();
 
-  // Step 1: Check if YVSApps_Cogmit_Data exists
-  const repo = await detectCogmitRepository();
-  if (!repo) {
-    return { state: "repo_missing" };
+  let isPrivate: boolean | null = null;
+  let sourceRepoName = "";
+
+  try {
+    await octokit.rest.repos.get({ owner, repo: COGMIT_REPO_PRIVATE });
+    isPrivate = true;
+    sourceRepoName = COGMIT_REPO_PRIVATE;
+  } catch (err: unknown) {
+    if (isHttpError(err) && err.status === 404) {
+      try {
+        await octokit.rest.repos.get({ owner, repo: COGMIT_REPO_PUBLIC });
+        isPrivate = false;
+        sourceRepoName = COGMIT_REPO_PUBLIC;
+      } catch (err2: unknown) {
+        if (isHttpError(err2) && err2.status === 404) {
+          try {
+            await octokit.rest.repos.get({ owner, repo: COGMIT_REPO_PUBLISHED });
+            isPrivate = true;
+            sourceRepoName = COGMIT_REPO_PRIVATE;
+            await octokit.rest.repos.createForAuthenticatedUser({
+              name: COGMIT_REPO_PRIVATE,
+              description: "Cogmit application data — managed by Cogmit",
+              private: true,
+              auto_init: false,
+            });
+          } catch (err3: unknown) {
+            if (isHttpError(err3) && err3.status === 404) {
+              return { state: "repo_missing" };
+            }
+            throw err3;
+          }
+        } else {
+          throw err2;
+        }
+      }
+    } else {
+      throw err;
+    }
   }
 
-  // Step 2: Validate the Cogmit structure
-  const isValid = await validateCogmitRepository(owner, COGMIT_REPO_NAME);
+  await reconcileArchitecture(owner, isPrivate);
+
+  const isValid = await validateCogmitRepository(owner, sourceRepoName);
   if (!isValid) {
-    return { state: "repo_invalid", owner, repo: COGMIT_REPO_NAME };
+    return { state: "repo_invalid", owner, repo: sourceRepoName };
   }
 
-  // Step 3: Check if the repository is empty (zero cogs)
   let isEmpty = false;
   try {
-    const octokit = await getOctokit();
     const { data } = await octokit.rest.repos.getContent({
       owner,
-      repo: COGMIT_REPO_NAME,
+      repo: sourceRepoName,
       path: "cogsIndex.json",
     });
     
@@ -380,7 +456,7 @@ export async function getCogmitDataStatus(): Promise<CogmitDataStatus> {
     console.error("Failed to check if repository is empty:", err);
   }
 
-  return { state: "ready", owner, repo: COGMIT_REPO_NAME, isEmpty };
+  return { state: "ready", owner, repo: sourceRepoName, isEmpty };
 }
 
 // ---------------------------------------------------------------------------
@@ -388,31 +464,30 @@ export async function getCogmitDataStatus(): Promise<CogmitDataStatus> {
 // ---------------------------------------------------------------------------
 
 /**
- * Creates the YVSApps_Cogmit_Data repository for the authenticated user.
- *
- * The repository is always created as **private**.
+ * Creates the Cogmit data repository for the authenticated user.
  *
  * This will fail if:
  * - A repository with the same name already exists
  */
-export async function createCogmitRepository() {
+export async function createCogmitRepository(isPrivate: boolean = true) {
   const octokit = await getOctokit();
   const user = await getAuthenticatedUser();
   const owner = user.login;
+  const repoName = isPrivate ? COGMIT_REPO_PRIVATE : COGMIT_REPO_PUBLIC;
 
   // Safety: check if repo already exists to avoid overwriting
   const existing = await detectCogmitRepository();
   if (existing) {
     throw new Error(
-      `Repository ${owner}/${COGMIT_REPO_NAME} already exists. ` +
+      `A Cogmit repository already exists. ` +
       `Will not overwrite an existing repository.`
     );
   }
 
   const { data } = await octokit.rest.repos.createForAuthenticatedUser({
-    name: COGMIT_REPO_NAME,
+    name: repoName,
     description: "Cogmit application data — managed by Cogmit",
-    private: true,
+    private: isPrivate,
     auto_init: false, // Set to false so we can authoritatively create README.md ourselves
   });
 
@@ -559,15 +634,8 @@ Project directory names represent Project names (maximum 57 characters).
 A RootCog is represented by its own directory containing:
 - \\\`rootCog.md\\\`: Canonical human-readable RootCog content/cognition.
 - \\\`rootCogInfo.json\\\`: RootCog-specific metadata.
-- \\\`children.json\\\`: Current ChildCog collection.
 
 RootCog title maximum: 77 characters.
-
----
-
-# ChildCogs
-
-ChildCogs are currently stored collectively in \\\`children.json\\\`.
 
 ---
 
@@ -578,7 +646,6 @@ These are RootCogs that do not belong to a Project.
 They are stored under \\\`NPPCogs/<RootCogId>/\\\` with:
 - \\\`rootCog.md\\\`
 - \\\`rootCogInfo.json\\\`
-- \\\`children.json\\\`
 
 ---
 
@@ -606,7 +673,6 @@ Therefore Cogmit does not need to duplicate Git history in its JSON metadata.
 4. Do not delete cogsIndex.json.
 5. Do not rename rootCog.md.
 6. Do not rename rootCogInfo.json.
-7. Do not rename children.json.
 8. Do not introduce a cogs/ directory under Projects.
 9. Do not manually restructure Project/RootCog hierarchy unless Cogmit explicitly supports that operation.
 10. Prefer Cogmit's UI for Cogmit data operations.
@@ -704,6 +770,20 @@ export async function initializeCogmitRepository(owner: string, repo: string) {
     "", 
     "Initial commit: Create deletedCogs directory"
   );
+
+  if (repo === COGMIT_REPO_PUBLIC) {
+    await createCommit(
+      "cogmits/.gitkeep",
+      "",
+      "Initial commit: Create cogmits directory"
+    );
+    const initialPubIndex = { cogmits: [] };
+    await createCommit(
+      "cogmits/cogmitsIndex.json",
+      JSON.stringify(initialPubIndex, null, 2),
+      "Initial commit: Create cogmitsIndex.json"
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -719,40 +799,44 @@ export type InitCogmitResult =
 /**
  * The full "Initiate Cogmit Data" flow.
  *
- * 1. Ensure YVSApps_Cogmit_Data exists (create if missing)
+ * 1. Ensure Cogmit data repository exists (create if missing)
  * 2. Initialize the Cogmit structure (if not already present)
  */
-export async function initiateCogmitData(): Promise<InitCogmitResult> {
+export async function initiateCogmitData(isPrivate: boolean = true): Promise<InitCogmitResult> {
   const user = await getAuthenticatedUser();
   const owner = user.login;
+  const targetRepoName = isPrivate ? COGMIT_REPO_PRIVATE : COGMIT_REPO_PUBLIC;
 
-  // Step 1: Check if YVSApps_Cogmit_Data already exists
+  // Step 1: Check if Cogmit repository already exists
   const existingRepo = await detectCogmitRepository();
 
   if (existingRepo) {
     // Repo exists — check if it already has valid Cogmit structure
-    const isValid = await validateCogmitRepository(owner, COGMIT_REPO_NAME);
+    const isValid = await validateCogmitRepository(owner, existingRepo.name);
     if (isValid) {
       // Already a valid Cogmit repo — just use it
-      return { success: true, owner, repo: COGMIT_REPO_NAME };
+      return { success: true, owner, repo: existingRepo.name };
     }
 
     // Repo exists but doesn't have Cogmit structure — check if safe to init
-    const safe = await isRepositorySafeToInitialize(owner, COGMIT_REPO_NAME);
+    const safe = await isRepositorySafeToInitialize(owner, existingRepo.name);
     if (!safe) {
       return { success: false, reason: "repo_has_unrelated_files" };
     }
 
     // Safe to initialize existing empty repo
-    await initializeCogmitRepository(owner, COGMIT_REPO_NAME);
-    return { success: true, owner, repo: COGMIT_REPO_NAME };
+    await initializeCogmitRepository(owner, existingRepo.name);
+    return { success: true, owner, repo: existingRepo.name };
   }
 
   // Step 2: Create the repo and initialize
-  await createCogmitRepository();
-  await initializeCogmitRepository(owner, COGMIT_REPO_NAME);
+  await createCogmitRepository(isPrivate);
+  await initializeCogmitRepository(owner, targetRepoName);
+  
+  // Reconcile will also create/initialize the published repo for private mode
+  await reconcileArchitecture(owner, isPrivate);
 
-  return { success: true, owner, repo: COGMIT_REPO_NAME };
+  return { success: true, owner, repo: targetRepoName };
 }
 
 // ---------------------------------------------------------------------------

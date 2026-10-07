@@ -42,14 +42,14 @@ export async function checkCogmitDataStatus(): Promise<CogmitDataStatus | null> 
  * - Home page empty state ("Initiate Cogmit Data" button)
  * - Invalid repository state ("Initiate Cogmit Data" button)
  */
-export async function handleInitiateCogmitData(): Promise<InitCogmitResult> {
+export async function handleInitiateCogmitData(isPrivate: boolean = true): Promise<InitCogmitResult> {
   const session = await auth();
   if (!session) {
     return { success: false, reason: "error", message: "Not authenticated" };
   }
 
   try {
-    return await initiateCogmitData();
+    return await initiateCogmitData(isPrivate);
   } catch (error: unknown) {
     if (error && typeof error === "object" && "name" in error && error.name === "AuthenticationRequiredError") {
       redirect("/login");

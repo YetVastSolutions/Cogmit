@@ -1,7 +1,7 @@
-import { getAnonymousOctokit } from "@/lib/github";
 import { Octokit } from "@octokit/rest";
 import { auth } from "@/auth";
 import { ViewCog } from "@/components/ViewCog";
+import { headers } from "next/headers";
 
 export default async function CogmitPage({ params }: { params: Promise<{ authorId: string; cogmitId: string; slug: string }> }) {
   const { authorId, cogmitId, slug } = await params;
@@ -11,28 +11,10 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
 
   const session = await auth().catch(() => null);
   let octokit: Octokit;
-  let hasGithubToken = false;
-  
+
   try {
-    octokit = await getAnonymousOctokit();
-    hasGithubToken = true;
-  } catch (error) {
-    if (error instanceof Error && error.name === "ServiceTokenMissingError") {
-      return (
-        <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-8 bg-background">
-          <h1 className="text-3xl font-bold text-destructive mb-4">Server Configuration Error</h1>
-          <p className="text-muted-foreground">The server is missing the required GITHUB_SERVICE_TOKEN to serve public Cogmits.</p>
-        </div>
-      );
-    }
-    if (error instanceof Error && error.name === "AuthenticationRequiredError") {
-      return (
-        <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-8 bg-background">
-          <h1 className="text-3xl font-bold text-destructive mb-4">GitHub Authentication Failed</h1>
-          <p className="text-muted-foreground">The server&apos;s service token could not authenticate with GitHub.</p>
-        </div>
-      );
-    }
+    octokit = new Octokit();
+  } catch {
     return (
       <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-8 bg-background">
         <h1 className="text-3xl font-bold text-destructive mb-4">Internal Error</h1>
@@ -42,23 +24,42 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
   }
 
   let defaultBranch = "";
-  
+  let targetRepo = "";
+
   // 1. Resolve repository metadata
   try {
     const repoInfo = await octokit.rest.repos.get({
       owner: decodedAuthorId,
-      repo: repoName,
+      repo: "YVSApps_Data_Cogmits_Published",
     });
     defaultBranch = repoInfo.data.default_branch;
+    targetRepo = "YVSApps_Data_Cogmits_Published";
   } catch (error) {
-    console.error("GitHub repository access diagnostic", {
-      owner: decodedAuthorId,
-      repo: repoName,
-      hasGithubToken: hasGithubToken,
-      authenticationSource: "existing application GitHub auth",
-      errorStatus: (error as { status?: number })?.status,
-      errorMessage: error instanceof Error ? error.message : undefined,
-    });
+    if ((error as { status?: number })?.status === 404) {
+      try {
+        const repoInfo = await octokit.rest.repos.get({
+          owner: decodedAuthorId,
+          repo: "YVSApps_Data_Cogmit_Public",
+        });
+        defaultBranch = repoInfo.data.default_branch;
+        targetRepo = "YVSApps_Data_Cogmit_Public";
+      } catch (innerError) {
+        console.error("GitHub repository access diagnostic (Public Fallback)", {
+          owner: decodedAuthorId,
+          repo: "YVSApps_Data_Cogmit_Public",
+          errorStatus: (innerError as { status?: number })?.status,
+        });
+      }
+    } else {
+      console.error("GitHub repository access diagnostic (Published)", {
+        owner: decodedAuthorId,
+        repo: "YVSApps_Data_Cogmits_Published",
+        errorStatus: (error as { status?: number })?.status,
+      });
+    }
+  }
+
+  if (!targetRepo) {
     return (
       <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-8 bg-background">
         <h1 className="text-3xl font-bold text-destructive mb-4">Repository Not Found</h1>
@@ -66,20 +67,20 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
     );
   }
 
-  // 2. Fetch cogsIndex.json
-  let publicIndexObj = { cogs: [] as { id: string, path?: string, project?: string, title?: string, cogmitId?: string, slug?: string, cogmitPublished?: string }[] };
+  // 2. Fetch cogmitsIndex.json
+  let publicIndexObj = { cogmits: [] as { cogmitId?: string, id?: string, path?: string, title?: string, slug?: string }[] };
   try {
     console.log("Diagnostic Log:", {
       authorId: decodedAuthorId,
-      repoName,
+      repoName: targetRepo,
       branchRef: defaultBranch,
-      indexPath: "cogsIndex.json"
+      indexPath: "cogmits/cogmitsIndex.json"
     });
 
     const { data } = await octokit.rest.repos.getContent({
       owner: decodedAuthorId,
-      repo: repoName,
-      path: "cogsIndex.json",
+      repo: targetRepo,
+      path: "cogmits/cogmitsIndex.json",
       ref: defaultBranch,
     });
 
@@ -101,15 +102,13 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
 
   // 3. Find requested Cogmit
   let cogPath = "";
-  let project = "";
   let title = decodedCogmitId;
 
-  const cogInfo = publicIndexObj.cogs?.find(
-    (c) => c.cogmitId === decodedCogmitId && c.cogmitPublished && c.slug === slug
+  const cogInfo = publicIndexObj.cogmits?.find(
+    (c) => (c.cogmitId === decodedCogmitId || c.id === decodedCogmitId) && c.slug === slug
   );
   if (cogInfo && cogInfo.path) {
     cogPath = cogInfo.path;
-    project = cogInfo.project || "No Parent Project";
     title = cogInfo.title || decodedCogmitId;
   }
 
@@ -123,26 +122,24 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
   }
 
   let content = "";
-
   try {
-    const { data: mdData } = await octokit.rest.repos.getContent({
+    const { data } = await octokit.rest.repos.getContent({
       owner: decodedAuthorId,
-      repo: repoName,
-      path: `${cogPath}/rootCog.md`,
+      repo: targetRepo,
+      path: cogPath,
       ref: defaultBranch,
     });
-    if (mdData && !Array.isArray(mdData) && "content" in mdData) {
-      content = Buffer.from(mdData.content, "base64").toString("utf8");
+    if (data && !Array.isArray(data) && "content" in data) {
+      content = Buffer.from(data.content, "base64").toString("utf-8");
     }
-
-
   } catch (error) {
-    console.error("Failed to load public cogmit content", error);
+    console.error("Failed to load cogmit content", error);
   }
+  const headersList = await headers();
+  const host = headersList.get("x-forwarded-host") ?? headersList.get("host");
+  const protocol = headersList.get("x-forwarded-proto") ?? "http";
 
-  // TODO: we can configure NEXT_PUBLIC_BASE_URL or just use a relative string for the share URL if needed
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : `https://cogmit.yvs.app/cogmits/${decodedAuthorId}/${decodedCogmitId}/${slug}`;
-
+  const shareUrl = `${protocol}://${host}/cogmits/${decodedAuthorId}/${decodedCogmitId}/${slug}`;
   const currentUsername = session?.user?.name || (session?.user as { login?: string })?.login || "";
   const isAuthor = currentUsername === decodedAuthorId;
 
@@ -150,7 +147,7 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
     <div className="w-full h-[calc(100vh-64px)] overflow-hidden">
       <ViewCog
         title={title}
-        project={project}
+        project={""}
         content={content}
         mode="cogmit"
         authorId={decodedAuthorId}

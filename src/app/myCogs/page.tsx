@@ -29,14 +29,14 @@ export default async function MyCogsPage() {
     if (!isoString) return "Unknown";
     const d = new Date(isoString);
     if (isNaN(d.getTime())) return "Unknown";
-    
+
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const day = d.getDate();
     const month = months[d.getMonth()];
     const year = d.getFullYear();
     const hours = d.getHours().toString().padStart(2, "0");
     const minutes = d.getMinutes().toString().padStart(2, "0");
-    
+
     return `${day} ${month} ${year}, ${hours}:${minutes}`;
   }
 
@@ -124,7 +124,7 @@ export default async function MyCogsPage() {
           let createdAt = null;
           let modifiedAt = null;
           const published = false; // Implementation gap: publication state does not exist in data model
-          
+
           try {
             // Fetch commits for this Cog path to get GitHub-derived timestamps
             const commitsData = await octokit.rest.repos.listCommits({
@@ -132,7 +132,7 @@ export default async function MyCogsPage() {
               repo: status.repo,
               path: cog.path,
             });
-            
+
             if (commitsData.data && commitsData.data.length > 0) {
               // First commit in the list is the most recent (modified)
               modifiedAt = commitsData.data[0].commit.committer?.date || null;
@@ -173,12 +173,12 @@ export default async function MyCogsPage() {
                     <h3 className="text-xl font-semibold text-foreground truncate pr-12">
                       {cog.title || "Untitled RootCog"}
                     </h3>
-                    
+
                     <div className="mt-auto flex flex-col gap-2 min-w-0">
                       {/* ROW 2 */}
                       <CogMetadataRow className="text-sm text-muted-foreground font-medium">
-                        <span className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium text-black ${cog.published ? "bg-yellow-400" : "bg-green-500"}`}>
-                          {cog.published ? "Published" : "Not published"}
+                        <span className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium text-black ${cog.cogmitPublished ? "bg-yellow-400" : "bg-green-500"}`}>
+                          {cog.cogmitPublished ? "Published" : "Not published"}
                         </span>
                         <span className="opacity-50">|</span>
                         <span>{cog.project || "NPPCog"}</span>
