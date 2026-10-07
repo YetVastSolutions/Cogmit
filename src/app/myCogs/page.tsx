@@ -3,7 +3,7 @@ import { getCogmitDataStatus, getOctokit } from "@/lib/github";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { CogMetadataRow } from "@/components/CogMetadataRow";
+import { MetadataMarquee } from "@/components/MetadataMarquee";
 
 type CogIndexEntry = {
   id: string;
@@ -11,6 +11,7 @@ type CogIndexEntry = {
   path: string;
   project?: string;
   deletedAt?: string;
+  cogmitPublished?: string;
 };
 
 type CogWithDetails = CogIndexEntry & {
@@ -168,28 +169,29 @@ export default async function MyCogsPage() {
             {cogsWithDetails.map((cog: CogWithDetails) => (
               <div key={cog.id} className="relative group">
                 <Link href={`/myCogs/${cog.id}/viewCog`} className="min-w-0 block h-full">
-                  <div className="border border-border p-6 rounded-xl bg-card hover:border-yellow-500 transition-colors h-full flex flex-col gap-3 min-w-0 overflow-hidden">
+                  <div className="border border-border p-6 rounded-xl bg-card hover:border-yellow-500 transition-colors h-full flex flex-col gap-3 min-w-0">
                     {/* ROW 1 */}
                     <h3 className="text-xl font-semibold text-foreground truncate pr-12">
                       {cog.title || "Untitled RootCog"}
                     </h3>
 
-                    <div className="mt-auto flex flex-col gap-2 min-w-0">
-                      {/* ROW 2 */}
-                      <CogMetadataRow className="text-sm text-muted-foreground font-medium">
-                        <span className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium text-black ${cog.cogmitPublished ? "bg-yellow-400" : "bg-green-500"}`}>
-                          {cog.cogmitPublished ? "Published" : "Not published"}
-                        </span>
-                        <span className="opacity-50">|</span>
-                        <span>{cog.project || "NPPCog"}</span>
-                      </CogMetadataRow>
-
-                      {/* ROW 3 */}
-                      <CogMetadataRow className="text-xs text-muted-foreground">
-                        <span>Modified: {formatDateString(cog.modifiedAt)}</span>
-                        <span className="opacity-50">|</span>
-                        <span>Created: {formatDateString(cog.createdAt)}</span>
-                      </CogMetadataRow>
+                    <div className="mt-auto flex flex-col min-w-0 w-full text-sm text-muted-foreground font-medium">
+                      <MetadataMarquee 
+                        layout="static-above"
+                        staticItems={[
+                          <span key="1" className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium text-black ${cog.cogmitPublished ? "bg-yellow-400" : "bg-green-500"}`}>
+                            {cog.cogmitPublished ? "Published" : "Not published"}
+                          </span>,
+                          <span key="2">{cog.project || "NPPCog"}</span>
+                        ]}
+                        items={[
+                          cog.cogmitPublished ? (
+                            <span key="3">Latest Cogmit published: {new Date(cog.cogmitPublished).toLocaleString()}</span>
+                          ) : null,
+                          <span key="4">Modified: {formatDateString(cog.modifiedAt)}</span>,
+                          <span key="5">Created: {formatDateString(cog.createdAt)}</span>
+                        ].filter(Boolean)} 
+                      />
                     </div>
                   </div>
                 </Link>
