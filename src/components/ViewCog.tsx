@@ -8,7 +8,7 @@ import { Volume2, User, Share, Heart, MessageSquare, BookPlus } from "lucide-rea
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { CogActionRow } from "@/components/CogActionRow";
-import { MetadataMarquee } from "@/components/MetadataMarquee";
+import { MarqueeContent } from "@/components/MarqueeContent";
 
 export interface ViewCogProps {
   title: string;
@@ -58,11 +58,27 @@ export function ViewCog({
   const [copied, setCopied] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
+  const isPublished = !!published;
+  
+  const staticItems = [
+    <span key="published" className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium text-black ${isPublished ? "bg-[#FFFF11]" : "bg-green-500"}`}>
+      {isPublished ? `Published ${new Date(published).toLocaleString()}` : "Not published"}
+    </span>
+  ];
+
+  const marqueeItems = [
+    lastModified ? (
+      <span key="2">Cog last modified: {new Date(lastModified).toLocaleString()}</span>
+    ) : null,
+    createdAt ? (
+      <span key="3">Cog created: {new Date(createdAt).toLocaleString()}</span>
+    ) : null,
+  ].filter(Boolean) as React.ReactNode[];
+
   const metadataContent = (
-    <MetadataMarquee 
-      published={published} 
-      lastModified={lastModified} 
-      createdAt={createdAt} 
+    <MarqueeContent 
+      staticItems={staticItems}
+      items={marqueeItems} 
     />
   );
 
@@ -114,8 +130,9 @@ export function ViewCog({
             projectEnabled={false}
             projects={projects}
             onMoveProject={onMoveProject}
-            shareEnabled={false}
+            shareEnabled={true}
             shareVisible={showShare}
+            onShare={handleShare}
             cogInEnabled={false}
             editCogEnabled={true}
             editUrl={editUrl}

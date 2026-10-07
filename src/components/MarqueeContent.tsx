@@ -3,23 +3,17 @@
 import React, { useRef, useState, useEffect, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-interface MetadataMarqueeProps {
-  published?: string;
-  lastModified?: string;
-  createdAt?: string;
-  items?: ReactNode[];
+interface MarqueeContentProps {
+  items: ReactNode[];
   staticItems?: ReactNode[];
   layout?: "same-row" | "static-above";
 }
 
-export function MetadataMarquee({ 
-  published, 
-  lastModified, 
-  createdAt, 
-  items: customItems, 
+export function MarqueeContent({ 
+  items, 
   staticItems,
   layout = "same-row"
-}: MetadataMarqueeProps) {
+}: MarqueeContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -36,19 +30,7 @@ export function MetadataMarquee({
     checkOverflow();
     window.addEventListener("resize", checkOverflow);
     return () => window.removeEventListener("resize", checkOverflow);
-  }, [published, lastModified, createdAt, customItems, layout]);
-
-  const items = customItems || [
-    <span key="1">
-      Latest Cogmit published: {published ? new Date(published).toLocaleString() : "Cogmit never published"}
-    </span>,
-    lastModified ? (
-      <span key="2">Cog last modified: {new Date(lastModified).toLocaleString()}</span>
-    ) : null,
-    createdAt ? (
-      <span key="3">Cog created: {new Date(createdAt).toLocaleString()}</span>
-    ) : null,
-  ].filter(Boolean) as ReactNode[];
+  }, [items, staticItems, layout]);
 
   const isStaticAbove = layout === "static-above";
 

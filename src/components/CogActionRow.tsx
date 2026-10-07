@@ -124,8 +124,7 @@ export function CogActionRow({
         {/* Share (Only in View Mode) */}
         {mode === "view" && shareVisible && (
           <Button 
-            variant="outline" 
-            className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none" 
+            className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none bg-[#FFFF11] hover:bg-[#e6e60f] text-black" 
             disabled={!shareEnabled}
             onClick={onShare}
           >

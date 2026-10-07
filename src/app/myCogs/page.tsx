@@ -2,8 +2,9 @@ import { auth } from "@/auth";
 import { getCogmitDataStatus, getOctokit } from "@/lib/github";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { MetadataMarquee } from "@/components/MetadataMarquee";
+import { MarqueeContent } from "@/components/MarqueeContent";
 
 type CogIndexEntry = {
   id: string;
@@ -176,10 +177,10 @@ export default async function MyCogsPage() {
                     </h3>
 
                     <div className="mt-auto flex flex-col min-w-0 w-full text-sm text-muted-foreground font-medium">
-                      <MetadataMarquee 
+                      <MarqueeContent 
                         layout="static-above"
                         staticItems={[
-                          <span key="1" className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium text-black ${cog.cogmitPublished ? "bg-yellow-400" : "bg-green-500"}`}>
+                          <span key="1" className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium text-black ${cog.cogmitPublished ? "bg-[#FFFF11]" : "bg-green-500"}`}>
                             {cog.cogmitPublished ? "Published" : "Not published"}
                           </span>,
                           <span key="2">{cog.project || "NPPCog"}</span>
@@ -190,7 +191,7 @@ export default async function MyCogsPage() {
                           ) : null,
                           <span key="4">Modified: {formatDateString(cog.modifiedAt)}</span>,
                           <span key="5">Created: {formatDateString(cog.createdAt)}</span>
-                        ].filter(Boolean)} 
+                        ].filter(Boolean) as React.ReactNode[]} 
                       />
                     </div>
                   </div>

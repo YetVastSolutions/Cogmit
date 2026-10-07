@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
@@ -24,7 +24,7 @@ import {
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
 
 import { CogActionRow } from "@/components/CogActionRow";
-import { MetadataMarquee } from "@/components/MetadataMarquee";
+import { MarqueeContent } from "@/components/MarqueeContent";
 
 import {
   PublishCogmitModal,
@@ -525,12 +525,28 @@ export function EditCogClient({
     }
   };
 
+  const isPublished = !!published;
+  
+  const staticItems = [
+    <span key="published" className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium text-black ${isPublished ? "bg-[#FFFF11]" : "bg-green-500"}`}>
+      {isPublished ? `Published ${new Date(published).toLocaleString()}` : "Not published"}
+    </span>
+  ];
+
+  const marqueeItems = [
+    lastModified ? (
+      <span key="2">Cog last modified: {new Date(lastModified).toLocaleString()}</span>
+    ) : null,
+    createdAt ? (
+      <span key="3">Cog created: {new Date(createdAt).toLocaleString()}</span>
+    ) : null,
+  ].filter(Boolean) as React.ReactNode[];
+
   const metadataContent =
     mode === "existing" ? (
-      <MetadataMarquee 
-        published={published} 
-        lastModified={lastModified} 
-        createdAt={createdAt} 
+      <MarqueeContent 
+        staticItems={staticItems}
+        items={marqueeItems} 
       />
     ) : null;
 
