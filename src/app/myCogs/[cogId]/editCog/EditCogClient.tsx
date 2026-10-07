@@ -24,6 +24,7 @@ import {
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
 
 import { CogActionRow } from "@/components/CogActionRow";
+import { MetadataMarquee } from "@/components/MetadataMarquee";
 
 import {
   PublishCogmitModal,
@@ -42,6 +43,7 @@ interface EditCogClientProps {
   projects: string[];
   createdAt?: string;
   lastModified?: string;
+  published?: string;
 }
 
 
@@ -65,6 +67,7 @@ export function EditCogClient({
   projects,
   createdAt,
   lastModified,
+  published,
 }: EditCogClientProps) {
   const router = useRouter();
 
@@ -82,6 +85,11 @@ export function EditCogClient({
 
   const [error, setError] =
     useState<string | null>(null);
+
+  const isDirty =
+    title !== initialTitle ||
+    project !== initialProject ||
+    content !== initialContent;
 
   const [publishModalOpen, setPublishModalOpen] =
     useState(false);
@@ -519,25 +527,11 @@ export function EditCogClient({
 
   const metadataContent =
     mode === "existing" ? (
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
-        {createdAt && (
-          <span>
-            Created:{" "}
-            {new Date(
-              createdAt
-            ).toLocaleString()}
-          </span>
-        )}
-
-        {lastModified && (
-          <span>
-            Last modified:{" "}
-            {new Date(
-              lastModified
-            ).toLocaleString()}
-          </span>
-        )}
-      </div>
+      <MetadataMarquee 
+        published={published} 
+        lastModified={lastModified} 
+        createdAt={createdAt} 
+      />
     ) : null;
 
   return (
@@ -656,7 +650,7 @@ export function EditCogClient({
               return res;
             }}
             shareEnabled={false}
-            cogInEnabled={true}
+            cogInEnabled={isDirty}
             onCogIn={
               handleSavePrivate
             }
@@ -665,7 +659,7 @@ export function EditCogClient({
             }
             editCogEnabled={true}
             onEditCog={() => { }}
-            cogmitEnabled={true}
+            cogmitEnabled={isDirty}
             onCogmit={
               handlePublishPublic
             }

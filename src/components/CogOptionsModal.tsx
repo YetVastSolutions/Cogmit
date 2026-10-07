@@ -20,11 +20,12 @@ export function CogOptionsModal({ cogId, className, deleteEnabled = true }: CogO
     <>
       <Button 
         variant="outline" 
-        className={cn("shrink-0 px-3", className)}
+        className={cn("shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none", className)}
         aria-label="Cog options"
         onClick={() => setIsOpen(true)}
       >
-        <MoreHorizontal className="w-5 h-5" />
+        <span className="hidden md:inline whitespace-nowrap">Options</span>
+        <MoreHorizontal className="w-5 h-5 md:ml-2 shrink-0" />
       </Button>
 
       {isOpen && (

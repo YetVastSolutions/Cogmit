@@ -98,6 +98,7 @@ export default async function ViewCogPage({ params }: { params: Promise<{ cogId:
       content={content}
       createdAt={createdAt}
       lastModified={lastModified}
+      published={cogIndexEntry?.cogmitPublished}
       editUrl={`/myCogs/${decodedCogId}/editCog`}
       deleteCogId={decodedCogId}
       cogId={decodedCogId}

@@ -87,6 +87,7 @@ export default async function EditCogPage({ params }: { params: Promise<{ cogId:
       projects={projects}
       createdAt={createdAt}
       lastModified={lastModified}
+      published={cogIndexEntry?.cogmitPublished}
     />
   );
 }

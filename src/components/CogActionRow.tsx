@@ -1,6 +1,8 @@
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Share, Save, Pencil, Megaphone, MoreHorizontal } from "lucide-react";
+"use client";
+
+import React, { useState } from "react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Share, Save, Pencil, Megaphone, MoreHorizontal, Pin } from "lucide-react";
 import { ProjectDisplay } from "@/components/ProjectDisplay";
 import { CogOptionsModal } from "@/components/CogOptionsModal";
 import Link from "next/link";
@@ -17,6 +19,7 @@ interface CogActionRowProps {
   
   // Share
   shareEnabled: boolean;
+  shareVisible?: boolean;
   onShare?: () => void;
   
   // Cog In
@@ -31,6 +34,7 @@ interface CogActionRowProps {
   
   // Cogmit
   cogmitEnabled: boolean;
+  cogmitVisible?: boolean;
   onCogmit?: () => void;
   isCogmitPending?: boolean;
   
@@ -43,106 +47,119 @@ interface CogActionRowProps {
 export function CogActionRow({
   mode,
   project, projectEnabled, projects, onMoveProject,
-  shareEnabled, onShare,
+  shareEnabled, shareVisible = true, onShare,
   cogInEnabled, onCogIn, isCogInPending,
   editCogEnabled, editUrl, onEditCog,
-  cogmitEnabled, onCogmit, isCogmitPending,
+  cogmitEnabled, cogmitVisible = true, onCogmit, isCogmitPending,
   optionsEnabled, cogId, deleteEnabled
 }: CogActionRowProps) {
-  const commonHeightClass = "h-10";
+  const [isPinned, setIsPinned] = useState(false);
 
   return (
-    <div className="flex flex-col sm:flex-row w-full gap-2 items-center">
-      {/* LEFT HALF (50%) */}
-      <div className="flex w-full sm:w-1/2 gap-2 items-center">
-        {/* First Action (25% overall) */}
-        <div className="w-1/2">
-          {mode === "view" ? (
-            editUrl ? (
-              <Link
-                href={!editCogEnabled ? "#" : editUrl}
-                className={cn(
-                  "w-full inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-accent hover:text-accent-foreground", 
-                  commonHeightClass,
-                  !editCogEnabled && "opacity-50 pointer-events-none cursor-not-allowed"
-                )}
-              >
-                <Pencil className="w-4 h-4 mr-2 shrink-0" /> <span className="truncate">Edit Cog</span>
-              </Link>
-            ) : (
-              <Button 
-                variant="outline"
-                className={cn("w-full truncate", commonHeightClass)}
-                disabled={!editCogEnabled}
-                onClick={onEditCog}
-              >
-                <Pencil className="w-4 h-4 mr-2 shrink-0" /> <span className="truncate">Edit Cog</span>
-              </Button>
-            )
+    <div className="flex flex-nowrap w-full items-center justify-center relative">
+      {/* Left Container */}
+      <div className="flex flex-1 justify-end pr-2 md:pr-4 gap-2 min-w-[88px]">
+        {/* Pin */}
+        <Button 
+          variant="outline" 
+          className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none" 
+          aria-label={isPinned ? "Unpin" : "Pin"}
+          onClick={() => setIsPinned(!isPinned)}
+        >
+          <span className="hidden md:inline whitespace-nowrap">{isPinned ? "Pinned" : "Pin"}</span>
+          <Pin className={cn("w-4 h-4 md:ml-2 shrink-0", isPinned && "fill-current")} />
+        </Button>
+
+        {/* Edit Cog / Cog In */}
+        {mode === "view" ? (
+          editUrl ? (
+            <Link
+              href={!editCogEnabled ? "#" : editUrl}
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none",
+                !editCogEnabled && "opacity-50 pointer-events-none cursor-not-allowed"
+              )}
+            >
+              <span className="hidden md:inline whitespace-nowrap">Edit Cog</span>
+              <Pencil className="w-4 h-4 md:ml-2 shrink-0" />
+            </Link>
           ) : (
             <Button 
-              variant="secondary" 
-              className={cn("w-full bg-[#4B0084] hover:bg-[#3A0066] text-white hover:text-white disabled:opacity-50 truncate", commonHeightClass)}
-              disabled={!cogInEnabled || isCogInPending}
-              onClick={onCogIn}
+              variant="outline"
+              className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
+              disabled={!editCogEnabled}
+              onClick={onEditCog}
             >
-              <Save className="w-4 h-4 mr-2 shrink-0" /> <span className="truncate">Cog In</span>
+              <span className="hidden md:inline whitespace-nowrap">Edit Cog</span>
+              <Pencil className="w-4 h-4 md:ml-2 shrink-0" />
             </Button>
-          )}
-        </div>
-        
-        {/* Project (25% overall) */}
-        <div className="w-1/2">
-          <ProjectDisplay 
-            project={project} 
-            disabled={!projectEnabled} 
-            projects={projects} 
-            onSave={onMoveProject}
-            className={cn("w-full", commonHeightClass)}
-          />
-        </div>
+          )
+        ) : (
+          <Button 
+            variant="secondary" 
+            className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none bg-[#4B0084] hover:bg-[#3A0066] text-white hover:text-white disabled:opacity-50"
+            disabled={!cogInEnabled || isCogInPending}
+            onClick={onCogIn}
+          >
+            <span className="hidden md:inline whitespace-nowrap">Cog In</span>
+            <Save className="w-4 h-4 md:ml-2 shrink-0" />
+          </Button>
+        )}
       </div>
 
-      {/* RIGHT HALF (50%) */}
-      <div className="flex w-full sm:w-1/2 gap-2 items-center">
-        {/* Share (20% overall / 40% of right half) */}
-        <div className="w-[40%]">
+      {/* Center Container */}
+      <div className="flex-none shrink-0 w-auto flex justify-center z-10 max-w-full min-w-0">
+        <ProjectDisplay 
+          project={project} 
+          disabled={!projectEnabled} 
+          projects={projects} 
+          onSave={onMoveProject}
+          className="h-10 px-4 w-auto min-w-0 sm:min-w-[140px] flex items-center justify-center"
+        />
+      </div>
+
+      {/* Right Container */}
+      <div className="flex flex-1 justify-start pl-2 md:pl-4 gap-2 min-w-[88px]">
+        {/* Share (Only in View Mode) */}
+        {mode === "view" && shareVisible && (
           <Button 
             variant="outline" 
-            className={cn("w-full truncate", commonHeightClass)} 
+            className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none" 
             disabled={!shareEnabled}
             onClick={onShare}
           >
-            <Share className="w-4 h-4 mr-2 shrink-0" /> <span className="truncate">Share</span>
+            <span className="hidden md:inline whitespace-nowrap">Share</span>
+            <Share className="w-4 h-4 md:ml-2 shrink-0" />
           </Button>
-        </div>
+        )}
 
-        {/* Cogmit (20% overall / 40% of right half) */}
-        <div className="w-[40%]">
+        {/* Cogmit */}
+        {cogmitVisible && (
           <Button 
-            className={cn("w-full bg-[#FFFF11] hover:bg-[#e6e60f] text-black truncate", commonHeightClass)}
+            className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none bg-[#FFFF11] hover:bg-[#e6e60f] text-black"
             disabled={!cogmitEnabled || isCogmitPending}
             onClick={onCogmit}
           >
-            <span className="truncate">Cogmit</span> <Megaphone className="w-4 h-4 ml-2 shrink-0" />
+            <span className="hidden md:inline whitespace-nowrap">Cogmit</span>
+            <Megaphone className="w-4 h-4 md:ml-2 shrink-0" />
           </Button>
-        </div>
+        )}
 
-        {/* Options (10% overall / 20% of right half) */}
-        <div className="w-[20%]">
-          {optionsEnabled && cogId ? (
-            <CogOptionsModal cogId={cogId} className={cn("w-full", commonHeightClass)} deleteEnabled={deleteEnabled} />
-          ) : (
-            <Button 
-              variant="outline" 
-              className={cn("w-full px-0", commonHeightClass)}
-              disabled
-              aria-label="Cog options"
-            >
-              <MoreHorizontal className="w-5 h-5 shrink-0" />
-            </Button>
-          )}
-        </div>
+        {/* Options */}
+        {optionsEnabled && cogId ? (
+          <CogOptionsModal cogId={cogId} className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none" deleteEnabled={deleteEnabled} />
+        ) : (
+          <Button 
+            variant="outline" 
+            className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
+            disabled
+            aria-label="Cog options"
+          >
+            <span className="hidden md:inline whitespace-nowrap">Options</span>
+            <MoreHorizontal className="w-5 h-5 md:ml-2 shrink-0" />
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { Volume2, User, Share, Heart, MessageSquare, BookPlus } from "lucide-rea
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { CogActionRow } from "@/components/CogActionRow";
+import { MetadataMarquee } from "@/components/MetadataMarquee";
 
 export interface ViewCogProps {
   title: string;
@@ -15,6 +16,7 @@ export interface ViewCogProps {
   content: string;
   createdAt?: string;
   lastModified?: string;
+  published?: string;
 
   mode?: "private" | "cogmit";
 
@@ -40,6 +42,7 @@ export function ViewCog({
   content,
   createdAt,
   lastModified,
+  published,
   mode = "private",
   editUrl,
 
@@ -56,14 +59,11 @@ export function ViewCog({
   const [isLiked, setIsLiked] = useState(false);
 
   const metadataContent = (
-    <div className="flex flex-wrap gap-x-4 gap-y-1">
-      {createdAt && (
-        <span>Created: {new Date(createdAt).toLocaleString()}</span>
-      )}
-      {lastModified && (
-        <span>Last modified: {new Date(lastModified).toLocaleString()}</span>
-      )}
-    </div>
+    <MetadataMarquee 
+      published={published} 
+      lastModified={lastModified} 
+      createdAt={createdAt} 
+    />
   );
 
   const handleShare = async () => {
@@ -77,6 +77,14 @@ export function ViewCog({
       console.error("Clipboard failed", e);
     }
   };
+
+  let showCogmit = false;
+  if (!published) {
+    showCogmit = true;
+  } else if (lastModified) {
+    showCogmit = new Date(lastModified) > new Date(published);
+  }
+  const showShare = !showCogmit;
 
   return (
     <CogWorkspaceShell
@@ -107,10 +115,12 @@ export function ViewCog({
             projects={projects}
             onMoveProject={onMoveProject}
             shareEnabled={false}
+            shareVisible={showShare}
             cogInEnabled={false}
             editCogEnabled={true}
             editUrl={editUrl}
             cogmitEnabled={false}
+            cogmitVisible={showCogmit}
             optionsEnabled={true}
             cogId={cogId}
             deleteEnabled={!!deleteCogId} // Only allow delete if they have the right

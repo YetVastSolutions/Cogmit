@@ -100,6 +100,12 @@ export function PublishCogmitModal({
               : state === "error"
                 ? "Publication Failed"
                 : "Publishing Cogmit"}
+            {state === "publishing" && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Please wait…
+              </div>
+            )}
           </h2>
 
           <button
@@ -155,12 +161,7 @@ export function PublishCogmitModal({
               </ul>
             )}
 
-          {state === "publishing" && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Please wait…
-            </div>
-          )}
+
 
           {state === "success" && (
             <div className="space-y-4">
