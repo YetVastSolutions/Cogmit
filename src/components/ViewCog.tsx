@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Volume2, User, Share, Heart } from "lucide-react";
+import { Volume2, User, Share, Heart, MessageSquare, BookPlus } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { CogActionRow } from "@/components/CogActionRow";
@@ -15,9 +15,9 @@ export interface ViewCogProps {
   content: string;
   createdAt?: string;
   lastModified?: string;
-  
+
   mode?: "private" | "cogmit";
-  
+
   // Private mode options
   editUrl?: string;
 
@@ -25,7 +25,7 @@ export interface ViewCogProps {
   cogId?: string;
   projects?: string[];
   onMoveProject?: (projectName: string, isNew: boolean) => Promise<{ success: boolean; error?: string }>;
-  
+
   // Cogmit mode options
 
   authorId?: string;
@@ -53,6 +53,7 @@ export function ViewCog({
   isAuthor = false,
 }: ViewCogProps) {
   const [copied, setCopied] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
 
   const metadataContent = (
     <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -114,45 +115,66 @@ export function ViewCog({
             cogId={cogId}
             deleteEnabled={!!deleteCogId} // Only allow delete if they have the right
           />
-        ) : undefined
-      }
-      control1Content={
-        mode === "cogmit" && authorId ? (
-          <Link
-            href={isAuthor ? "/" : `/cogmits/${authorId}`}
-            className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start truncate")}
-          >
-            <User className="w-4 h-4 mr-2 shrink-0" />
-            <span className="truncate">Cogmit: {authorId}</span>
-          </Link>
-        ) : undefined
-      }
-      control2Content={
-        mode === "cogmit" ? (
-          <div className={cn(buttonVariants({ variant: "outline" }), "w-full cursor-default truncate flex items-center justify-start text-muted-foreground")}>
-            <span className="truncate">{project}</span>
+        ) : mode === "cogmit" && authorId ? (
+          <div className="flex flex-nowrap w-full items-center justify-center relative">
+            {/* Left Container */}
+            <div className="flex flex-1 justify-end pr-2 md:pr-4 gap-2 min-w-[88px]">
+              <Button
+                variant="outline"
+                disabled
+                className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
+                aria-label="Add to Reads"
+              >
+                <span className="hidden md:inline whitespace-nowrap">Add to Reads</span>
+                <BookPlus className="w-4 h-4 md:ml-2 shrink-0" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleShare}
+                className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
+                title="Copy link"
+              >
+                <span className="hidden md:inline whitespace-nowrap">{copied ? "Copied!" : "Share"}</span>
+                <Share className="w-4 h-4 md:ml-2 shrink-0" />
+              </Button>
+            </div>
+
+            {/* Center Container */}
+            <div className="flex-none shrink-0 w-auto flex justify-center z-10 max-w-full min-w-0">
+              <Link
+                href={isAuthor ? "/" : `/cogmits/${authorId}`}
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "bg-[#FFFF11] dark:bg-background hover:bg-[#e6e60f] dark:hover:bg-muted text-[#4B0084] dark:text-[#FFFF11] border-transparent dark:border-input font-medium flex items-center justify-center h-10 px-4 w-auto min-w-0 sm:min-w-[140px]"
+                )}
+              >
+                <User className="w-4 h-4 mr-2 shrink-0" />
+                <span className="whitespace-nowrap truncate min-w-0">
+                  {authorId}
+                  <span className="hidden sm:inline">
+                    {project && project !== "No Parent Project" ? ` : ${project}` : ""}
+                  </span>
+                </span>
+              </Link>
+            </div>
+
+            {/* Right Container */}
+            <div className="flex flex-1 justify-start pl-2 md:pl-4 gap-2 min-w-[88px]">
+              <Button
+                variant="outline"
+                onClick={() => setIsLiked(!isLiked)}
+                className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
+                aria-label="Like"
+              >
+                <span className="hidden md:inline whitespace-nowrap">{isLiked ? "Unlike" : "Like"}</span>
+                <Heart className={cn("w-4 h-4 md:ml-2 shrink-0", isLiked ? "fill-red-500 text-red-500" : "")} />
+              </Button>
+              <Button variant="outline" disabled className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none" aria-label="Child Cog">
+                <span className="hidden md:inline whitespace-nowrap">+ Child Cog</span>
+                <MessageSquare className="w-4 h-4 md:ml-2 shrink-0" />
+              </Button>
+            </div>
           </div>
-        ) : undefined
-      }
-      control3Content={
-        mode === "cogmit" ? (
-          <Button 
-            variant="outline" 
-            className="w-full justify-center" 
-            onClick={handleShare}
-            title="Copy link"
-          >
-            <Share className="w-4 h-4 mr-2" />
-            {copied ? "Copied!" : "Share"}
-          </Button>
-        ) : undefined
-      }
-      control4Content={
-        mode === "cogmit" ? (
-          <Button variant="outline" className="w-full justify-center" disabled>
-            <Heart className="w-4 h-4 mr-2" />
-            Like
-          </Button>
         ) : undefined
       }
     >
