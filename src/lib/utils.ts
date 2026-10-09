@@ -32,3 +32,7 @@ export function extractDescription(md: string): string {
   const match = md.match(/^(?!#)[a-zA-Z0-9].*$/m);
   return match ? match[0].substring(0, 160) : "";
 }
+
+export function getCanonicalCogmitUrl(origin: string, authorId: string, cogmitId: string): string {
+  return `${origin}/cogmits/${authorId}/${cogmitId}`;
+}

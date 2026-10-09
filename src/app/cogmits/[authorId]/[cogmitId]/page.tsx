@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { ViewCog } from "@/components/ViewCog";
 import { headers } from "next/headers";
 import { Metadata } from "next";
+import { getCanonicalCogmitUrl } from "@/lib/utils";
 
 interface PublicCogmitPageProps {
   params: Promise<{ authorId: string; cogmitId: string }>;
@@ -107,7 +108,8 @@ export async function generateMetadata({ params }: PublicCogmitPageProps): Promi
     };
   }
 
-  const url = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || 'cogmit.com'}/cogmits/${cogmit.authorId}/${cogmit.cogmitId}`;
+  const origin = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || 'cogmit.com'}`;
+  const url = getCanonicalCogmitUrl(origin, cogmit.authorId, cogmit.cogmitId);
   
   const truncatedDescription = cogmit.description && cogmit.description.length > 157 
     ? `${cogmit.description.slice(0, 156)}…` 
@@ -159,7 +161,7 @@ export default async function CogmitPage({ params }: PublicCogmitPageProps) {
   const host = headersList.get("x-forwarded-host") ?? headersList.get("host");
   const protocol = headersList.get("x-forwarded-proto") ?? "http";
 
-  const shareUrl = `${protocol}://${host}/cogmits/${cogmit.authorId}/${cogmit.cogmitId}`;
+  const shareUrl = getCanonicalCogmitUrl(`${protocol}://${host}`, cogmit.authorId, cogmit.cogmitId);
   const currentUsername = session?.user?.name || (session?.user as { login?: string })?.login || "";
   const isAuthor = currentUsername === cogmit.authorId;
 

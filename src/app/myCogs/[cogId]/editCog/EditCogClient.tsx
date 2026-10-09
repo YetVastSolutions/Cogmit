@@ -24,7 +24,7 @@ import {
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
 import { formatTimestamp } from "@/lib/utils";
 
-import { extractDescription } from "@/lib/utils";
+import { extractDescription, getCanonicalCogmitUrl } from "@/lib/utils";
 
 import { CogActionRow } from "@/components/CogActionRow";
 import { MarqueeContent } from "@/components/MarqueeContent";
@@ -426,8 +426,11 @@ export function EditCogClient({
       const origin =
         window.location.origin;
 
-      const publicUrl =
-        `${origin}/${pubResult.author}/${pubResult.cogmitId}`;
+      const publicUrl = getCanonicalCogmitUrl(
+        origin,
+        pubResult.author,
+        pubResult.cogmitId
+      );
 
       setPublishUrl(
         publicUrl

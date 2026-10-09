@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next'
+import { getCanonicalCogmitUrl } from '@/lib/utils';
 
 const COGMIT_REPO_PUBLIC = "YVSApps_Data_Cogmit_Public";
 
@@ -27,9 +28,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (Array.isArray(index.cogmits)) {
         for (const cogmit of index.cogmits) {
           // Avoid duplicate URLs if the index is somehow malformed
-          if (!sitemapEntries.some(entry => entry.url === `${baseUrl}/cogmits/${ownerId}/${cogmit.cogmitId}`)) {
+          if (!sitemapEntries.some(entry => entry.url === getCanonicalCogmitUrl(baseUrl, ownerId, cogmit.cogmitId))) {
             sitemapEntries.push({
-              url: `${baseUrl}/cogmits/${ownerId}/${cogmit.cogmitId}`,
+              url: getCanonicalCogmitUrl(baseUrl, ownerId, cogmit.cogmitId),
               lastModified: cogmit.publishedAt ? new Date(cogmit.publishedAt) : new Date(),
             });
           }

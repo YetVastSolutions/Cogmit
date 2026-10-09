@@ -6,7 +6,7 @@ import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Volume2, User, Share, Heart, MessageSquare, BookPlus } from "lucide-react";
 import Link from "next/link";
-import { cn, formatTimestamp } from "@/lib/utils";
+import { cn, formatTimestamp, getCanonicalCogmitUrl } from "@/lib/utils";
 import { CogActionRow } from "@/components/CogActionRow";
 import { MarqueeContent } from "@/components/MarqueeContent";
 import { ShareCogmitModal } from "@/components/ShareCogmitModal";
@@ -88,7 +88,7 @@ export function ViewCog({
 
   const resolvedShareUrl = shareUrl || 
     (authorId && cogmitId && typeof window !== "undefined"
-      ? `${window.location.origin}/cogmits/${authorId}/${cogmitId}`
+      ? getCanonicalCogmitUrl(window.location.origin, authorId, cogmitId)
       : "");
 
   const handleShare = async () => {
