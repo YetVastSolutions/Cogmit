@@ -50,7 +50,7 @@ export function isGitHubAuthError(error: unknown): boolean {
 /** Canonical Cogmit data repository names inside the user's account. */
 export const COGMIT_REPO_PUBLIC = "YVSApps_Data_Cogmit_Public";
 export const COGMIT_REPO_PRIVATE = "YVSApps_Data_Cogmit_Private";
-export const COGMIT_REPO_PUBLISHED = "YVSApps_Data_Cogmits_Published";
+export const COGMIT_REPO_PUBLISHED = "YVSApps_Data_Cogmit_Public";
 
 // ---------------------------------------------------------------------------
 // Authenticated User Info
@@ -83,7 +83,7 @@ export async function getOctokit() {
   }
 
   const salt = secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token";
-  
+
   const decoded = await decode({
     token,
     salt,
@@ -129,7 +129,7 @@ export async function getOctokit() {
  */
 export async function getRepositoryContent(owner: string, repo: string, path: string = "", ref?: string) {
   const octokit = await getOctokit();
-  
+
   const attemptRequest = async (retries = 2, delay = 500): Promise<unknown> => {
     try {
       const { data } = await octokit.rest.repos.getContent({
@@ -270,7 +270,7 @@ export async function listUserRepositories(perPage: number = 50) {
 export async function detectCogmitRepository() {
   const octokit = await getOctokit();
   const user = await getAuthenticatedUser();
-  
+
   try {
     const { data } = await octokit.rest.repos.get({
       owner: user.login,
@@ -290,7 +290,7 @@ export async function detectCogmitRepository() {
   } catch (error: unknown) {
     if (!isHttpError(error) || error.status !== 404) throw error;
   }
-  
+
   return null;
 }
 
@@ -312,7 +312,7 @@ export type CogmitDataStatus =
  */
 export async function reconcileArchitecture(owner: string, isPrivate: boolean) {
   const sourceRepo = isPrivate ? COGMIT_REPO_PRIVATE : COGMIT_REPO_PUBLIC;
-  
+
   // Reconcile Source Repo
   await reconcileRepoStructure(owner, sourceRepo, true);
 
@@ -355,8 +355,8 @@ async function reconcileRepoStructure(owner: string, repo: string, isSource: boo
             content: Buffer.from(content).toString("base64"),
           });
         } catch (createErr: unknown) {
-           console.error(`GitHub reconciliation failure\noperation: create ${path}\nowner: ${owner}\nrepository: ${repo}\npath: ${path}\nbranch: default\nstatus: ${isHttpError(createErr) ? createErr.status : "unknown"}\nmessage: ${createErr instanceof Error ? createErr.message : String(createErr)}`);
-           throw createErr;
+          console.error(`GitHub reconciliation failure\noperation: create ${path}\nowner: ${owner}\nrepository: ${repo}\npath: ${path}\nbranch: default\nstatus: ${isHttpError(createErr) ? createErr.status : "unknown"}\nmessage: ${createErr instanceof Error ? createErr.message : String(createErr)}`);
+          throw createErr;
         }
       } else {
         throw err;
@@ -371,7 +371,7 @@ async function reconcileRepoStructure(owner: string, repo: string, isSource: boo
     await ensureFile("projects/.gitkeep", "", "Initial commit: Create projects directory");
     await ensureFile("NPPCogs/.gitkeep", "", "Initial commit: Create NPPCogs directory");
     await ensureFile("deletedCogs/.gitkeep", "", "Initial commit: Create deletedCogs directory");
-    
+
     if (repo === COGMIT_REPO_PUBLIC) {
       await ensureFile("cogmits/.gitkeep", "", "Initial commit: Create cogmits directory");
       const initialPubIndex = { cogmits: [] };
@@ -444,7 +444,7 @@ export async function getCogmitDataStatus(): Promise<CogmitDataStatus> {
       repo: sourceRepoName,
       path: "cogsIndex.json",
     });
-    
+
     if (data && !Array.isArray(data) && "content" in data) {
       const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
       const indexObj = JSON.parse(contentStr);
@@ -717,7 +717,7 @@ Git → history
  */
 export async function initializeCogmitRepository(owner: string, repo: string) {
   const octokit = await getOctokit();
-  
+
   const initialIndex = {
     cogs: [],
   };
@@ -748,26 +748,26 @@ export async function initializeCogmitRepository(owner: string, repo: string) {
   );
 
   await createCommit(
-    "cogsIndex.json", 
-    JSON.stringify(initialIndex, null, 2), 
+    "cogsIndex.json",
+    JSON.stringify(initialIndex, null, 2),
     "Initial commit: Create cogsIndex.json"
   );
-  
+
   await createCommit(
-    "projects/.gitkeep", 
-    "", 
+    "projects/.gitkeep",
+    "",
     "Initial commit: Create projects directory"
   );
-  
+
   await createCommit(
-    "NPPCogs/.gitkeep", 
-    "", 
+    "NPPCogs/.gitkeep",
+    "",
     "Initial commit: Create NPPCogs directory"
   );
 
   await createCommit(
-    "deletedCogs/.gitkeep", 
-    "", 
+    "deletedCogs/.gitkeep",
+    "",
     "Initial commit: Create deletedCogs directory"
   );
 
@@ -832,7 +832,7 @@ export async function initiateCogmitData(isPrivate: boolean = true): Promise<Ini
   // Step 2: Create the repo and initialize
   await createCogmitRepository(isPrivate);
   await initializeCogmitRepository(owner, targetRepoName);
-  
+
   // Reconcile will also create/initialize the published repo for private mode
   await reconcileArchitecture(owner, isPrivate);
 

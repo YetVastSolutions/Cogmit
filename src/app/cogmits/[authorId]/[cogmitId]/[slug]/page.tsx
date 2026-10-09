@@ -30,10 +30,10 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
   try {
     const repoInfo = await octokit.rest.repos.get({
       owner: decodedAuthorId,
-      repo: "YVSApps_Data_Cogmits_Published",
+      repo: "YVSApps_Data_Cogmit_Public",
     });
     defaultBranch = repoInfo.data.default_branch;
-    targetRepo = "YVSApps_Data_Cogmits_Published";
+    targetRepo = "YVSApps_Data_Cogmit_Public";
   } catch (error) {
     if ((error as { status?: number })?.status === 404) {
       try {
@@ -53,7 +53,7 @@ export default async function CogmitPage({ params }: { params: Promise<{ authorI
     } else {
       console.error("GitHub repository access diagnostic (Published)", {
         owner: decodedAuthorId,
-        repo: "YVSApps_Data_Cogmits_Published",
+        repo: "YVSApps_Data_Cogmit_Public",
         errorStatus: (error as { status?: number })?.status,
       });
     }

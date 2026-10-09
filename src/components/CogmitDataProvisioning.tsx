@@ -180,7 +180,7 @@ export function CogmitDataProvisioning({
               Choose how your Cogs and published Cogmits are stored.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
             {/* Option 1 - Public Cogs */}
             <div className="border border-border rounded-xl p-6 flex flex-col bg-card shadow-sm hover:border-primary/50 transition-colors h-full">
@@ -231,7 +231,7 @@ export function CogmitDataProvisioning({
                   YVSApps_Data_Cogmit_Private
                 </span>
                 <span className="font-mono text-xs bg-muted px-2 py-1 rounded w-fit border border-border">
-                  YVSApps_Data_Cogmits_Published
+                  YVSApps_Data_Cogmit_Public
                 </span>
               </div>
 
@@ -255,7 +255,7 @@ export function CogmitDataProvisioning({
               </Button>
             </div>
           </div>
-          
+
           {error && (
             <p className="text-sm text-red-600 dark:text-red-400 text-center mt-6">
               {error}
@@ -263,9 +263,9 @@ export function CogmitDataProvisioning({
           )}
 
           <div className="mt-8 text-center">
-             <Button variant="ghost" onClick={() => setShowOptions(false)} disabled={isPending}>
-               Back
-             </Button>
+            <Button variant="ghost" onClick={() => setShowOptions(false)} disabled={isPending}>
+              Back
+            </Button>
           </div>
         </div>
       </div>
