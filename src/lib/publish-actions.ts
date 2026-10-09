@@ -29,17 +29,7 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function slugify(value: string): string {
-  const slug = value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 120);
-
-  return slug || "cogmit";
-}
+import { generateCogmitId } from "./id-generator";
 
 async function getAuthenticatedOwner() {
   const octokit = await getOctokit();
@@ -53,51 +43,11 @@ async function getAuthenticatedOwner() {
   };
 }
 
-async function readJsonFile(
-  owner: string,
-  repo: string,
-  path: string,
-  branch: string
-): Promise<{ sha: string; value: any } | null> {
-  const octokit = await getOctokit();
-
-  try {
-    const { data } =
-      await octokit.rest.repos.getContent({
-        owner,
-        repo,
-        path,
-        ref: branch,
-      });
-
-    if (
-      Array.isArray(data) ||
-      data.type !== "file" ||
-      !data.content
-    ) {
-      throw new Error(
-        `GitHub path is not a readable file: ${path}`
-      );
-    }
-
-    return {
-      sha: data.sha,
-      value: JSON.parse(
-        Buffer.from(data.content, "base64").toString("utf-8")
-      ),
-    };
-  } catch (error) {
-    if (getErrorStatus(error) === 404) {
-      return null;
-    }
-
-    throw error;
-  }
-}
-
 
 export async function writePublishedCogmitMarkdown(
+  cogId: string,
   title: string,
+  description: string,
   content: string
 ) {
   const session = await auth();
@@ -112,51 +62,75 @@ export async function writePublishedCogmitMarkdown(
     throw new Error("Cogmit repository is not ready");
   }
 
-  const { octokit, owner } =
-    await getAuthenticatedOwner();
+  const { octokit, owner } = await getAuthenticatedOwner();
 
-  const isPrivateArchitecture =
-    status.repo === COGMIT_REPO_PRIVATE;
+  const isPrivateArchitecture = status.repo === COGMIT_REPO_PRIVATE;
+  const targetRepo = isPrivateArchitecture ? COGMIT_REPO_PUBLISHED : COGMIT_REPO_PUBLIC;
+  const sourceRepo = status.repo;
 
-  const targetRepo = isPrivateArchitecture
-    ? COGMIT_REPO_PUBLISHED
-    : COGMIT_REPO_PUBLIC;
+  const branch = await getDefaultBranch(owner, targetRepo);
+  const sourceBranch = await getDefaultBranch(owner, sourceRepo);
 
-  const branch = await getDefaultBranch(
-    owner,
-    targetRepo
-  );
+  // 1. Check if already published
+  let existingCogmitId: string | null = null;
+  try {
+    const { data: sourceIndexData } = await octokit.rest.repos.getContent({
+      owner,
+      repo: sourceRepo,
+      path: "cogsIndex.json",
+      ref: sourceBranch,
+    });
+    if (!Array.isArray(sourceIndexData) && sourceIndexData.type === "file") {
+      const sourceIndex = JSON.parse(Buffer.from(sourceIndexData.content, "base64").toString("utf-8"));
+      const indexCog = sourceIndex.cogs?.find((c: Record<string, unknown>) => c.id === cogId);
+      if (indexCog && indexCog.cogmitId) {
+        existingCogmitId = String(indexCog.cogmitId);
+      }
+    }
+  } catch (error) {
+    if (getErrorStatus(error) !== 404) throw error;
+  }
 
-  const now = new Date();
+  let cogmitId = existingCogmitId;
 
-  const timestamp = now
-    .toISOString()
-    .replace(/[-:T]/g, "")
-    .slice(0, 14);
+  // 2. If not published, generate a unique ID
+  if (!cogmitId) {
+    let indexObj: { cogmits: Record<string, unknown>[] } = { cogmits: [] };
+    try {
+      const { data: indexData } = await octokit.rest.repos.getContent({
+        owner,
+        repo: targetRepo,
+        path: "cogmits/cogmitsIndex.json",
+        ref: branch,
+      });
+      if (!Array.isArray(indexData) && indexData.type === "file") {
+        indexObj = JSON.parse(Buffer.from(indexData.content, "base64").toString("utf-8"));
+      }
+    } catch (error) {
+      if (getErrorStatus(error) !== 404) throw error;
+    }
 
-  const cogmitId =
-    `cogmit_${timestamp}`;
+    let suffix = 1;
+    let candidateId = generateCogmitId(owner, new Date());
+    while (indexObj.cogmits.some(c => c.cogmitId === candidateId)) {
+      suffix++;
+      candidateId = generateCogmitId(owner, new Date(), suffix);
+    }
+    cogmitId = candidateId;
+  }
 
-  const slug = slugify(title);
-
-  const targetPath =
-    `cogmits/${cogmitId}_${slug}.md`;
-
+  const targetPath = `cogmits/${cogmitId}.md`;
   let mdSha = "";
 
   try {
-    const { data } =
-      await octokit.rest.repos.getContent({
-        owner,
-        repo: targetRepo,
-        path: targetPath,
-        ref: branch,
-      });
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo: targetRepo,
+      path: targetPath,
+      ref: branch,
+    });
 
-    if (
-      !Array.isArray(data) &&
-      data.type === "file"
-    ) {
+    if (!Array.isArray(data) && data.type === "file") {
       mdSha = data.sha;
     }
   } catch (error) {
@@ -171,9 +145,7 @@ export async function writePublishedCogmitMarkdown(
       repo: targetRepo,
       path: targetPath,
       message: `Publish cogmit ${cogmitId}`,
-      content: Buffer.from(
-        content || `# ${title}\n\n`
-      ).toString("base64"),
+      content: Buffer.from(content || `# ${title}\n\n`).toString("base64"),
       ...(mdSha ? { sha: mdSha } : {}),
       branch,
     });
@@ -186,14 +158,12 @@ path: ${targetPath}
 branch: ${branch}
 status: ${getErrorStatus(error) || "unknown"}
 message: ${getErrorMessage(error)}`);
-
     throw error;
   }
 
   return {
     success: true,
     cogmitId,
-    slug,
     targetPath,
     author: owner,
   };
@@ -202,8 +172,8 @@ message: ${getErrorMessage(error)}`);
 export async function updateCogmitsIndex(
   cogId: string,
   title: string,
+  description: string,
   cogmitId: string,
-  slug: string,
   targetPath: string
 ) {
   const session = await auth();
@@ -218,84 +188,59 @@ export async function updateCogmitsIndex(
     throw new Error("Cogmit repository is not ready");
   }
 
-  const { octokit, owner } =
-    await getAuthenticatedOwner();
+  const { octokit, owner } = await getAuthenticatedOwner();
 
-  const isPrivateArchitecture =
-    status.repo === COGMIT_REPO_PRIVATE;
-
-  const targetRepo = isPrivateArchitecture
-    ? COGMIT_REPO_PUBLISHED
-    : COGMIT_REPO_PUBLIC;
-
-  const branch = await getDefaultBranch(
-    owner,
-    targetRepo
-  );
+  const isPrivateArchitecture = status.repo === COGMIT_REPO_PRIVATE;
+  const targetRepo = isPrivateArchitecture ? COGMIT_REPO_PUBLISHED : COGMIT_REPO_PUBLIC;
+  const branch = await getDefaultBranch(owner, targetRepo);
 
   let indexSha = "";
-
-  let indexObj: {
-    cogmits: any[];
-  } = {
-    cogmits: [],
-  };
+  let indexObj: { cogmits: Record<string, unknown>[] } = { cogmits: [] };
 
   try {
-    const { data } =
-      await octokit.rest.repos.getContent({
-        owner,
-        repo: targetRepo,
-        path: "cogmits/cogmitsIndex.json",
-        ref: branch,
-      });
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo: targetRepo,
+      path: "cogmits/cogmitsIndex.json",
+      ref: branch,
+    });
 
-    if (
-      !Array.isArray(data) &&
-      data.type === "file"
-    ) {
+    if (!Array.isArray(data) && data.type === "file") {
       indexSha = data.sha;
-
-      indexObj = JSON.parse(
-        Buffer.from(
-          data.content,
-          "base64"
-        ).toString("utf-8")
-      );
+      indexObj = JSON.parse(Buffer.from(data.content, "base64").toString("utf-8"));
     }
   } catch (error) {
-    if (getErrorStatus(error) !== 404) {
-      throw error;
-    }
+    if (getErrorStatus(error) !== 404) throw error;
   }
 
   if (!Array.isArray(indexObj.cogmits)) {
     indexObj.cogmits = [];
   }
 
-  const existingEntry =
-    indexObj.cogmits.find(
-      (entry) =>
-        entry &&
-        (entry.cogmitId === cogmitId || entry.id === cogmitId)
-    );
+  const existingEntry = indexObj.cogmits.find(
+    (entry) => entry && (entry.cogmitId === cogmitId || entry.id === cogmitId)
+  );
 
-  const publishedAt =
-    new Date().toISOString();
+  const publishedAt = new Date().toISOString();
 
   if (existingEntry) {
     delete existingEntry.id;
     delete existingEntry.sourceCogId;
+    delete existingEntry.slug;
+    existingEntry.ownerId = owner;
     existingEntry.cogmitId = cogmitId;
+    existingEntry.rootCogId = cogId;
     existingEntry.title = title;
-    existingEntry.slug = slug;
+    existingEntry.description = description;
     existingEntry.publishedAt = publishedAt;
     existingEntry.path = targetPath;
   } else {
     indexObj.cogmits.push({
+      ownerId: owner,
       cogmitId,
+      rootCogId: cogId,
       title,
-      slug,
+      description,
       publishedAt,
       path: targetPath,
     });
@@ -333,8 +278,7 @@ message: ${getErrorMessage(error)}`);
 
 export async function updateSourceCogsIndexStatus(
   cogId: string,
-  cogmitId: string,
-  slug: string
+  cogmitId: string
 ) {
   const session = await auth();
 
@@ -364,7 +308,7 @@ export async function updateSourceCogsIndexStatus(
   let indexSha = "";
 
   let indexObj: {
-    cogs: any[];
+    cogs: Record<string, unknown>[];
   } = {
     cogs: [],
   };
@@ -415,7 +359,7 @@ export async function updateSourceCogsIndexStatus(
   }
 
   indexCog.cogmitId = cogmitId;
-  indexCog.slug = slug;
+  delete indexCog.slug;
   indexCog.cogmitPublished =
     new Date().toISOString();
 

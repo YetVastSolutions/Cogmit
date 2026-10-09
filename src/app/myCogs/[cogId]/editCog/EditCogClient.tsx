@@ -24,6 +24,8 @@ import {
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
 import { formatTimestamp } from "@/lib/utils";
 
+import { extractDescription } from "@/lib/utils";
+
 import { CogActionRow } from "@/components/CogActionRow";
 import { MarqueeContent } from "@/components/MarqueeContent";
 
@@ -152,6 +154,7 @@ export function EditCogClient({
   };
 
   const handlePublishPublic = async () => {
+    console.log("[COGMIT_DEBUG] button clicked");
     if (!title.trim()) {
       setError("Title is required");
       return;
@@ -322,21 +325,20 @@ export function EditCogClient({
        * Retry never generates another publication artifact
        * during the same publication attempt.
        */
-      if (
-        !publishContext.publishedCogmit
-      ) {
-        setActiveStep(
-          "publish_markdown"
-        );
+      if (!publishContext.publishedCogmit) {
+        setActiveStep("publish_markdown");
+
+        const description = extractDescription(content);
 
         publishContext.publishedCogmit =
           await writePublishedCogmitMarkdown(
+            savedCogId,
             title,
+            description,
             content
           );
 
-        publishContextRef.current =
-          publishContext;
+        publishContextRef.current = publishContext;
 
         updateStep(
           "publish_markdown",
@@ -380,8 +382,8 @@ export function EditCogClient({
         await updateCogmitsIndex(
           savedCogId,
           title,
+          extractDescription(content),
           pubResult.cogmitId,
-          pubResult.slug,
           pubResult.targetPath
         );
 
@@ -412,8 +414,7 @@ export function EditCogClient({
 
         await updateSourceCogsIndexStatus(
           savedCogId,
-          pubResult.cogmitId,
-          pubResult.slug
+          pubResult.cogmitId
         );
 
         updateStep(
@@ -426,7 +427,7 @@ export function EditCogClient({
         window.location.origin;
 
       const publicUrl =
-        `${origin}/cogmits/${pubResult.author}/${pubResult.cogmitId}/${pubResult.slug}`;
+        `${origin}/${pubResult.author}/${pubResult.cogmitId}`;
 
       setPublishUrl(
         publicUrl
@@ -676,7 +677,8 @@ export function EditCogClient({
             }
             editCogEnabled={true}
             onEditCog={() => { }}
-            cogmitEnabled={isDirty}
+            cogmitEnabled={true}
+            isCogmitPending={isPending}
             onCogmit={
               handlePublishPublic
             }

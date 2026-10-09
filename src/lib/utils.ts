@@ -26,3 +26,9 @@ export function formatTimestamp(dateInput: string | number | Date | null | undef
   
   return `${year} ${month} ${day}, ${hours}:${minutes}`;
 }
+
+export function extractDescription(md: string): string {
+  if (!md) return "";
+  const match = md.match(/^(?!#)[a-zA-Z0-9].*$/m);
+  return match ? match[0].substring(0, 160) : "";
+}

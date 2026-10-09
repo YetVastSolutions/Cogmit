@@ -6,6 +6,8 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { ViewCog } from "@/components/ViewCog";
 
+import { extractDescription } from "@/lib/utils";
+
 export default async function ViewCogPage({ params }: { params: Promise<{ cogId: string }> }) {
   const session = await auth();
   if (!session) {
@@ -104,6 +106,9 @@ export default async function ViewCogPage({ params }: { params: Promise<{ cogId:
       cogId={decodedCogId}
       projects={projects}
       onMoveProject={handleMoveProject}
+      authorId={owner}
+      cogmitId={cogIndexEntry?.cogmitId}
+      description={extractDescription(content)}
     />
   );
 }

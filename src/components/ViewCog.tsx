@@ -9,9 +9,11 @@ import Link from "next/link";
 import { cn, formatTimestamp } from "@/lib/utils";
 import { CogActionRow } from "@/components/CogActionRow";
 import { MarqueeContent } from "@/components/MarqueeContent";
+import { ShareCogmitModal } from "@/components/ShareCogmitModal";
 
 export interface ViewCogProps {
   title: string;
+  description?: string;
   project?: string;
   content: string;
   createdAt?: string;
@@ -38,6 +40,7 @@ export interface ViewCogProps {
 
 export function ViewCog({
   title,
+  description,
   project = "No Parent Project",
   content,
   createdAt,
@@ -52,11 +55,12 @@ export function ViewCog({
   onMoveProject,
 
   authorId,
+  cogmitId,
   shareUrl,
   isAuthor = false,
 }: ViewCogProps) {
-  const [copied, setCopied] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const isPublished = !!published;
   
@@ -82,15 +86,14 @@ export function ViewCog({
     />
   );
 
+  const resolvedShareUrl = shareUrl || 
+    (authorId && cogmitId && typeof window !== "undefined"
+      ? `${window.location.origin}/cogmits/${authorId}/${cogmitId}`
+      : "");
+
   const handleShare = async () => {
-    const urlToShare = shareUrl || (typeof window !== "undefined" ? window.location.href : "");
-    if (!urlToShare) return;
-    try {
-      await navigator.clipboard.writeText(urlToShare);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (e) {
-      console.error("Clipboard failed", e);
+    if (resolvedShareUrl) {
+      setShowShareModal(true);
     }
   };
 
@@ -166,7 +169,7 @@ export function ViewCog({
                 className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
                 title="Copy link"
               >
-                <span className="hidden md:inline whitespace-nowrap">{copied ? "Copied!" : "Share"}</span>
+                <span className="hidden md:inline whitespace-nowrap">Share</span>
                 <Share className="w-4 h-4 md:ml-2 shrink-0" />
               </Button>
             </div>
@@ -213,6 +216,16 @@ export function ViewCog({
       <div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground w-full">
         <ReactMarkdown>{content}</ReactMarkdown>
       </div>
+
+      <ShareCogmitModal
+        open={showShareModal}
+        onOpenChange={setShowShareModal}
+        title={title}
+        description={description}
+        authorId={authorId}
+        published={published}
+        shareUrl={resolvedShareUrl}
+      />
     </CogWorkspaceShell>
   );
 }

@@ -124,7 +124,7 @@ export default async function AuthorCogmitsPage({ params }: { params: Promise<{ 
             return (
               <Link
                 key={linkId}
-                href={`/cogmits/${decodedAuthorId}/${linkId}/${slug}`}
+                href={`/cogmits/${decodedAuthorId}/${linkId}`}
                 className="flex flex-col p-4 border border-border rounded-xl hover:border-primary/50 transition-colors bg-card"
               >
                 <h2 className="text-xl font-semibold mb-2 line-clamp-2" title={cogmit.title}>

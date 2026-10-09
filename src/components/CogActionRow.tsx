@@ -138,6 +138,7 @@ export function CogActionRow({
         {cogmitVisible && (
           <div className={cn("relative group", cogmitTooltip && "cursor-help inline-block")}>
             <Button 
+              type="button"
               className={cn("shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none bg-[#FFFF11] hover:bg-[#e6e60f] text-black", cogmitTooltip && "cursor-help pointer-events-auto")}
               disabled={!cogmitEnabled || isCogmitPending}
               onClick={onCogmit}

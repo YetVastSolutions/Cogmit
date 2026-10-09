@@ -50,7 +50,8 @@ export function PublishCogmitModal({
 
   useEffect(() => {
     if (!open) {
-      setCopied(false);
+      const timer = setTimeout(() => setCopied(false), 0);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 
