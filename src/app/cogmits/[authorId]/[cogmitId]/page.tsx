@@ -126,13 +126,16 @@ export async function generateMetadata({ params }: PublicCogmitPageProps): Promi
       type: "article",
       publishedTime: cogmit.publishedAt,
       authors: [cogmit.authorId],
-      ...(cogmit.image ? { images: [{ url: cogmit.image }] } : {}),
+      // Temporarily disable open graph preview image
+      // ...(cogmit.image ? { images: [{ url: cogmit.image }] } : {}),
     },
     twitter: {
-      card: cogmit.image ? "summary_large_image" : "summary",
+      // Temporarily disable twitter card preview image
+      // card: cogmit.image ? "summary_large_image" : "summary",
+      card: "summary",
       title: cogmit.title,
       description: truncatedDescription,
-      ...(cogmit.image ? { images: [cogmit.image] } : {}),
+      // ...(cogmit.image ? { images: [cogmit.image] } : {}),
     }
   };
 }
