@@ -1,15 +1,75 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Volume2, User, Share, Heart, MessageSquare, BookPlus } from "lucide-react";
+import { Volume2, User, Share, Heart, MessageSquare, BookPlus, Eye } from "lucide-react";
+
+import MarkdownIt from "markdown-it";
+import { marked } from "marked";
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
+import rehypeStringify from "rehype-stringify";
+import { micromark } from "micromark";
+import showdown from "showdown";
+import { Parser as CommonmarkParser, HtmlRenderer as CommonmarkRenderer } from "commonmark";
+import DOMPurify from "isomorphic-dompurify";
 import Link from "next/link";
 import { cn, formatTimestamp, getCanonicalCogmitUrl } from "@/lib/utils";
 import { CogActionRow } from "@/components/CogActionRow";
 import { MarqueeContent } from "@/components/MarqueeContent";
 import { ShareCogmitModal } from "@/components/ShareCogmitModal";
+
+const parsers = [
+  {
+    name: "view1", // markdown-it
+    parse: async (md: string) => {
+      const mdIt = new MarkdownIt();
+      return mdIt.render(md);
+    },
+  },
+  {
+    name: "view2", // Marked
+    parse: async (md: string) => {
+      return marked.parse(md);
+    },
+  },
+  {
+    name: "view3", // remark
+    parse: async (md: string) => {
+      const result = await unified()
+        .use(remarkParse)
+        .use(remarkRehype)
+        .use(rehypeStringify)
+        .process(md);
+      return String(result);
+    },
+  },
+  {
+    name: "view4", // micromark
+    parse: async (md: string) => {
+      return micromark(md);
+    },
+  },
+  {
+    name: "view5", // Showdown
+    parse: async (md: string) => {
+      const converter = new showdown.Converter();
+      return converter.makeHtml(md);
+    },
+  },
+  {
+    name: "view6", // commonmark.js
+    parse: async (md: string) => {
+      const reader = new CommonmarkParser();
+      const writer = new CommonmarkRenderer();
+      const parsed = reader.parse(md);
+      return writer.render(parsed);
+    },
+  },
+];
 
 export interface ViewCogProps {
   title: string;
@@ -61,6 +121,45 @@ export function ViewCog({
 }: ViewCogProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+
+  // Custom parsers state
+  const [currentViewIndex, setCurrentViewIndex] = useState(0);
+  const [renderedHtml, setRenderedHtml] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [renderError, setRenderError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== "cogmit" || !content) return;
+
+    let isMounted = true;
+    
+    async function renderMarkdown() {
+      setIsTransitioning(true);
+      setRenderError(null);
+      
+      try {
+        const parser = parsers[currentViewIndex];
+        const htmlContent = await parser.parse(content);
+        const sanitizedHtml = DOMPurify.sanitize(htmlContent);
+        
+        if (isMounted) {
+          setRenderedHtml(sanitizedHtml);
+          setIsTransitioning(false);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setRenderError((err as Error).message);
+          setIsTransitioning(false);
+        }
+      }
+    }
+    
+    renderMarkdown();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [mode, content, currentViewIndex]);
 
   const isPublished = !!published;
   
@@ -156,6 +255,16 @@ export function ViewCog({
             <div className="flex flex-1 justify-end pr-2 md:pr-4 gap-2 min-w-[88px]">
               <Button
                 variant="outline"
+                onClick={() => setCurrentViewIndex((prev) => (prev + 1) % parsers.length)}
+                disabled={isTransitioning}
+                className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
+                aria-label={`View (${parsers[currentViewIndex].name})`}
+              >
+                <span className="hidden md:inline whitespace-nowrap">View: {parsers[currentViewIndex].name}</span>
+                <Eye className="w-4 h-4 md:ml-2 shrink-0" />
+              </Button>
+              <Button
+                variant="outline"
                 disabled
                 className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
                 aria-label="Add to Reads"
@@ -213,8 +322,28 @@ export function ViewCog({
         ) : undefined
       }
     >
+      {isTransitioning && mode === "cogmit" && (
+        <div className="fixed inset-0 z-[9999] bg-background/80 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
+          <div className="bg-card p-6 rounded-lg shadow-lg border border-border flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="text-lg font-medium">Please wait…</p>
+          </div>
+        </div>
+      )}
+
       <div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground w-full">
-        <ReactMarkdown>{content}</ReactMarkdown>
+        {mode === "cogmit" ? (
+          <>
+            {renderError && (
+              <div className="mb-4 p-4 border border-destructive bg-destructive/10 text-destructive rounded-md">
+                Error rendering view: {renderError}
+              </div>
+            )}
+            <div dangerouslySetInnerHTML={{ __html: renderedHtml || "" }} />
+          </>
+        ) : (
+          <ReactMarkdown>{content}</ReactMarkdown>
+        )}
       </div>
 
       <ShareCogmitModal
