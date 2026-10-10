@@ -7,12 +7,16 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Volume2, User, Share, Heart, MessageSquare, BookPlus, Eye } from "lucide-react";
 
 import MarkdownIt from "markdown-it";
+// @ts-expect-error missing types
+import markdownItTaskLists from "markdown-it-task-lists";
 import { marked } from "marked";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
+import remarkGfm from "remark-gfm";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
 import { micromark } from "micromark";
+import { gfm, gfmHtml } from "micromark-extension-gfm";
 import showdown from "showdown";
 import { Parser as CommonmarkParser, HtmlRenderer as CommonmarkRenderer } from "commonmark";
 import DOMPurify from "isomorphic-dompurify";
@@ -24,44 +28,60 @@ import { ShareCogmitModal } from "@/components/ShareCogmitModal";
 
 const parsers = [
   {
-    name: "view1", // markdown-it
+    name: "v1", // markdown-it
+    tooltip: "markdown-it",
     parse: async (md: string) => {
-      const mdIt = new MarkdownIt();
+      const mdIt = new MarkdownIt({ html: true, linkify: true, typographer: true })
+        .use(markdownItTaskLists, { enabled: false });
       return mdIt.render(md);
     },
   },
   {
-    name: "view2", // Marked
+    name: "v2", // Marked
+    tooltip: "Marked",
     parse: async (md: string) => {
-      return marked.parse(md);
+      return marked.parse(md, { gfm: true });
     },
   },
   {
-    name: "view3", // remark
+    name: "v3", // remark
+    tooltip: "remark (unified pipeline)",
     parse: async (md: string) => {
       const result = await unified()
         .use(remarkParse)
-        .use(remarkRehype)
-        .use(rehypeStringify)
+        .use(remarkGfm)
+        .use(remarkRehype, { allowDangerousHtml: true })
+        .use(rehypeStringify, { allowDangerousHtml: true })
         .process(md);
       return String(result);
     },
   },
   {
-    name: "view4", // micromark
+    name: "v4", // micromark
+    tooltip: "micromark",
     parse: async (md: string) => {
-      return micromark(md);
+      return micromark(md, {
+        allowDangerousHtml: true,
+        extensions: [gfm()],
+        htmlExtensions: [gfmHtml()]
+      });
     },
   },
   {
-    name: "view5", // Showdown
+    name: "v5", // Showdown
+    tooltip: "Showdown",
     parse: async (md: string) => {
-      const converter = new showdown.Converter();
+      const converter = new showdown.Converter({
+        tables: true,
+        strikethrough: true,
+        tasklists: true
+      });
       return converter.makeHtml(md);
     },
   },
   {
-    name: "view6", // commonmark.js
+    name: "v6", // commonmark.js
+    tooltip: "commonmark.js",
     parse: async (md: string) => {
       const reader = new CommonmarkParser();
       const writer = new CommonmarkRenderer();
@@ -257,11 +277,14 @@ export function ViewCog({
                 variant="outline"
                 onClick={() => setCurrentViewIndex((prev) => (prev + 1) % parsers.length)}
                 disabled={isTransitioning}
-                className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
-                aria-label={`View (${parsers[currentViewIndex].name})`}
+                className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none group relative"
+                aria-label={`Switch Markdown parser: ${parsers[currentViewIndex].tooltip}`}
               >
-                <span className="hidden md:inline whitespace-nowrap">View: {parsers[currentViewIndex].name}</span>
+                <span className="hidden md:inline whitespace-nowrap">{parsers[currentViewIndex].name}</span>
                 <Eye className="w-4 h-4 md:ml-2 shrink-0" />
+                <div className="absolute right-0 md:left-1/2 md:-translate-x-1/2 top-full mt-2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-md border border-border">
+                  {parsers[currentViewIndex].tooltip}
+                </div>
               </Button>
               <Button
                 variant="outline"
@@ -331,20 +354,20 @@ export function ViewCog({
         </div>
       )}
 
-      <div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground w-full">
-        {mode === "cogmit" ? (
-          <>
-            {renderError && (
-              <div className="mb-4 p-4 border border-destructive bg-destructive/10 text-destructive rounded-md">
-                Error rendering view: {renderError}
-              </div>
-            )}
-            <div dangerouslySetInnerHTML={{ __html: renderedHtml || "" }} />
-          </>
-        ) : (
+      {mode === "cogmit" ? (
+        <div className="w-full">
+          {renderError && (
+            <div className="mb-4 p-4 border border-destructive bg-destructive/10 text-destructive rounded-md">
+              Error rendering view: {renderError}
+            </div>
+          )}
+          <div className="markdown-content" dangerouslySetInnerHTML={{ __html: renderedHtml || "" }} />
+        </div>
+      ) : (
+        <div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground w-full">
           <ReactMarkdown>{content}</ReactMarkdown>
-        )}
-      </div>
+        </div>
+      )}
 
       <ShareCogmitModal
         open={showShareModal}
