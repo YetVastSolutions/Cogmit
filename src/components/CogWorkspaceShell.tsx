@@ -28,16 +28,18 @@ export function CogWorkspaceShell({
         )}
 
         {/* ROW 2: Title and Actions */}
-        <div className="flex items-center gap-4 w-full">
-          <div className={actionContent ? "w-[80%] flex items-center min-w-0" : "w-full flex items-center min-w-0"}>
-            {titleContent}
-          </div>
-          {actionContent && (
-            <div className="w-[20%] flex items-center justify-end min-w-0">
-              {actionContent}
+        {(titleContent || actionContent) && (
+          <div className="flex items-center gap-4 w-full">
+            <div className={actionContent ? "w-[80%] flex items-center min-w-0" : "w-full flex items-center min-w-0"}>
+              {titleContent}
             </div>
-          )}
-        </div>
+            {actionContent && (
+              <div className="w-[20%] flex items-center justify-end min-w-0">
+                {actionContent}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ROW 3: Metadata */}
         {metadataContent && (

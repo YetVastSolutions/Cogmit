@@ -225,15 +225,33 @@ export function ViewCog({
   }
   const showShare = !showCogmit;
 
+  let shouldShowTitle = mode === "cogmit";
+  if (shouldShowTitle && content) {
+    const trimmed = content.trim();
+    const titleLower = title.trim().toLowerCase();
+    
+    // Check if starts with `# Title`
+    const startsWithHashTitle = trimmed.toLowerCase().startsWith(`# ${titleLower}`);
+    
+    // Check if starts with `Title\n===`
+    const startsWithUnderlineTitle = trimmed.toLowerCase().startsWith(titleLower + '\n=') || trimmed.toLowerCase().startsWith(titleLower + '\r\n=');
+    
+    if (startsWithHashTitle || startsWithUnderlineTitle) {
+      shouldShowTitle = false;
+    }
+  }
+
   return (
     <CogWorkspaceShell
       titleContent={
-        <input
-          type="text"
-          value={title}
-          disabled
-          className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-lg font-semibold ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
-        />
+        mode === "private" ? (
+          <input
+            type="text"
+            value={title}
+            disabled
+            className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-lg font-semibold ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+          />
+        ) : undefined
       }
       actionContent={
         mode === "private" ? (
@@ -475,6 +493,11 @@ export function ViewCog({
             <div className="mb-4 p-4 border border-destructive bg-destructive/10 text-destructive rounded-md">
               Error rendering view: {renderError}
             </div>
+          )}
+          {shouldShowTitle && (
+            <h1 className="text-4xl font-extrabold tracking-tight mb-8 mt-2 text-foreground break-words">
+              {title}
+            </h1>
           )}
           <div className="markdown-content" dangerouslySetInnerHTML={{ __html: renderedHtml || "" }} />
         </div>
