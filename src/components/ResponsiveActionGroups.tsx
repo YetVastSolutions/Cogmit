@@ -77,7 +77,7 @@ function OptionsDropdown({
       
       {expanded && hiddenItems.length > 0 && (
         <div 
-          className="absolute top-full mt-2 left-0 bg-popover border border-border shadow-lg rounded-md p-2 flex flex-col gap-2 z-50 min-w-[150px]"
+          className="absolute top-full mt-2 right-0 bg-popover border border-border shadow-lg rounded-md p-2 flex flex-col gap-2 z-50 min-w-[150px]"
           onClick={handleInteract}
           onKeyDown={(e) => {
             handleInteract(e);
@@ -166,10 +166,10 @@ export function ResponsiveActionGroups({ leftItems, rightItems, className = "" }
         }
       });
 
-      // Options button always present
-      if (leftCount > 0) reqWidth += GAP;
+      // Options button is always present, now in right group
+      if (rightCount > 0) reqWidth += GAP;
       reqWidth += OPTIONS_WIDTH;
-      leftCount++;
+      rightCount++;
 
       rightItems.forEach(item => {
         if (item.hideOrder !== undefined && item.hideOrder <= hideThreshold) {
@@ -246,7 +246,7 @@ export function ResponsiveActionGroups({ leftItems, rightItems, className = "" }
       </div>
 
       {/* Actual visible layout */}
-      <div ref={containerRef} className="flex items-center justify-between w-full h-full gap-2 sm:gap-4 overflow-hidden">
+      <div ref={containerRef} className="flex items-center justify-between w-full h-full gap-2 sm:gap-4">
         
         {/* Left Area */}
         <div className="flex items-center gap-1 sm:gap-2 min-w-0 shrink">
@@ -255,8 +255,6 @@ export function ResponsiveActionGroups({ leftItems, rightItems, className = "" }
               {visibleState.isCompact && item.compactNode ? item.compactNode : item.node}
             </div>
           ))}
-          
-          <OptionsDropdown hiddenItems={visibleState.hiddenItems} />
 
           {visibleState.leftHideableVis.map(item => (
             <div key={item.id} className="shrink-0">
@@ -267,6 +265,8 @@ export function ResponsiveActionGroups({ leftItems, rightItems, className = "" }
 
         {/* Right Area */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <OptionsDropdown hiddenItems={visibleState.hiddenItems} />
+
           {visibleState.rightHideableVis.map(item => (
             <div key={item.id} className="shrink-0">
               {visibleState.isCompact && item.compactNode ? item.compactNode : item.node}
