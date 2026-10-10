@@ -32,7 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="h-full flex flex-col">
         <AuthProvider initialSession={sessionStatus}>
           <GlobalNav />
           {children}

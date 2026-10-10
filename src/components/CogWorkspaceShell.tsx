@@ -17,7 +17,7 @@ export function CogWorkspaceShell({
   children,
 }: CogWorkspaceShellProps) {
   return (
-    <div className="flex flex-col pt-4 px-4 sm:px-8 bg-background w-full max-w-[var(--page-content-max-width)] mx-auto h-[calc(100vh-64px)] overflow-hidden">
+    <div className="flex flex-col pt-4 px-4 sm:px-8 bg-background w-full max-w-[var(--page-content-max-width)] mx-auto flex-1 min-h-0 overflow-hidden">
       {/* FIXED HEADER AREA */}
       <div className="shrink-0 bg-background z-10 flex flex-col gap-2 pb-4 border-b border-border">
         {/* ROW 1: Actions */}
