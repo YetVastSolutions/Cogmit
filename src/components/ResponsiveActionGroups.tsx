@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 export interface ToolbarItem {
   id: string;
   node: React.ReactNode;
-  priority: number; // 1 is highest
+  compactNode?: React.ReactNode;
+  hideOrder?: number; // 1 hides first, 2 hides second. undefined means never hide.
 }
 
 interface ResponsiveActionGroupsProps {
@@ -18,10 +19,12 @@ function ExpandableGroup({
   visibleItems,
   hiddenItems,
   isRight,
+  isCompact,
 }: {
   visibleItems: ToolbarItem[];
   hiddenItems: ToolbarItem[];
   isRight: boolean;
+  isCompact: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -59,7 +62,7 @@ function ExpandableGroup({
   return (
     <div className="flex items-center gap-2 relative">
       {!isRight && visibleItems.map(item => (
-        <div key={item.id}>{item.node}</div>
+        <div key={item.id}>{isCompact && item.compactNode ? item.compactNode : item.node}</div>
       ))}
       
       {hiddenItems.length > 0 && (
@@ -86,6 +89,7 @@ function ExpandableGroup({
               onKeyDown={handleInteract}
               onFocusCapture={handleInteract}
             >
+              {/* Inside dropdown we typically show full nodes for clarity, or compact if they prefer. Let's show full. */}
               {hiddenItems.map(item => (
                 <div key={item.id}>{item.node}</div>
               ))}
@@ -95,7 +99,7 @@ function ExpandableGroup({
       )}
       
       {isRight && visibleItems.map(item => (
-        <div key={item.id}>{item.node}</div>
+        <div key={item.id}>{isCompact && item.compactNode ? item.compactNode : item.node}</div>
       ))}
     </div>
   );
@@ -115,7 +119,6 @@ export function ResponsiveActionGroups({ leftItems, rightItems, className = "" }
       }
     });
     observer.observe(containerRef.current);
-    // Initial measurement
     setContainerWidth(containerRef.current.getBoundingClientRect().width);
     return () => observer.disconnect();
   }, []);
@@ -140,75 +143,105 @@ export function ResponsiveActionGroups({ leftItems, rightItems, className = "" }
         leftVisible: leftItems,
         leftHidden: [],
         rightVisible: rightItems,
-        rightHidden: []
+        rightHidden: [],
+        isCompact: false,
       };
     }
 
-    const ARROW_WIDTH = 48; // generous width for the arrow + gap
+    const ARROW_WIDTH = 48; // arrow + gap
     const GAP = 8; 
     const GROUP_GAP = 16; 
 
-    const allItems = [
-      ...leftItems.map(item => ({ ...item, isRight: false, score: item.priority + 0.1 })),
-      ...rightItems.map(item => ({ ...item, isRight: true, score: item.priority + 0.5 })) 
-    ];
-    
-    // Sort items so highest score (lowest priority) comes first. 
-    allItems.sort((a, b) => b.score - a.score);
+    const maxHideOrder = Math.max(
+      0,
+      ...leftItems.map(i => i.hideOrder || 0),
+      ...rightItems.map(i => i.hideOrder || 0)
+    );
 
-    let bestLeftVisible = leftItems;
-    let bestRightVisible = rightItems;
-    let bestLeftHidden: typeof leftItems = [];
-    let bestRightHidden: typeof rightItems = [];
-
-    for (let hideCount = 0; hideCount <= allItems.length; hideCount++) {
-      const hiddenIds = new Set(allItems.slice(0, hideCount).map(item => item.id));
-      
-      const leftVis = leftItems.filter(item => !hiddenIds.has(item.id));
-      const leftHid = leftItems.filter(item => hiddenIds.has(item.id));
-      
-      const rightVis = rightItems.filter(item => !hiddenIds.has(item.id));
-      const rightHid = rightItems.filter(item => hiddenIds.has(item.id));
-      
+    // Helper to calculate required width
+    const getReqWidth = (isCompact: boolean, hideThreshold: number) => {
       let leftWidth = 0;
-      leftVis.forEach((item, idx) => {
-        leftWidth += (itemWidths[item.id] || 100);
-        if (idx > 0) leftWidth += GAP;
+      let leftHidCount = 0;
+      let leftVisCount = 0;
+
+      leftItems.forEach(item => {
+        if (item.hideOrder !== undefined && item.hideOrder <= hideThreshold) {
+          leftHidCount++;
+        } else {
+          const w = itemWidths[`${isCompact ? 'compact' : 'full'}-${item.id}`] || itemWidths[`full-${item.id}`] || 100;
+          if (leftVisCount > 0) leftWidth += GAP;
+          leftWidth += w;
+          leftVisCount++;
+        }
       });
-      if (leftHid.length > 0) {
-        if (leftVis.length > 0) leftWidth += GAP;
+      if (leftHidCount > 0) {
+        if (leftVisCount > 0) leftWidth += GAP;
         leftWidth += (itemWidths['left-arrow'] || ARROW_WIDTH);
       }
-      
+
       let rightWidth = 0;
-      rightVis.forEach((item, idx) => {
-        rightWidth += (itemWidths[item.id] || 100);
-        if (idx > 0) rightWidth += GAP;
+      let rightHidCount = 0;
+      let rightVisCount = 0;
+
+      rightItems.forEach(item => {
+        if (item.hideOrder !== undefined && item.hideOrder <= hideThreshold) {
+          rightHidCount++;
+        } else {
+          const w = itemWidths[`${isCompact ? 'compact' : 'full'}-${item.id}`] || itemWidths[`full-${item.id}`] || 100;
+          if (rightVisCount > 0) rightWidth += GAP;
+          rightWidth += w;
+          rightVisCount++;
+        }
       });
-      if (rightHid.length > 0) {
-        if (rightVis.length > 0) rightWidth += GAP;
+      if (rightHidCount > 0) {
+        if (rightVisCount > 0) rightWidth += GAP;
         rightWidth += (itemWidths['right-arrow'] || ARROW_WIDTH);
       }
-      
+
       let reqWidth = leftWidth + rightWidth;
       if (leftWidth > 0 && rightWidth > 0) {
         reqWidth += GROUP_GAP;
       }
-      
-      if (reqWidth <= containerWidth || hideCount === allItems.length) {
-        bestLeftVisible = leftVis;
-        bestLeftHidden = leftHid;
-        bestRightVisible = rightVis;
-        bestRightHidden = rightHid;
+      return reqWidth;
+    };
+
+    // Stage 0: Full width, no hidden
+    if (getReqWidth(false, 0) <= containerWidth) {
+      return {
+        leftVisible: leftItems, leftHidden: [],
+        rightVisible: rightItems, rightHidden: [],
+        isCompact: false,
+      };
+    }
+
+    // Stage 1: Compact width, no hidden
+    if (getReqWidth(true, 0) <= containerWidth) {
+      return {
+        leftVisible: leftItems, leftHidden: [],
+        rightVisible: rightItems, rightHidden: [],
+        isCompact: true,
+      };
+    }
+
+    // Stage 2+: Hide progressively
+    let bestThreshold = maxHideOrder; // Hide everything possible by default if it's very narrow
+    for (let t = 1; t <= maxHideOrder; t++) {
+      if (getReqWidth(true, t) <= containerWidth) {
+        bestThreshold = t;
         break;
       }
     }
+
+    const leftVisible = leftItems.filter(i => i.hideOrder === undefined || i.hideOrder > bestThreshold);
+    const leftHidden = leftItems.filter(i => i.hideOrder !== undefined && i.hideOrder <= bestThreshold);
     
+    const rightVisible = rightItems.filter(i => i.hideOrder === undefined || i.hideOrder > bestThreshold);
+    const rightHidden = rightItems.filter(i => i.hideOrder !== undefined && i.hideOrder <= bestThreshold);
+
     return {
-      leftVisible: bestLeftVisible,
-      leftHidden: bestLeftHidden,
-      rightVisible: bestRightVisible,
-      rightHidden: bestRightHidden
+      leftVisible, leftHidden,
+      rightVisible, rightHidden,
+      isCompact: true,
     };
   }, [containerWidth, itemWidths, leftItems, rightItems]);
 
@@ -220,8 +253,10 @@ export function ResponsiveActionGroups({ leftItems, rightItems, className = "" }
         className="absolute top-0 left-0 opacity-0 pointer-events-none flex gap-2 w-max h-0 overflow-hidden"
         aria-hidden="true"
       >
-        {leftItems.map(item => <div key={item.id} data-id={item.id}>{item.node}</div>)}
-        {rightItems.map(item => <div key={item.id} data-id={item.id}>{item.node}</div>)}
+        {leftItems.map(item => <div key={`full-${item.id}`} data-id={`full-${item.id}`}>{item.node}</div>)}
+        {leftItems.map(item => <div key={`compact-${item.id}`} data-id={`compact-${item.id}`}>{item.compactNode || item.node}</div>)}
+        {rightItems.map(item => <div key={`full-${item.id}`} data-id={`full-${item.id}`}>{item.node}</div>)}
+        {rightItems.map(item => <div key={`compact-${item.id}`} data-id={`compact-${item.id}`}>{item.compactNode || item.node}</div>)}
         <div data-id="left-arrow">
           <Button variant="outline" className="w-10 h-10 px-0 flex items-center justify-center shrink-0"><ChevronRight className="w-4 h-4 shrink-0" /></Button>
         </div>
@@ -236,11 +271,13 @@ export function ResponsiveActionGroups({ leftItems, rightItems, className = "" }
           isRight={false}
           visibleItems={visibleState.leftVisible}
           hiddenItems={visibleState.leftHidden}
+          isCompact={visibleState.isCompact}
         />
         <ExpandableGroup
           isRight={true}
           visibleItems={visibleState.rightVisible}
           hiddenItems={visibleState.rightHidden}
+          isCompact={visibleState.isCompact}
         />
       </div>
     </div>
