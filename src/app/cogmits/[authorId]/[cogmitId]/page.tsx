@@ -166,18 +166,16 @@ export default async function CogmitPage({ params }: PublicCogmitPageProps) {
   const isAuthor = currentUsername === cogmit.authorId;
 
   return (
-    <div className="w-full h-[calc(100vh-64px)] overflow-hidden">
-      <ViewCog
-        title={cogmit.title}
-        description={cogmit.description}
-        project={""}
-        content={cogmit.content}
-        mode="cogmit"
-        authorId={cogmit.authorId}
-        cogmitId={cogmit.cogmitId}
-        shareUrl={shareUrl}
-        isAuthor={isAuthor}
-      />
-    </div>
+    <ViewCog
+      title={cogmit.title}
+      description={cogmit.description}
+      project={""}
+      content={cogmit.content}
+      mode="cogmit"
+      authorId={cogmit.authorId}
+      cogmitId={cogmit.cogmitId}
+      shareUrl={shareUrl}
+      isAuthor={isAuthor}
+    />
   );
 }
