@@ -48,7 +48,7 @@ export function CogWorkspaceShell({
       </div>
 
       {/* SCROLLABLE CONTENT AREA */}
-      <div className="flex-1 overflow-y-hidden min-h-0 py-6">
+      <div className="flex-1 overflow-y-auto min-h-0 py-6">
         {children}
       </div>
     </div>

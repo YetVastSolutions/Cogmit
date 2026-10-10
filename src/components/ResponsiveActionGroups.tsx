@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 export interface ToolbarItem {
@@ -15,16 +15,10 @@ interface ResponsiveActionGroupsProps {
   className?: string;
 }
 
-function ExpandableGroup({
-  visibleItems,
+function OptionsDropdown({
   hiddenItems,
-  isRight,
-  isCompact,
 }: {
-  visibleItems: ToolbarItem[];
   hiddenItems: ToolbarItem[];
-  isRight: boolean;
-  isCompact: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -53,54 +47,51 @@ function ExpandableGroup({
     };
   }, [expanded]);
 
+  // If no hidden items, force close
   useEffect(() => {
     if (hiddenItems.length === 0) {
       setExpanded(false);
     }
   }, [hiddenItems.length]);
 
+  const toggleOptions = () => {
+    if (hiddenItems.length === 0) return;
+    if (expanded) {
+      collapse();
+    } else {
+      setExpanded(true);
+    }
+  };
+
   return (
-    <div className="flex items-center gap-2 relative">
-      {!isRight && visibleItems.map(item => (
-        <div key={item.id}>{isCompact && item.compactNode ? item.compactNode : item.node}</div>
-      ))}
+    <div className="relative shrink-0">
+      <Button 
+        variant="outline" 
+        className="w-10 h-10 px-0 flex items-center justify-center shrink-0" 
+        onClick={toggleOptions}
+        aria-label={expanded ? "Close Options" : "Options"}
+        aria-expanded={expanded}
+      >
+        <Menu className="w-4 h-4 shrink-0" />
+      </Button>
       
-      {hiddenItems.length > 0 && (
-        <div className="relative">
-          <Button 
-            variant="outline" 
-            className="w-10 h-10 px-0 flex items-center justify-center shrink-0" 
-            onClick={() => {
-               if (expanded) {
-                 collapse();
-               } else {
-                 setExpanded(true);
-               }
-            }}
-            aria-label={expanded ? "Collapse" : "Expand"}
-          >
-            {isRight ? <ChevronLeft className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
-          </Button>
-          
-          {expanded && (
-            <div 
-              className={`absolute top-full mt-2 ${isRight ? 'right-0' : 'left-0'} bg-popover border border-border shadow-lg rounded-md p-2 flex flex-col gap-2 z-50 min-w-[120px]`}
-              onClick={handleInteract}
-              onKeyDown={handleInteract}
-              onFocusCapture={handleInteract}
-            >
-              {/* Inside dropdown we typically show full nodes for clarity, or compact if they prefer. Let's show full. */}
-              {hiddenItems.map(item => (
-                <div key={item.id}>{item.node}</div>
-              ))}
+      {expanded && hiddenItems.length > 0 && (
+        <div 
+          className="absolute top-full mt-2 left-0 bg-popover border border-border shadow-lg rounded-md p-2 flex flex-col gap-2 z-50 min-w-[150px]"
+          onClick={handleInteract}
+          onKeyDown={(e) => {
+            handleInteract(e);
+            if (e.key === 'Escape') collapse();
+          }}
+          onFocusCapture={handleInteract}
+        >
+          {hiddenItems.map(item => (
+            <div key={item.id} onClick={collapse} className="w-full">
+              {item.node}
             </div>
-          )}
+          ))}
         </div>
       )}
-      
-      {isRight && visibleItems.map(item => (
-        <div key={item.id}>{isCompact && item.compactNode ? item.compactNode : item.node}</div>
-      ))}
     </div>
   );
 }
@@ -140,15 +131,16 @@ export function ResponsiveActionGroups({ leftItems, rightItems, className = "" }
   const visibleState = useMemo(() => {
     if (containerWidth === null || Object.keys(itemWidths).length === 0) {
       return {
-        leftVisible: leftItems,
-        leftHidden: [],
-        rightVisible: rightItems,
-        rightHidden: [],
+        leftPermanent: leftItems.filter(i => i.hideOrder === undefined),
+        leftHideableVis: leftItems.filter(i => i.hideOrder !== undefined),
+        rightHideableVis: rightItems.filter(i => i.hideOrder !== undefined),
+        rightPermanent: rightItems.filter(i => i.hideOrder === undefined),
+        hiddenItems: [],
         isCompact: false,
       };
     }
 
-    const ARROW_WIDTH = 48; // arrow + gap
+    const OPTIONS_WIDTH = itemWidths['options-btn'] || 48; // includes typical gap conceptually
     const GAP = 8; 
     const GROUP_GAP = 16; 
 
@@ -158,90 +150,81 @@ export function ResponsiveActionGroups({ leftItems, rightItems, className = "" }
       ...rightItems.map(i => i.hideOrder || 0)
     );
 
-    // Helper to calculate required width
     const getReqWidth = (isCompact: boolean, hideThreshold: number) => {
-      let leftWidth = 0;
-      let leftHidCount = 0;
-      let leftVisCount = 0;
+      let reqWidth = 0;
+      let leftCount = 0;
+      let rightCount = 0;
 
       leftItems.forEach(item => {
         if (item.hideOrder !== undefined && item.hideOrder <= hideThreshold) {
-          leftHidCount++;
+          // hidden
         } else {
           const w = itemWidths[`${isCompact ? 'compact' : 'full'}-${item.id}`] || itemWidths[`full-${item.id}`] || 100;
-          if (leftVisCount > 0) leftWidth += GAP;
-          leftWidth += w;
-          leftVisCount++;
+          if (leftCount > 0) reqWidth += GAP;
+          reqWidth += w;
+          leftCount++;
         }
       });
-      if (leftHidCount > 0) {
-        if (leftVisCount > 0) leftWidth += GAP;
-        leftWidth += (itemWidths['left-arrow'] || ARROW_WIDTH);
-      }
 
-      let rightWidth = 0;
-      let rightHidCount = 0;
-      let rightVisCount = 0;
+      // Options button always present
+      if (leftCount > 0) reqWidth += GAP;
+      reqWidth += OPTIONS_WIDTH;
+      leftCount++;
 
       rightItems.forEach(item => {
         if (item.hideOrder !== undefined && item.hideOrder <= hideThreshold) {
-          rightHidCount++;
+          // hidden
         } else {
           const w = itemWidths[`${isCompact ? 'compact' : 'full'}-${item.id}`] || itemWidths[`full-${item.id}`] || 100;
-          if (rightVisCount > 0) rightWidth += GAP;
-          rightWidth += w;
-          rightVisCount++;
+          if (rightCount > 0) reqWidth += GAP;
+          reqWidth += w;
+          rightCount++;
         }
       });
-      if (rightHidCount > 0) {
-        if (rightVisCount > 0) rightWidth += GAP;
-        rightWidth += (itemWidths['right-arrow'] || ARROW_WIDTH);
-      }
 
-      let reqWidth = leftWidth + rightWidth;
-      if (leftWidth > 0 && rightWidth > 0) {
+      if (leftCount > 0 && rightCount > 0) {
         reqWidth += GROUP_GAP;
       }
       return reqWidth;
     };
 
-    // Stage 0: Full width, no hidden
+    let bestThreshold = 0;
+    let bestCompact = false;
+
     if (getReqWidth(false, 0) <= containerWidth) {
-      return {
-        leftVisible: leftItems, leftHidden: [],
-        rightVisible: rightItems, rightHidden: [],
-        isCompact: false,
-      };
-    }
-
-    // Stage 1: Compact width, no hidden
-    if (getReqWidth(true, 0) <= containerWidth) {
-      return {
-        leftVisible: leftItems, leftHidden: [],
-        rightVisible: rightItems, rightHidden: [],
-        isCompact: true,
-      };
-    }
-
-    // Stage 2+: Hide progressively
-    let bestThreshold = maxHideOrder; // Hide everything possible by default if it's very narrow
-    for (let t = 1; t <= maxHideOrder; t++) {
-      if (getReqWidth(true, t) <= containerWidth) {
-        bestThreshold = t;
-        break;
+      bestThreshold = 0;
+      bestCompact = false;
+    } else if (getReqWidth(true, 0) <= containerWidth) {
+      bestThreshold = 0;
+      bestCompact = true;
+    } else {
+      bestCompact = true;
+      bestThreshold = maxHideOrder; // max hiding by default
+      for (let t = 1; t <= maxHideOrder; t++) {
+        if (getReqWidth(true, t) <= containerWidth) {
+          bestThreshold = t;
+          break;
+        }
       }
     }
 
-    const leftVisible = leftItems.filter(i => i.hideOrder === undefined || i.hideOrder > bestThreshold);
+    const leftPermanent = leftItems.filter(i => i.hideOrder === undefined);
+    const leftHideableVis = leftItems.filter(i => i.hideOrder !== undefined && i.hideOrder > bestThreshold);
     const leftHidden = leftItems.filter(i => i.hideOrder !== undefined && i.hideOrder <= bestThreshold);
     
-    const rightVisible = rightItems.filter(i => i.hideOrder === undefined || i.hideOrder > bestThreshold);
+    const rightHideableVis = rightItems.filter(i => i.hideOrder !== undefined && i.hideOrder > bestThreshold);
+    const rightPermanent = rightItems.filter(i => i.hideOrder === undefined);
     const rightHidden = rightItems.filter(i => i.hideOrder !== undefined && i.hideOrder <= bestThreshold);
 
+    // Keep hidden actions in their original logical order within the dropdown.
+    // Order: Left items first, then Right items.
+    const hiddenItems = [...leftHidden, ...rightHidden];
+
     return {
-      leftVisible, leftHidden,
-      rightVisible, rightHidden,
-      isCompact: true,
+      leftPermanent, leftHideableVis,
+      rightHideableVis, rightPermanent,
+      hiddenItems,
+      isCompact: bestCompact,
     };
   }, [containerWidth, itemWidths, leftItems, rightItems]);
 
@@ -257,28 +240,46 @@ export function ResponsiveActionGroups({ leftItems, rightItems, className = "" }
         {leftItems.map(item => <div key={`compact-${item.id}`} data-id={`compact-${item.id}`}>{item.compactNode || item.node}</div>)}
         {rightItems.map(item => <div key={`full-${item.id}`} data-id={`full-${item.id}`}>{item.node}</div>)}
         {rightItems.map(item => <div key={`compact-${item.id}`} data-id={`compact-${item.id}`}>{item.compactNode || item.node}</div>)}
-        <div data-id="left-arrow">
-          <Button variant="outline" className="w-10 h-10 px-0 flex items-center justify-center shrink-0"><ChevronRight className="w-4 h-4 shrink-0" /></Button>
-        </div>
-        <div data-id="right-arrow">
-          <Button variant="outline" className="w-10 h-10 px-0 flex items-center justify-center shrink-0"><ChevronLeft className="w-4 h-4 shrink-0" /></Button>
+        <div data-id="options-btn">
+          <Button variant="outline" className="w-10 h-10 px-0 flex items-center justify-center shrink-0"><Menu className="w-4 h-4 shrink-0" /></Button>
         </div>
       </div>
 
       {/* Actual visible layout */}
-      <div ref={containerRef} className="flex items-center justify-between w-full h-full">
-        <ExpandableGroup
-          isRight={false}
-          visibleItems={visibleState.leftVisible}
-          hiddenItems={visibleState.leftHidden}
-          isCompact={visibleState.isCompact}
-        />
-        <ExpandableGroup
-          isRight={true}
-          visibleItems={visibleState.rightVisible}
-          hiddenItems={visibleState.rightHidden}
-          isCompact={visibleState.isCompact}
-        />
+      <div ref={containerRef} className="flex items-center justify-between w-full h-full gap-2 sm:gap-4 overflow-hidden">
+        
+        {/* Left Area */}
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0 shrink">
+          {visibleState.leftPermanent.map(item => (
+            <div key={item.id} className="min-w-0 shrink">
+              {visibleState.isCompact && item.compactNode ? item.compactNode : item.node}
+            </div>
+          ))}
+          
+          <OptionsDropdown hiddenItems={visibleState.hiddenItems} />
+
+          {visibleState.leftHideableVis.map(item => (
+            <div key={item.id} className="shrink-0">
+              {visibleState.isCompact && item.compactNode ? item.compactNode : item.node}
+            </div>
+          ))}
+        </div>
+
+        {/* Right Area */}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {visibleState.rightHideableVis.map(item => (
+            <div key={item.id} className="shrink-0">
+              {visibleState.isCompact && item.compactNode ? item.compactNode : item.node}
+            </div>
+          ))}
+          
+          {visibleState.rightPermanent.map(item => (
+            <div key={item.id} className="shrink-0">
+              {visibleState.isCompact && item.compactNode ? item.compactNode : item.node}
+            </div>
+          ))}
+        </div>
+
       </div>
     </div>
   );

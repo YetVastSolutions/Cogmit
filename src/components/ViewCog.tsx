@@ -389,7 +389,6 @@ export function ViewCog({
               },
               {
                 id: "share",
-                hideOrder: 2,
                 node: (
                   <Button
                     variant="outline"
@@ -414,7 +413,6 @@ export function ViewCog({
               },
               {
                 id: "like",
-                hideOrder: 3,
                 node: (
                   <Button
                     variant="outline"
