@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
+import { ResponsiveActionGroups, ToolbarItem } from "@/components/ResponsiveActionGroups";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Volume2, User, Share, Heart, MessageSquare, BookPlus, Eye } from "lucide-react";
 
@@ -235,13 +236,15 @@ export function ViewCog({
         />
       }
       actionContent={
-        <Button variant="outline" className="w-full group relative cursor-help" disabled>
-          <Volume2 className="w-4 h-4 mr-2" />
-          <span className="hidden sm:inline">YappOut</span>
-          <div className="absolute right-0 top-full mt-2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-md border border-border">
-            YappOut
-          </div>
-        </Button>
+        mode === "private" ? (
+          <Button variant="outline" className="w-full group relative cursor-help" disabled>
+            <Volume2 className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">YappOut</span>
+            <div className="absolute right-0 top-full mt-2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-md border border-border">
+              YappOut
+            </div>
+          </Button>
+        ) : undefined
       }
       metadataContent={mode === "private" ? metadataContent : undefined}
       actionRowContent={
@@ -270,78 +273,120 @@ export function ViewCog({
             deleteEnabled={!!deleteCogId} // Only allow delete if they have the right
           />
         ) : mode === "cogmit" && authorId ? (
-          <div className="flex flex-nowrap w-full items-center justify-center relative">
-            {/* Left Container */}
-            <div className="flex flex-1 justify-end pr-2 md:pr-4 gap-2 min-w-[88px]">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentViewIndex((prev) => (prev + 1) % parsers.length)}
-                disabled={isTransitioning}
-                className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none group relative"
-                aria-label={`Switch Markdown parser: ${parsers[currentViewIndex].tooltip}`}
-              >
-                <span className="hidden md:inline whitespace-nowrap">{parsers[currentViewIndex].name}</span>
-                <Eye className="w-4 h-4 md:ml-2 shrink-0" />
-                <div className="absolute right-0 md:left-1/2 md:-translate-x-1/2 top-full mt-2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-md border border-border">
-                  {parsers[currentViewIndex].tooltip}
-                </div>
-              </Button>
-              <Button
-                variant="outline"
-                disabled
-                className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
-                aria-label="Add to Reads"
-              >
-                <span className="hidden md:inline whitespace-nowrap">Add to Reads</span>
-                <BookPlus className="w-4 h-4 md:ml-2 shrink-0" />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleShare}
-                className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
-                title="Copy link"
-              >
-                <span className="hidden md:inline whitespace-nowrap">Share</span>
-                <Share className="w-4 h-4 md:ml-2 shrink-0" />
-              </Button>
-            </div>
-
-            {/* Center Container */}
-            <div className="flex-none shrink-0 w-auto flex justify-center z-10 max-w-full min-w-0">
-              <Link
-                href={isAuthor ? "/" : `/cogmits/${authorId}`}
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "bg-[#FFFF11] dark:bg-background hover:bg-[#e6e60f] dark:hover:bg-muted text-[#4B0084] dark:text-[#FFFF11] border-transparent dark:border-input font-medium flex items-center justify-center h-10 px-4 w-auto min-w-0 sm:min-w-[140px]"
-                )}
-              >
-                <User className="w-4 h-4 mr-2 shrink-0" />
-                <span className="whitespace-nowrap truncate min-w-0">
-                  {authorId}
-                  <span className="hidden sm:inline">
-                    {project && project !== "No Parent Project" ? ` : ${project}` : ""}
-                  </span>
-                </span>
-              </Link>
-            </div>
-
-            {/* Right Container */}
-            <div className="flex flex-1 justify-start pl-2 md:pl-4 gap-2 min-w-[88px]">
-              <Button
-                variant="outline"
-                onClick={() => setIsLiked(!isLiked)}
-                className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none"
-                aria-label="Like"
-              >
-                <span className="hidden md:inline whitespace-nowrap">{isLiked ? "Unlike" : "Like"}</span>
-                <Heart className={cn("w-4 h-4 md:ml-2 shrink-0", isLiked ? "fill-red-500 text-red-500" : "")} />
-              </Button>
-              <Button variant="outline" disabled className="shrink-0 h-10 w-10 px-0 md:w-auto md:px-4 flex-none" aria-label="Child Cog">
-                <span className="hidden md:inline whitespace-nowrap">+ Child Cog</span>
-                <MessageSquare className="w-4 h-4 md:ml-2 shrink-0" />
-              </Button>
-            </div>
-          </div>
+          <ResponsiveActionGroups
+            leftItems={[
+              {
+                id: "author",
+                priority: 1,
+                node: (
+                  <Link
+                    href={isAuthor ? "/" : `/cogmits/${authorId}`}
+                    className={cn(
+                      buttonVariants({ variant: "outline" }),
+                      "bg-[#FFFF11] dark:bg-background hover:bg-[#e6e60f] dark:hover:bg-muted text-[#4B0084] dark:text-[#FFFF11] border-transparent dark:border-input font-medium flex items-center justify-center h-10 px-4 whitespace-nowrap w-full md:w-auto min-w-[140px]"
+                    )}
+                  >
+                    <User className="w-4 h-4 mr-2 shrink-0" />
+                    <span>
+                      {authorId}
+                      <span className="hidden sm:inline">
+                        {project && project !== "No Parent Project" ? ` : ${project}` : ""}
+                      </span>
+                    </span>
+                  </Link>
+                )
+              },
+              {
+                id: "view-modes",
+                priority: 2,
+                node: (
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentViewIndex((prev) => (prev + 1) % parsers.length)}
+                    disabled={isTransitioning}
+                    className="shrink-0 h-10 w-full md:w-auto px-4 flex-none group relative"
+                    aria-label={`Switch Markdown parser: ${parsers[currentViewIndex].tooltip}`}
+                  >
+                    <span className="whitespace-nowrap">{parsers[currentViewIndex].name}</span>
+                    <Eye className="w-4 h-4 ml-2 shrink-0" />
+                    <div className="absolute right-0 top-full mt-2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-md border border-border">
+                      {parsers[currentViewIndex].tooltip}
+                    </div>
+                  </Button>
+                )
+              },
+              {
+                id: "add-to-reads",
+                priority: 3,
+                node: (
+                  <Button
+                    variant="outline"
+                    disabled
+                    className="shrink-0 h-10 w-full md:w-auto px-4 flex-none"
+                    aria-label="Add to Reads"
+                  >
+                    <span className="whitespace-nowrap">Add to Reads</span>
+                    <BookPlus className="w-4 h-4 ml-2 shrink-0" />
+                  </Button>
+                )
+              }
+            ]}
+            rightItems={[
+              {
+                id: "child-cog",
+                priority: 1,
+                node: (
+                  <Button variant="outline" disabled className="shrink-0 h-10 w-full md:w-auto px-4 flex-none" aria-label="Child Cog">
+                    <span className="whitespace-nowrap">+ Child Cog</span>
+                    <MessageSquare className="w-4 h-4 ml-2 shrink-0" />
+                  </Button>
+                )
+              },
+              {
+                id: "share",
+                priority: 2,
+                node: (
+                  <Button
+                    variant="outline"
+                    onClick={handleShare}
+                    className="shrink-0 h-10 w-full md:w-auto px-4 flex-none"
+                    title="Copy link"
+                  >
+                    <span className="whitespace-nowrap">Share</span>
+                    <Share className="w-4 h-4 ml-2 shrink-0" />
+                  </Button>
+                )
+              },
+              {
+                id: "like",
+                priority: 3,
+                node: (
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsLiked(!isLiked)}
+                    className="shrink-0 h-10 w-full md:w-auto px-4 flex-none"
+                    aria-label="Like"
+                  >
+                    <span className="whitespace-nowrap">{isLiked ? "Unlike" : "Like"}</span>
+                    <Heart className={cn("w-4 h-4 ml-2 shrink-0", isLiked ? "fill-red-500 text-red-500" : "")} />
+                  </Button>
+                )
+              },
+              {
+                id: "yappout",
+                priority: 4,
+                node: (
+                  <Button variant="outline" className="w-full md:w-auto shrink-0 h-10 px-4 group relative cursor-help flex-none" disabled>
+                    <span className="whitespace-nowrap">YappOut</span>
+                    <Volume2 className="w-4 h-4 ml-2 shrink-0" />
+                    <div className="absolute right-0 top-full mt-2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-md border border-border">
+                      YappOut
+                    </div>
+                  </Button>
+                )
+              }
+            ]}
+          />
         ) : undefined
       }
     >

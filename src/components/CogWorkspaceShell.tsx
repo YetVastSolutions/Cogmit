@@ -29,12 +29,14 @@ export function CogWorkspaceShell({
 
         {/* ROW 2: Title and Actions */}
         <div className="flex items-center gap-4 w-full">
-          <div className="w-[80%] flex items-center min-w-0">
+          <div className={actionContent ? "w-[80%] flex items-center min-w-0" : "w-full flex items-center min-w-0"}>
             {titleContent}
           </div>
-          <div className="w-[20%] flex items-center justify-end min-w-0">
-            {actionContent}
-          </div>
+          {actionContent && (
+            <div className="w-[20%] flex items-center justify-end min-w-0">
+              {actionContent}
+            </div>
+          )}
         </div>
 
         {/* ROW 3: Metadata */}
@@ -46,7 +48,7 @@ export function CogWorkspaceShell({
       </div>
 
       {/* SCROLLABLE CONTENT AREA */}
-      <div className="flex-1 overflow-y-auto min-h-0 py-6">
+      <div className="flex-1 overflow-y-hidden min-h-0 py-6">
         {children}
       </div>
     </div>
