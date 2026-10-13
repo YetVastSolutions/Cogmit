@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { ViewCog } from "@/components/ViewCog";
 import { headers } from "next/headers";
 import { Metadata } from "next";
-import { getCanonicalCogmitUrl } from "@/lib/utils";
+import { getCanonicalCogmitUrl, extractExcerpt } from "@/lib/utils";
 
 interface PublicCogmitPageProps {
   params: Promise<{ authorId: string; cogmitId: string }>;
@@ -36,7 +36,7 @@ async function getPublishedCogmit(authorId: string, cogmitId: string) {
           repo: targetRepo,
         });
         defaultBranch = repoInfo.data.default_branch;
-      } catch (innerError) {
+      } catch {
         return null;
       }
     } else {
@@ -61,7 +61,7 @@ async function getPublishedCogmit(authorId: string, cogmitId: string) {
     } else {
       return null;
     }
-  } catch (error) {
+  } catch {
     return null;
   }
 
@@ -82,7 +82,7 @@ async function getPublishedCogmit(authorId: string, cogmitId: string) {
     if (data && !Array.isArray(data) && "content" in data) {
       content = Buffer.from(data.content, "base64").toString("utf-8");
     }
-  } catch (error) {
+  } catch {
     return null;
   }
 
@@ -108,36 +108,39 @@ export async function generateMetadata({ params }: PublicCogmitPageProps): Promi
     };
   }
 
-  const origin = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || 'cogmit.com'}`;
+  const origin = process.env.NEXT_PUBLIC_APP_URL 
+    || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined)
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)
+    || "https://cogmit.com";
   const url = getCanonicalCogmitUrl(origin, cogmit.authorId, cogmit.cogmitId);
   
-  const truncatedDescription = cogmit.description && cogmit.description.length > 157 
-    ? `${cogmit.description.slice(0, 156)}…` 
-    : cogmit.description;
+  const descriptionExcerpt = extractExcerpt(
+    cogmit.description || cogmit.content,
+    200,
+    cogmit.title
+  );
 
   return {
     title: cogmit.title,
-    description: truncatedDescription,
+    description: descriptionExcerpt,
     alternates: {
       canonical: url,
     },
     openGraph: {
       title: cogmit.title,
-      description: truncatedDescription,
+      description: descriptionExcerpt,
       url: url,
+      siteName: "Cogmit",
       type: "article",
       publishedTime: cogmit.publishedAt,
       authors: [cogmit.authorId],
-      // Temporarily disable open graph preview image
-      // ...(cogmit.image ? { images: [{ url: cogmit.image }] } : {}),
+      ...(cogmit.image ? { images: [{ url: cogmit.image }] } : {}),
     },
     twitter: {
-      // Temporarily disable twitter card preview image
-      // card: cogmit.image ? "summary_large_image" : "summary",
-      card: "summary",
+      card: cogmit.image ? "summary_large_image" : "summary",
       title: cogmit.title,
-      description: truncatedDescription,
-      // ...(cogmit.image ? { images: [cogmit.image] } : {}),
+      description: descriptionExcerpt,
+      ...(cogmit.image ? { images: [cogmit.image] } : {}),
     }
   };
 }

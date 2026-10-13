@@ -515,6 +515,7 @@ export function ViewCog({
         authorId={authorId}
         published={published}
         shareUrl={resolvedShareUrl}
+        content={content}
       />
     </CogWorkspaceShell>
   );

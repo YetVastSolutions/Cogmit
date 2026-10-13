@@ -1,4 +1,7 @@
+import { extractExcerpt } from "./excerpt";
+
 export { cn } from "cn";
+export { extractExcerpt, MAX_EXCERPT_LENGTH, stripMarkdown } from "./excerpt";
 
 export function formatTimestamp(dateInput: string | number | Date | null | undefined): string {
   if (!dateInput) return "Unknown date";
@@ -28,9 +31,7 @@ export function formatTimestamp(dateInput: string | number | Date | null | undef
 }
 
 export function extractDescription(md: string): string {
-  if (!md) return "";
-  const match = md.match(/^(?!#)[a-zA-Z0-9].*$/m);
-  return match ? match[0].substring(0, 160) : "";
+  return extractExcerpt(md, 200);
 }
 
 export function getCanonicalCogmitUrl(origin: string, authorId: string, cogmitId: string): string {
