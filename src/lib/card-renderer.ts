@@ -2,20 +2,20 @@
  * Deterministic Cogmit Card Renderer
  * Follows YVS Visual Language and Cogmit specifications:
  * - Deterministic SVG generation with exact text rendering.
- * - Two independent options: withDescription (portrait 3:4) / landscape (4:3), darkTheme.
+ * - Two independent options: withDescription (portrait content-driven) / landscape (4:3), darkTheme.
  * - Dark theme: black background, YV Indigo Violet border/dividers, YV Yellow text.
  * - Light theme: neutral surface background, YV Indigo Violet border, dark foreground text.
- * - Title limit: 147 characters. Description limit: 397 characters.
+ * - Title limit: 147 characters. Description limit: 597 characters.
  * - Safe XML escaping, text wrapping, and overflow prevention.
  * - In-memory client caching ensuring cards are reused and not regenerated unnecessarily.
  * - Deterministic PNG/JPEG rasterization via HTML5 Canvas.
  */
 
-export const TEMPLATE_VERSION = "1.1.0";
+export const TEMPLATE_VERSION = "1.2.0";
 
 // Canvas dimensions
-export const CARD_WIDTH_PORTRAIT = 900;   // 3:4 portrait (with description)
-export const CARD_HEIGHT_PORTRAIT = 1200;
+export const CARD_WIDTH_PORTRAIT = 900;   // Portrait base width (with description, content-driven height)
+export const CARD_HEIGHT_PORTRAIT = 1200; // Base portrait fallback height
 export const CARD_WIDTH_LANDSCAPE = 1200; // 4:3 landscape (without description)
 export const CARD_HEIGHT_LANDSCAPE = 900;
 
@@ -31,7 +31,7 @@ export const COLOR_YELLOW = "#FFFF11";
 /** Shared single source of truth for the RootCog title maximum length across Cogmit. */
 export const MAX_ROOTCOG_TITLE_LENGTH = 147;
 export const CARD_TITLE_MAX = MAX_ROOTCOG_TITLE_LENGTH;
-export const CARD_DESCRIPTION_MAX = 397;
+export const CARD_DESCRIPTION_MAX = 597;
 
 export interface CardTemplateOptions {
   title: string;
@@ -40,11 +40,11 @@ export interface CardTemplateOptions {
   authorId?: string;
   published?: string;
   templateVersion?: string;
-  /** Include description block and use portrait 3:4 layout. Default false. */
+  /** Include description block and use portrait layout with content-driven height. Default false. */
   withDescription?: boolean;
   /** Use dark theme (black bg, YV Yellow text). Default true. */
   darkTheme?: boolean;
-  // width/height are derived from withDescription; kept for back-compat but ignored.
+  // width/height are derived from withDescription and content; kept for back-compat but ignored.
   width?: number;
   height?: number;
 }
@@ -78,9 +78,112 @@ export function escapeXml(str: string): string {
 }
 
 /**
- * Deterministic word-wrapping algorithm.
- * Splits text into lines that do not exceed maxCharsPerLine.
- * Long words exceeding the limit are cleanly broken across lines.
+ * Proportional character width factor relative to font-size (em).
+ * Tuned for standard sans-serif system fonts (-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Inter).
+ */
+export function getCharWidthFactor(char: string, isBold = false): number {
+  if (!char) return 0;
+  if (char === " " || char === "\u00A0") return 0.28;
+  if ("ijl|![]():;.,'\"`".includes(char)) return 0.28;
+  if ("frtI".includes(char)) return 0.35;
+  if ("abcdeghknopquvxyzs".includes(char)) return 0.53;
+  if ("mw".includes(char)) return 0.78;
+  if ("ABCDEFGHJKLNPQRSTUVXYZ".includes(char)) return 0.68;
+  if ("MW".includes(char)) return 0.85;
+  if ("0123456789".includes(char)) return 0.55;
+  if ("-_=+?/#$%&*@".includes(char)) {
+    return char === "@" || char === "%" ? 0.85 : 0.55;
+  }
+  if (char.charCodeAt(0) > 255) return 1.0;
+  return isBold ? 0.58 : 0.52;
+}
+
+/**
+ * Estimates text width in pixels for a given font size and weight.
+ */
+export function estimateStringWidth(str: string, fontSize: number, isBold = false): number {
+  let total = 0;
+  const boldMultiplier = isBold ? 1.08 : 1.0;
+  for (let i = 0; i < str.length; i++) {
+    total += getCharWidthFactor(str[i], isBold) * fontSize * boldMultiplier;
+  }
+  return total;
+}
+
+/**
+ * Deterministic word-wrapping algorithm based on pixel width.
+ * Splits text into lines that do not exceed maxWidth pixels.
+ * Breaks words cleanly if an individual word exceeds maxWidth.
+ */
+export function wrapTextByWidth(
+  text: string,
+  maxWidth: number,
+  fontSize: number,
+  isBold = false
+): string[] {
+  if (!text) return [];
+
+  // Support multi-line input by splitting paragraphs
+  const paragraphs = text.split(/\r?\n/);
+  const resultLines: string[] = [];
+
+  for (const para of paragraphs) {
+    const trimmedPara = para.trim();
+    if (!trimmedPara) continue;
+
+    const words = trimmedPara.split(/\s+/);
+    let currentLine = "";
+
+    for (const word of words) {
+      if (!word) continue;
+
+      const wordWidth = estimateStringWidth(word, fontSize, isBold);
+
+      // If a single word is wider than maxWidth, break it by character
+      if (wordWidth > maxWidth) {
+        if (currentLine) {
+          resultLines.push(currentLine);
+          currentLine = "";
+        }
+        let chunk = "";
+        for (const char of word) {
+          if (estimateStringWidth(chunk + char, fontSize, isBold) > maxWidth && chunk) {
+            resultLines.push(chunk);
+            chunk = char;
+          } else {
+            chunk += char;
+          }
+        }
+        if (chunk) {
+          currentLine = chunk;
+        }
+        continue;
+      }
+
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+      const candidateWidth = estimateStringWidth(candidate, fontSize, isBold);
+
+      if (candidateWidth <= maxWidth) {
+        currentLine = candidate;
+      } else {
+        if (currentLine) {
+          resultLines.push(currentLine);
+        }
+        currentLine = word;
+      }
+    }
+
+    if (currentLine) {
+      resultLines.push(currentLine);
+    }
+  }
+
+  return resultLines;
+}
+
+/**
+ * Deterministic character-count word-wrapping algorithm.
+ * Maintained for backward compatibility with external consumers and existing tests.
  */
 export function wrapText(text: string, maxCharsPerLine: number): string[] {
   if (!text) return [];
@@ -119,6 +222,47 @@ export function wrapText(text: string, maxCharsPerLine: number): string[] {
   }
 
   return lines;
+}
+
+/**
+ * Calculates the dynamic, content-driven height of a portrait Cogmit card.
+ * Adapts to title and description lengths, supporting up to 597 description chars
+ * while eliminating excessive blank space when the description is short.
+ */
+export function calculatePortraitHeight(opts: Partial<CardTemplateOptions>): number {
+  const title = (opts.title || "Untitled Cogmit").slice(0, MAX_ROOTCOG_TITLE_LENGTH);
+  const excerpt = (opts.excerpt || "").slice(0, CARD_DESCRIPTION_MAX);
+
+  const paddingX = 64;
+  const usableWidth = CARD_WIDTH_PORTRAIT - paddingX * 2; // 772px
+  const maxTextWidth = usableWidth - 12; // 760px
+
+  const titleLines = wrapTextByWidth(title, maxTextWidth, 44, true);
+  const excerptLines = excerpt ? wrapTextByWidth(excerpt, maxTextWidth, 28, false) : [];
+
+  const titleStartY = 200;
+  const titleLineHeight = 54;
+  const titleEndY = titleStartY + Math.max(0, titleLines.length - 1) * titleLineHeight;
+
+  const divider1Y = titleEndY + 46;
+
+  let contentEndY: number;
+  if (excerptLines.length > 0) {
+    const excerptStartY = divider1Y + 52;
+    const excerptLineHeight = 44;
+    const excerptEndY = excerptStartY + (excerptLines.length - 1) * excerptLineHeight;
+    contentEndY = excerptEndY + 12;
+  } else {
+    contentEndY = divider1Y + 20;
+  }
+
+  const divider2Y = contentEndY + 48;
+  const footerIntroY = divider2Y + 44;
+  const footerUrlY = footerIntroY + 38;
+
+  const borderInset = 28;
+  const bottomPadding = 56;
+  return Math.round(footerUrlY + bottomPadding + borderInset);
 }
 
 /**
@@ -209,15 +353,16 @@ function buildStyles(c: ThemeColors): string {
   const font = `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif`;
   const mono = `"JetBrains Mono", Consolas, Monaco, monospace`;
   return `
+      svg { width: 100%; height: auto; max-width: 100%; box-sizing: border-box; display: block; }
       .bg { fill: ${c.bg}; }
       .outer-border { fill: none; stroke: ${c.borderColor}; stroke-width: 3; }
       .brand { font-family: ${font}; font-size: 22px; font-weight: 700; fill: ${c.brand}; letter-spacing: 3px; }
       .sep   { font-family: ${font}; font-size: 22px; font-weight: 400; fill: ${c.separator}; letter-spacing: 0; }
       .author-name { font-family: ${font}; font-size: 22px; font-weight: 700; fill: ${c.authorName}; letter-spacing: 0; }
-      .title { font-family: ${font}; font-size: 44px; font-weight: 800; fill: ${c.title}; }
-      .excerpt { font-family: ${font}; font-size: 28px; font-weight: 400; fill: ${c.excerpt}; }
-      .url-intro { font-family: ${mono}; font-size: 19px; font-weight: 500; fill: ${c.urlIntro}; }
-      .url-label { font-family: ${mono}; font-size: 20px; font-weight: 700; fill: ${c.urlLabel}; }
+      .title-container, .title { font-family: ${font}; font-size: 44px; font-weight: 800; fill: ${c.title}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .description-container, .excerpt, p { font-family: ${font}; font-size: 28px; font-weight: 400; fill: ${c.excerpt}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .url-intro { font-family: ${mono}; font-size: 22px; font-weight: 500; fill: ${c.urlIntro}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .url-label { font-family: ${mono}; font-size: 20px; font-weight: 700; fill: ${c.urlLabel}; width: 100%; max-width: 100%; box-sizing: border-box; }
       .divider { stroke: ${c.divider}; stroke-width: 1.5; stroke-opacity: ${c.dividerOpacity}; }`.trimStart();
 }
 
@@ -248,20 +393,20 @@ function buildFooter(
   <!-- Footer divider -->
   <line x1="${paddingX}" y1="${divider2Y}" x2="${width - paddingX}" y2="${divider2Y}" class="divider" />
 
-  <!-- Footer row 1: intro -->
+  <!-- Footer row 1: intro (matching username font size 22px) -->
   <text x="${paddingX}" y="${footerIntroY}" class="url-intro">Full content at COGMIT:</text>
 
   <!-- Footer row 2: link -->
   <text x="${paddingX}" y="${footerUrlY}" class="url-label">${displayUrl}</text>`;
 }
 
-// ─── Portrait card (3:4, with description) ───────────────────────────────────
+// ─── Portrait card (content-driven height, with description) ──────────────────
 
 function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string {
   const { title, excerpt, url, authorId } = opts;
 
   const width = CARD_WIDTH_PORTRAIT;
-  const height = CARD_HEIGHT_PORTRAIT;
+  const height = calculatePortraitHeight(opts);
 
   const safeUsername = escapeXml(authorId ? authorId.toLowerCase() : "");
   const displayUrl = escapeXml(url.replace(/^https?:\/\//, ""));
@@ -270,32 +415,44 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const borderInset = 28;
   const borderRadius = 20;
 
-  // Title: up to 6 lines for 147 chars, ~34 chars per line (portrait width ~772px usable)
-  const titleLines = wrapText(title || "Untitled Cogmit", 34).slice(0, 6);
+  const usableWidth = width - paddingX * 2; // 772px
+  const maxTextWidth = usableWidth - 12; // 760px
 
-  // Description: ~44 chars per line (uses full available width)
-  const excerptLines = wrapText(excerpt, 44);
+  // Title: natural multi-line wrapping, never sliced
+  const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, 44, true);
+
+  // Description: occupies full available inner width (~760px), wraps naturally only when width exhausted
+  const excerptLines = excerpt ? wrapTextByWidth(excerpt, maxTextWidth, 28, false) : [];
 
   const headerY = 108;
 
-  const titleStartY = 204;
+  const titleStartY = 200;
   const titleLineHeight = 54;
+  const titleEndY = titleStartY + Math.max(0, titleLines.length - 1) * titleLineHeight;
 
-  const divider1Y = titleStartY + (titleLines.length - 1) * titleLineHeight + 56;
+  const divider1Y = titleEndY + 46;
 
-  const excerptStartY = divider1Y + 54;
-  const excerptLineHeight = 46;
+  let contentEndY: number;
+  const excerptStartY = divider1Y + 52;
+  const excerptLineHeight = 44;
 
-  // Footer: two rows
-  const divider2Y = height - 136;
-  const footerIntroY = height - 96;
-  const footerUrlY = height - 58;
+  if (excerptLines.length > 0) {
+    const excerptEndY = excerptStartY + (excerptLines.length - 1) * excerptLineHeight;
+    contentEndY = excerptEndY + 12;
+  } else {
+    contentEndY = divider1Y + 20;
+  }
+
+  // Footer: dynamic Y based on actual content
+  const divider2Y = contentEndY + 48;
+  const footerIntroY = divider2Y + 44;
+  const footerUrlY = footerIntroY + 38;
 
   const titleTspans = buildTspans(titleLines, paddingX, titleLineHeight);
   const excerptTspans = buildTspans(excerptLines, paddingX, excerptLineHeight);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box;">
   <defs><style>${buildStyles(c)}</style></defs>
 
   <!-- Card surface -->
@@ -315,7 +472,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   <!-- Divider below title -->
   <line x1="${paddingX}" y1="${divider1Y}" x2="${width - paddingX}" y2="${divider1Y}" class="divider" />
 
-  <!-- Description (up to 397 chars) -->
+  <!-- Description (up to 597 chars, full usable width) -->
   <text x="${paddingX}" y="${excerptStartY}" class="excerpt">
     ${excerptTspans}
   </text>
@@ -338,35 +495,40 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const borderInset = 32;
   const borderRadius = 24;
 
-  // Title: up to 5 lines for 147 chars, ~42 chars per line (landscape width ~1040px usable)
-  const titleLines = wrapText(title || "Untitled Cogmit", 42).slice(0, 5);
+  const usableWidth = width - paddingX * 2; // 1040px
+  const maxTextWidth = usableWidth - 20; // 1020px
 
-  // Layout: landscape has more horizontal space — vertically distribute content
+  // Title: natural multi-line wrapping within usable width, accommodates full 147 chars, never sliced
+  const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, 56, true);
+
   const headerY = 110;
+  const headerDividerY = headerY + 24; // 134
 
-  const titleStartY = 240;
+  // Footer: strictly 4:3 positions
+  const divider2Y = height - 148; // 752
+  const footerIntroY = height - 104; // 796
+  const footerUrlY = height - 62; // 838
+
   const titleLineHeight = 68;
+  const titleBlockHeight = (titleLines.length - 1) * titleLineHeight + 56;
+  const availableTitleHeight = divider2Y - headerDividerY; // 618px
 
-  // Vertically centre the title block in the card
-  const titleBlockHeight = titleLines.length * titleLineHeight;
-  const centredTitleY = Math.round((height - titleBlockHeight) / 2 - 20);
-  const usedTitleStartY = Math.max(titleStartY, centredTitleY);
-
-  const divider1Y = usedTitleStartY + (titleLines.length - 1) * titleLineHeight + 60;
-
-  // Footer: two rows
-  const divider2Y = height - 148;
-  const footerIntroY = height - 104;
-  const footerUrlY = height - 62;
+  // Vertically centre the title block nicely within available title area
+  const titleStartY = Math.max(
+    190,
+    Math.round(headerDividerY + (availableTitleHeight - titleBlockHeight) / 2)
+  );
+  const titleEndY = titleStartY + (titleLines.length - 1) * titleLineHeight;
+  const divider1Y = Math.min(divider2Y - 30, titleEndY + 50);
 
   const titleTspans = buildTspans(titleLines, paddingX, titleLineHeight);
 
-  // Landscape title is larger
+  // Landscape title styles (56px bold, full width, border-box)
   const landscapeStyle = `
-      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 56px; font-weight: 800; fill: ${c.title}; }`;
+      .title-container, .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 56px; font-weight: 800; fill: ${c.title}; width: 100%; max-width: 100%; box-sizing: border-box; }`;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box;">
   <defs><style>${buildStyles(c)}${landscapeStyle}</style></defs>
 
   <!-- Card surface -->
@@ -379,10 +541,10 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   ${buildHeader(paddingX, headerY, safeUsername)}
 
   <!-- Divider below header -->
-  <line x1="${paddingX}" y1="${headerY + 24}" x2="${width - paddingX}" y2="${headerY + 24}" class="divider" />
+  <line x1="${paddingX}" y1="${headerDividerY}" x2="${width - paddingX}" y2="${headerDividerY}" class="divider" />
 
-  <!-- Title -->
-  <text x="${paddingX}" y="${usedTitleStartY}" class="title">
+  <!-- Title (full usable inner width, 147 chars accommodated, no border crossing) -->
+  <text x="${paddingX}" y="${titleStartY}" class="title">
     ${titleTspans}
   </text>
 
@@ -398,7 +560,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
  * Generates deterministic SVG XML for the Cogmit Card.
  *
  * - withDescription=false (default) → 4:3 landscape, no description
- * - withDescription=true            → 3:4 portrait, with description
+ * - withDescription=true            → portrait with content-driven height, with description
  * - darkTheme=true (default)        → black bg, YV Yellow text, YV Indigo borders
  * - darkTheme=false                 → light neutral bg, dark foreground text
  */
@@ -444,17 +606,34 @@ export function setCachedCard(cacheKey: string, entry: CachedCard): void {
 
 /**
  * Exports an SVG XML string to a PNG or JPEG Blob using client HTML5 Canvas.
- * Width and height must match the SVG's actual dimensions for correct rasterization.
+ * Width and height automatically adapt to the SVG's actual viewBox/attributes for exact rasterization.
  */
 export async function exportSvgToBlob(
   svgString: string,
-  width: number,
-  height: number,
+  width?: number,
+  height?: number,
   format: "image/png" | "image/jpeg" = "image/png"
 ): Promise<Blob> {
   if (typeof window === "undefined" || typeof Image === "undefined") {
     throw new Error("Client environment with Image and Canvas is required for image export");
   }
+
+  let targetWidth = width;
+  let targetHeight = height;
+
+  // Extract dimensions from SVG viewBox if available to ensure canvas matches generated SVG
+  const viewBoxMatch = svgString.match(/viewBox=["']\s*0\s+0\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*["']/);
+  if (viewBoxMatch) {
+    const vbW = Math.round(parseFloat(viewBoxMatch[1]));
+    const vbH = Math.round(parseFloat(viewBoxMatch[2]));
+    if (vbW > 0 && vbH > 0) {
+      targetWidth = vbW;
+      targetHeight = vbH;
+    }
+  }
+
+  const exportW = targetWidth || CARD_WIDTH_PORTRAIT;
+  const exportH = targetHeight || CARD_HEIGHT_PORTRAIT;
 
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -466,8 +645,8 @@ export async function exportSvgToBlob(
 
       try {
         const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = exportW;
+        canvas.height = exportH;
 
         const ctx = canvas.getContext("2d");
         if (!ctx) {
@@ -475,8 +654,8 @@ export async function exportSvgToBlob(
           return;
         }
 
-        // Draw the rasterized SVG image
-        ctx.drawImage(img, 0, 0, width, height);
+        // Draw the rasterized SVG image at exact intrinsic dimensions
+        ctx.drawImage(img, 0, 0, exportW, exportH);
 
         canvas.toBlob(
           (blob) => {
@@ -504,12 +683,18 @@ export async function exportSvgToBlob(
 }
 
 /**
- * Returns the pixel dimensions for a card based on the withDescription option.
+ * Returns the pixel dimensions for a card based on the withDescription option and content.
  */
-export function getCardDimensions(withDescription: boolean): { width: number; height: number } {
-  return withDescription
-    ? { width: CARD_WIDTH_PORTRAIT, height: CARD_HEIGHT_PORTRAIT }
-    : { width: CARD_WIDTH_LANDSCAPE, height: CARD_HEIGHT_LANDSCAPE };
+export function getCardDimensions(
+  withDescription: boolean,
+  opts?: Partial<CardTemplateOptions>
+): { width: number; height: number } {
+  if (!withDescription) {
+    return { width: CARD_WIDTH_LANDSCAPE, height: CARD_HEIGHT_LANDSCAPE };
+  }
+
+  const height = opts ? calculatePortraitHeight(opts) : CARD_HEIGHT_PORTRAIT;
+  return { width: CARD_WIDTH_PORTRAIT, height };
 }
 
 /**

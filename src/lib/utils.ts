@@ -1,4 +1,5 @@
 import { extractExcerpt } from "./excerpt";
+import { CARD_DESCRIPTION_MAX } from "./card-renderer";
 
 export { cn } from "cn";
 export { extractExcerpt, MAX_EXCERPT_LENGTH, stripMarkdown } from "./excerpt";
@@ -32,7 +33,7 @@ export function formatTimestamp(dateInput: string | number | Date | null | undef
 }
 
 export function extractDescription(md: string): string {
-  return extractExcerpt(md, 397);
+  return extractExcerpt(md, CARD_DESCRIPTION_MAX);
 }
 
 export function getCanonicalCogmitUrl(origin: string, authorId: string, cogmitId: string): string {

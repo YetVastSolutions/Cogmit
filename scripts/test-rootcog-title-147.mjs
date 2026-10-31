@@ -32,8 +32,8 @@ test("MAX_ROOTCOG_TITLE_LENGTH is exactly 147", () => {
   assert.strictEqual(CARD_TITLE_MAX, 147);
 });
 
-test("CARD_DESCRIPTION_MAX remains 397 and is not altered", () => {
-  assert.strictEqual(CARD_DESCRIPTION_MAX, 397);
+test("CARD_DESCRIPTION_MAX is updated to 597", () => {
+  assert.strictEqual(CARD_DESCRIPTION_MAX, 597);
 });
 
 // 2. Acceptance of titles between 78 and 147 characters
@@ -75,7 +75,7 @@ test("Portrait SVG cleanly renders 147-character title", () => {
     withDescription: true,
   });
 
-  assert.ok(svg.includes("viewBox=\"0 0 900 1200\""));
+  assert.ok(svg.includes("viewBox=\"0 0 900 "));
   assert.ok(svg.includes("class=\"title\""));
   // First words of title should be present
   assert.ok(svg.includes("Deep Cognitive Exploration:"));

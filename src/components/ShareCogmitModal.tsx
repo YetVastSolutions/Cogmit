@@ -16,6 +16,7 @@ import { extractExcerpt, formatTimestamp } from "@/lib/utils";
 import {
   CARD_DESCRIPTION_MAX,
   MAX_ROOTCOG_TITLE_LENGTH,
+  TEMPLATE_VERSION,
   computeCardSourceHash,
   exportSvgToBlob,
   generateCardSvg,
@@ -109,14 +110,14 @@ export function ShareCogmitModal({
     return typeof navigator !== "undefined" && typeof navigator.share === "function";
   });
 
-  // Description excerpt up to CARD_DESCRIPTION_MAX (397) chars
+  // Description excerpt up to CARD_DESCRIPTION_MAX (597) chars
   const excerpt = useMemo(() => {
     return extractExcerpt(content || description || "", CARD_DESCRIPTION_MAX, title);
   }, [content, description, title]);
 
   // Deterministic source hash — includes both option flags
   const sourceHash = useMemo(() => {
-    return computeCardSourceHash(title, excerpt, shareUrl, authorId, undefined, withDescription, darkTheme);
+    return computeCardSourceHash(title, excerpt, shareUrl, authorId, TEMPLATE_VERSION, withDescription, darkTheme);
   }, [title, excerpt, shareUrl, authorId, withDescription, darkTheme]);
 
   // Cache key includes options so each combination is independently cached
@@ -144,7 +145,7 @@ export function ShareCogmitModal({
       sourceHash,
       excerpt,
       canonicalUrl: shareUrl,
-      templateVersion: "1.1.0",
+      templateVersion: TEMPLATE_VERSION,
       svgString: generatedSvg,
     });
 
@@ -204,7 +205,9 @@ export function ShareCogmitModal({
     }
   };
 
-  const { width: cardW, height: cardH } = getCardDimensions(withDescription);
+  const cardDimensions = useMemo(() => {
+    return getCardDimensions(withDescription, { title, excerpt });
+  }, [withDescription, title, excerpt]);
 
   const getOrGenerateCardBlob = async (): Promise<Blob> => {
     const cached = getCachedCard(cacheKey, sourceHash);
@@ -212,7 +215,7 @@ export function ShareCogmitModal({
       return cached.blob;
     }
 
-    const blob = await exportSvgToBlob(cardSvg, cardW, cardH);
+    const blob = await exportSvgToBlob(cardSvg, cardDimensions.width, cardDimensions.height);
     if (cached) {
       cached.blob = blob;
       setCachedCard(cacheKey, cached);
@@ -286,8 +289,6 @@ export function ShareCogmitModal({
     }
   };
 
-  // Aspect ratio class for the preview container
-  const previewAspect = withDescription ? "aspect-[3/4]" : "aspect-[4/3]";
   const previewBg = darkTheme ? "bg-black" : "bg-[#F8F5FA]";
 
   return (
@@ -384,16 +385,19 @@ export function ShareCogmitModal({
               {cardGenerated && (
                 <div className="space-y-2">
                   <div
-                    className={`overflow-hidden rounded-lg border-2 shadow-sm ${previewBg} ${previewAspect} flex items-center justify-center`}
-                    style={{ borderColor: "#4B0084" }}
+                    className={`overflow-hidden rounded-lg border-2 shadow-sm ${previewBg} flex items-center justify-center w-full max-w-full ${
+                      withDescription ? "" : "aspect-[4/3]"
+                    }`}
+                    style={{ borderColor: "#4B0084", boxSizing: "border-box" }}
                   >
                     {cardSvg ? (
                       <div
-                        className="w-full h-full select-none"
+                        className="w-full max-w-full select-none"
+                        style={{ boxSizing: "border-box", width: "100%", maxWidth: "100%" }}
                         dangerouslySetInnerHTML={{ __html: cardSvg }}
                       />
                     ) : (
-                      <div className={`text-xs ${darkTheme ? "text-[#FFFF11]" : "text-[#4B0084]"}`}>
+                      <div className={`p-8 text-xs ${darkTheme ? "text-[#FFFF11]" : "text-[#4B0084]"}`}>
                         Generating preview…
                       </div>
                     )}
@@ -401,7 +405,7 @@ export function ShareCogmitModal({
 
                   <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                     <span>
-                      {withDescription ? "Portrait 3:4" : "Landscape 4:3"} ·{" "}
+                      {withDescription ? "Portrait" : "Landscape 4:3"} ·{" "}
                       {darkTheme ? "Dark" : "Light"} theme
                     </span>
                     {withDescription && (
