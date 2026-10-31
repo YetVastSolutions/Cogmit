@@ -1,10 +1,10 @@
 /**
- * Deterministic Cognition Card Renderer
+ * Deterministic Cogmit Card Renderer
  * Follows YVS Visual Language and Cogmit specifications:
  * - Deterministic SVG generation with exact text rendering.
- * - Background color: YV's Indigoviolet (#4B0084).
- * - Text color: YV's yellow (#FFFF11).
- * - Canvas dimensions: 1200 x 630 (mobile sharing friendly 1.91:1 ratio).
+ * - Border color: YV Indigo Violet (#4B0084). Card interior: neutral surface.
+ * - Text color: dark foreground (#17121C) on light card surface.
+ * - Canvas dimensions: 900 x 1200 (3:4 portrait ratio, social-media friendly).
  * - Displays author/branding, title, up to 200 characters of RootCog excerpt, and canonical URL.
  * - Safe XML escaping, text wrapping, and overflow prevention.
  * - In-memory client caching ensuring cards are reused and not regenerated unnecessarily.
@@ -12,8 +12,8 @@
  */
 
 export const TEMPLATE_VERSION = "1.0.0";
-export const CARD_WIDTH = 1200;
-export const CARD_HEIGHT = 630;
+export const CARD_WIDTH = 900;
+export const CARD_HEIGHT = 1200;
 export const COLOR_INDIGO_VIOLET = "#4B0084";
 export const COLOR_YELLOW = "#FFFF11";
 
@@ -120,7 +120,8 @@ export function computeCardSourceHash(
 }
 
 /**
- * Generates deterministic SVG XML for the Cognition Card.
+ * Generates deterministic SVG XML for the Cogmit Card.
+ * Portrait 3:4 canvas (900×1200). YV Indigo Violet border on neutral surface.
  */
 export function generateCardSvg({
   title,
@@ -130,37 +131,49 @@ export function generateCardSvg({
   width = CARD_WIDTH,
   height = CARD_HEIGHT,
 }: CardTemplateOptions): string {
-  const safeAuthor = escapeXml(authorId ? `@${authorId}` : "Cogmit");
-  const safeUrl = escapeXml(url);
+  // Author header: "COGMIT | username" — username lowercase, no @
+  const rawUsername = authorId ? authorId.toLowerCase() : "";
+  const safeUsername = escapeXml(rawUsername);
 
-  // Wrap title (max ~42 chars per line, up to 2 lines)
-  const titleLines = wrapText(title || "Untitled Cogmit", 42).slice(0, 2);
+  // Strip https:// from displayed URL; keep full URL for the underlying link
+  const displayUrl = escapeXml(url.replace(/^https?:\/\//, ""));
 
-  // Wrap excerpt (max ~52 chars per line)
-  const excerptLines = wrapText(excerpt, 52);
+  // Wrap title (max ~34 chars per line at this width, up to 3 lines)
+  const titleLines = wrapText(title || "Untitled Cogmit", 34).slice(0, 3);
 
-  // SVG dimensions & padding
-  const paddingX = 70;
+  // Wrap excerpt (max ~44 chars per line)
+  const excerptLines = wrapText(excerpt, 44);
 
-  // Header Y coordinate
-  const headerY = 90;
+  // SVG layout constants
+  const paddingX = 64;
+  const borderInset = 28;
+  const borderRadius = 20;
 
-  // Title start Y
-  const titleStartY = 160;
-  const titleLineHeight = 44;
+  // Light neutral card surface (#F8F5FA ≈ near-white with slight warmth)
+  const COLOR_SURFACE = "#F8F5FA";
+  const COLOR_FOREGROUND = "#17121C";
+  const COLOR_MUTED = "#64748B";
+  const COLOR_DIVIDER = COLOR_INDIGO_VIOLET;
 
-  // Divider 1 Y
-  const divider1Y = titleStartY + (titleLines.length - 1) * titleLineHeight + 40;
+  // Header
+  const headerY = 108;
 
-  // Excerpt start Y
-  const excerptStartY = divider1Y + 50;
-  const excerptLineHeight = 40;
+  // Title
+  const titleStartY = 200;
+  const titleLineHeight = 52;
 
-  // Footer divider & URL Y
-  const divider2Y = height - 100;
-  const footerY = height - 60;
+  // Divider after title
+  const divider1Y = titleStartY + (titleLines.length - 1) * titleLineHeight + 52;
 
-  // Format title lines TSPANS
+  // Excerpt
+  const excerptStartY = divider1Y + 52;
+  const excerptLineHeight = 44;
+
+  // Footer
+  const divider2Y = height - 110;
+  const footerY = height - 68;
+
+  // Build title tspans
   const titleTspans = titleLines
     .map(
       (line, idx) =>
@@ -168,7 +181,7 @@ export function generateCardSvg({
     )
     .join("\n        ");
 
-  // Format excerpt lines TSPANS
+  // Build excerpt tspans
   const excerptTspans = excerptLines
     .map(
       (line, idx) =>
@@ -180,27 +193,27 @@ export function generateCardSvg({
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
   <defs>
     <style>
-      .bg { fill: ${COLOR_INDIGO_VIOLET}; }
-      .brand { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 20px; font-weight: 700; fill: ${COLOR_YELLOW}; fill-opacity: 0.9; letter-spacing: 2px; }
-      .author { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 18px; font-weight: 500; fill: ${COLOR_YELLOW}; fill-opacity: 0.75; }
-      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 38px; font-weight: 800; fill: ${COLOR_YELLOW}; }
-      .excerpt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 28px; font-weight: 400; fill: ${COLOR_YELLOW}; line-height: 1.45; }
-      .url-label { font-family: "JetBrains Mono", Consolas, Monaco, monospace; font-size: 18px; font-weight: 500; fill: ${COLOR_YELLOW}; fill-opacity: 0.85; }
-      .card-border { stroke: ${COLOR_YELLOW}; stroke-width: 1.5; stroke-opacity: 0.25; fill: none; }
-      .divider { stroke: ${COLOR_YELLOW}; stroke-width: 1; stroke-opacity: 0.2; }
+      .bg { fill: ${COLOR_SURFACE}; }
+      .outer-border { fill: none; stroke: ${COLOR_INDIGO_VIOLET}; stroke-width: 3; }
+      .brand { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 22px; font-weight: 700; fill: ${COLOR_INDIGO_VIOLET}; letter-spacing: 3px; }
+      .separator { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 22px; font-weight: 400; fill: ${COLOR_MUTED}; }
+      .author-name { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 22px; font-weight: 700; fill: ${COLOR_FOREGROUND}; }
+      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 44px; font-weight: 800; fill: ${COLOR_FOREGROUND}; }
+      .excerpt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 28px; font-weight: 400; fill: ${COLOR_FOREGROUND}; }
+      .url-label { font-family: "JetBrains Mono", Consolas, Monaco, monospace; font-size: 20px; font-weight: 500; fill: ${COLOR_INDIGO_VIOLET}; }
+      .divider { stroke: ${COLOR_DIVIDER}; stroke-width: 1; stroke-opacity: 0.18; }
     </style>
   </defs>
 
-  <!-- Background -->
+  <!-- Card surface -->
   <rect width="${width}" height="${height}" class="bg" />
 
-  <!-- Inner Structural Border -->
-  <rect x="36" y="36" width="${width - 72}" height="${height - 72}" rx="16" class="card-border" />
+  <!-- YV Indigo Violet outer border -->
+  <rect x="${borderInset}" y="${borderInset}" width="${width - borderInset * 2}" height="${height - borderInset * 2}" rx="${borderRadius}" class="outer-border" />
 
-  <!-- Header: Branding & Author -->
+  <!-- Header: COGMIT | username -->
   <text x="${paddingX}" y="${headerY}">
-    <tspan class="brand">COGMIT</tspan>
-    <tspan dx="16" class="author">·  ${safeAuthor}</tspan>
+    <tspan class="brand">COGMIT</tspan><tspan dx="14" class="separator"> | </tspan><tspan class="author-name">${safeUsername}</tspan>
   </text>
 
   <!-- Title -->
@@ -208,21 +221,19 @@ export function generateCardSvg({
     ${titleTspans}
   </text>
 
-  <!-- Top Divider -->
+  <!-- Divider below title -->
   <line x1="${paddingX}" y1="${divider1Y}" x2="${width - paddingX}" y2="${divider1Y}" class="divider" />
 
-  <!-- Excerpt (actual RootCog text, up to 200 chars) -->
+  <!-- Excerpt (RootCog text, up to 200 chars) -->
   <text x="${paddingX}" y="${excerptStartY}" class="excerpt">
     ${excerptTspans}
   </text>
 
-  <!-- Bottom Divider -->
+  <!-- Footer divider -->
   <line x1="${paddingX}" y1="${divider2Y}" x2="${width - paddingX}" y2="${divider2Y}" class="divider" />
 
-  <!-- Footer: Canonical Public RootCog URL -->
-  <text x="${paddingX}" y="${footerY}" class="url-label">
-    ${safeUrl}
-  </text>
+  <!-- Footer: Canonical URL (https:// stripped from display) -->
+  <text x="${paddingX}" y="${footerY}" class="url-label">${displayUrl}</text>
 </svg>`;
 }
 
@@ -257,6 +268,7 @@ export function setCachedCard(cacheKey: string, entry: CachedCard): void {
 
 /**
  * Exports an SVG XML string to a PNG or JPEG Blob using client HTML5 Canvas.
+ * Default dimensions match the Cogmit Card portrait canvas (900×1200).
  */
 export async function exportSvgToBlob(
   svgString: string,

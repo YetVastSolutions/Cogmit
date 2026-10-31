@@ -13,11 +13,21 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const defaultBaseUrl = process.env.NEXT_PUBLIC_APP_URL 
+  || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined)
+  || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)
+  || "https://cogmit.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(defaultBaseUrl),
   title: "Cogmit",
   description: "GitHub-native cognition repository",
   icons: {
     icon: "/cogmitLogo.png",
+  },
+  openGraph: {
+    siteName: "Cogmit",
+    type: "website",
   },
 };
 

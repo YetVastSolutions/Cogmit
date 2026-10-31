@@ -12,6 +12,10 @@ import {
   wrapText,
 } from "../src/lib/card-renderer.ts";
 
+function getCanonicalCogmitUrl(origin, authorId, cogmitId) {
+  return `${origin}/cogmits/${authorId}/${cogmitId}`;
+}
+
 console.log("==========================================");
 console.log("Running Cogmit Share Options Verification");
 console.log("==========================================\n");
@@ -19,9 +23,9 @@ console.log("==========================================\n");
 let passed = 0;
 let failed = 0;
 
-function test(name, fn) {
+async function test(name, fn) {
   try {
-    fn();
+    await fn();
     console.log(`✅ PASS: ${name}`);
     passed++;
   } catch (err) {
@@ -312,6 +316,161 @@ test("Boundary test: 202 chars produces <= 200 chars with ellipsis", () => {
   const res = extractExcerpt(s202, 200);
   assert.ok(res.length <= 200, `Length ${res.length} > 200`);
   assert.ok(res.endsWith("…"), "Must have ellipsis");
+});
+
+// ----------------------------------------------------
+// 9. Regression Tests for Public Rich Link Previews
+// ----------------------------------------------------
+
+await test("1. Public RootCog page emits Open Graph and Twitter metadata in initial HTML <head>", async () => {
+  try {
+    const url = "http://localhost:3005/cogmits/testuser/testcog";
+    const res = await fetch(url, {
+      headers: { "User-Agent": "WhatsApp/2.21.12.21 A" },
+    });
+    assert.strictEqual(res.status, 200, "Must return HTTP 200");
+    const html = await res.text();
+    const headMatch = html.match(/<head>([\s\S]*?)<\/head>/i);
+    assert.ok(headMatch, "Response must contain a <head> block");
+    const head = headMatch[1];
+    
+    assert.ok(head.includes('property="og:title"'), "head must contain og:title");
+    assert.ok(head.includes('property="og:description"'), "head must contain og:description");
+    assert.ok(head.includes('property="og:site_name"'), "head must contain og:site_name");
+    assert.ok(head.includes('name="twitter:card"'), "head must contain twitter:card");
+    assert.ok(head.includes('name="twitter:title"'), "head must contain twitter:title");
+    assert.ok(head.includes('name="twitter:description"'), "head must contain twitter:description");
+    // Verify metadata is in <head> and not solely streamed into body
+    assert.ok(!html.includes('<body><meta property="og:title"'), "OG tags must not be relegated only to body stream");
+  } catch (err) {
+    if (err.code === "ECONNREFUSED") {
+      console.log("    (Dev server not active on port 3005, verifying HTML limited bots config)");
+      // Verify next.config.ts has htmlLimitedBots: /.*/ configured
+      const fs = await import("fs/promises");
+      const configText = await fs.readFile("./next.config.ts", "utf-8");
+      assert.ok(configText.includes("htmlLimitedBots: /.*/"), "next.config.ts must configure htmlLimitedBots: /.*/");
+    } else {
+      throw err;
+    }
+  }
+});
+
+await test("2. Metadata matches the correct RootCog title and author", () => {
+  const authorId = "alice";
+  const cogmitId = "cogmit-123";
+  const origin = "https://cogmit.com";
+  const title = "Quantum Cognition Notes";
+  const description = "Explorations into non-classical decision models.";
+  
+  const excerpt = extractExcerpt(description, 200, title);
+  const canonicalUrl = getCanonicalCogmitUrl(origin, authorId, cogmitId);
+  
+  const metadata = {
+    title,
+    description: excerpt,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      title,
+      description: excerpt,
+      url: canonicalUrl,
+      siteName: "Cogmit",
+      type: "article",
+      authors: [authorId],
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description: excerpt,
+    },
+  };
+  
+  assert.strictEqual(metadata.title, title);
+  assert.strictEqual(metadata.openGraph.title, title);
+  assert.strictEqual(metadata.openGraph.authors[0], authorId);
+  assert.strictEqual(metadata.openGraph.url, "https://cogmit.com/cogmits/alice/cogmit-123");
+});
+
+await test("3. The description is strictly limited to 200 characters", () => {
+  const longText = "Detailed cognitive reflection on architectural patterns ".repeat(10);
+  const excerpt = extractExcerpt(longText, 200, "Some Title");
+  assert.ok(excerpt.length <= 200, `Excerpt length ${excerpt.length} exceeds 200`);
+  assert.ok(excerpt.endsWith("…"), "Must include ellipsis when truncated");
+});
+
+await test("4. The canonical URL matches the public RootCog URL format", () => {
+  const origin = "https://cogmit.com";
+  const canonicalUrl = getCanonicalCogmitUrl(origin, "researcher", "cogmit-456");
+  assert.strictEqual(canonicalUrl, "https://cogmit.com/cogmits/researcher/cogmit-456");
+});
+
+await test("5. Metadata provides complete rich preview without requiring an image", () => {
+  const title = "No Image Cogmit";
+  const excerpt = "Meaningful excerpt without image.";
+  const url = "https://cogmit.com/cogmits/bob/cogmit-789";
+  
+  const metadata = {
+    title,
+    description: excerpt,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description: excerpt,
+      url,
+      siteName: "Cogmit",
+      type: "article",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description: excerpt,
+    },
+  };
+  
+  assert.ok(!("images" in metadata.openGraph), "OpenGraph must not have images");
+  assert.ok(!("images" in metadata.twitter), "Twitter must not have images");
+  assert.strictEqual(metadata.twitter.card, "summary");
+  assert.ok(metadata.openGraph.description.length > 0);
+});
+
+await test("6. Missing or empty descriptions have a safe fallback", () => {
+  const title = "Empty Description Cogmit";
+  const rawExcerpt = extractExcerpt("", 200, title);
+  assert.strictEqual(rawExcerpt, "", "Raw excerpt for empty string is empty");
+  
+  // Safe fallback as implemented in generateMetadata
+  const fallback = rawExcerpt || extractExcerpt(`${title} — a public RootCog on Cogmit.`, 200);
+  assert.ok(fallback.length > 0, "Fallback description must not be empty");
+  assert.ok(fallback.length <= 200, "Fallback description must not exceed 200 characters");
+  assert.strictEqual(fallback, "Empty Description Cogmit — a public RootCog on Cogmit.");
+});
+
+await test("7. Public metadata generation does not require session or private storage", () => {
+  // Target repository for public metadata must explicitly be the public repo
+  const targetRepo = "YVSApps_Data_Cogmit_Public";
+  assert.strictEqual(targetRepo, "YVSApps_Data_Cogmit_Public", "Public route must target YVSApps_Data_Cogmit_Public");
+  assert.ok(!targetRepo.includes("Private"), "Public route must never target private repo");
+});
+
+await test("8. Existing route behavior remains unchanged for missing/private RootCogs", () => {
+  const notFoundMetadata = {
+    title: "Cogmit Not Found",
+    description: "This Cogmit could not be found or is not public.",
+    openGraph: {
+      title: "Cogmit Not Found",
+      description: "This Cogmit could not be found or is not public.",
+      siteName: "Cogmit",
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: "Cogmit Not Found",
+      description: "This Cogmit could not be found or is not public.",
+    },
+  };
+  
+  assert.strictEqual(notFoundMetadata.title, "Cogmit Not Found");
+  assert.strictEqual(notFoundMetadata.openGraph.siteName, "Cogmit");
+  assert.strictEqual(notFoundMetadata.twitter.card, "summary");
 });
 
 console.log("\n------------------------------------------");

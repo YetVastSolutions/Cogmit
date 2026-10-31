@@ -156,7 +156,7 @@ export function ShareCogmitModal({
         .slice(0, 32);
       triggerImageDownload(blob, `${authorId ? `${authorId}-` : ""}${sanitizedName}.png`);
     } catch (err) {
-      console.error("Failed to export Cognition Card image", err);
+      console.error("Failed to export Cogmit Card image", err);
     } finally {
       setIsExporting(false);
     }
@@ -254,7 +254,7 @@ export function ShareCogmitModal({
               }`}
             >
               <ImageIcon className="h-4 w-4" />
-              <span>Cognition Card</span>
+              <span>Cogmit Card</span>
             </button>
 
             <button
@@ -278,15 +278,15 @@ export function ShareCogmitModal({
                 Downloadable card image with up to 200 characters of RootCog text and canonical URL.
               </p>
 
-              {/* Card Preview */}
-              <div className="overflow-hidden rounded-lg border shadow-md bg-[#4B0084] aspect-[1200/630] flex items-center justify-center">
+              {/* Card Preview — 3:4 portrait */}
+              <div className="overflow-hidden rounded-lg border-2 shadow-sm bg-[#F8F5FA] aspect-[3/4] flex items-center justify-center" style={{ borderColor: "#4B0084" }}>
                 {cardSvg ? (
                   <div
                     className="w-full h-full select-none"
                     dangerouslySetInnerHTML={{ __html: cardSvg }}
                   />
                 ) : (
-                  <div className="text-xs text-[#FFFF11]">Generating preview…</div>
+                  <div className="text-xs text-[#4B0084]">Generating preview…</div>
                 )}
               </div>
 

@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Ensure blocking metadata in <head> for all user agents and social crawlers (e.g. WhatsApp, iMessage, etc.)
+  htmlLimitedBots: /.*/,
 };
 
 export default nextConfig;

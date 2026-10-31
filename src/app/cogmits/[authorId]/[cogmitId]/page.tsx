@@ -9,11 +9,62 @@ interface PublicCogmitPageProps {
   params: Promise<{ authorId: string; cogmitId: string }>;
 }
 
-async function getPublishedCogmit(authorId: string, cogmitId: string) {
+export interface PublishedCogmit {
+  title: string;
+  description: string;
+  image?: string;
+  content: string;
+  authorId: string;
+  cogmitId: string;
+  publishedAt?: string;
+}
+
+export async function getPublishedCogmit(
+  authorId: string,
+  cogmitId: string
+): Promise<PublishedCogmit | null> {
   const decodedAuthorId = decodeURIComponent(authorId);
   const decodedCogmitId = decodeURIComponent(cogmitId);
   const targetRepo = "YVSApps_Data_Cogmit_Public";
 
+  // Fast path 1: Fetch directly from raw.githubusercontent.com (rate-limit free, edge-cached)
+  try {
+    const indexUrl = `https://raw.githubusercontent.com/${decodedAuthorId}/${targetRepo}/HEAD/cogmits/cogmitsIndex.json`;
+    const res = await fetch(indexUrl, {
+      next: { revalidate: 60 },
+    });
+
+    if (res.ok) {
+      const publicIndexObj = await res.json();
+      const cogInfo = publicIndexObj.cogmits?.find(
+        (c: { cogmitId?: string; id?: string }) =>
+          c.cogmitId === decodedCogmitId || c.id === decodedCogmitId
+      );
+
+      if (cogInfo && cogInfo.path) {
+        const contentUrl = `https://raw.githubusercontent.com/${decodedAuthorId}/${targetRepo}/HEAD/${cogInfo.path}`;
+        const contentRes = await fetch(contentUrl, {
+          next: { revalidate: 60 },
+        });
+
+        const content = contentRes.ok ? await contentRes.text() : "";
+
+        return {
+          title: cogInfo.title || decodedCogmitId,
+          description: cogInfo.description || "",
+          image: cogInfo.image,
+          content,
+          authorId: decodedAuthorId,
+          cogmitId: decodedCogmitId,
+          publishedAt: cogInfo.publishedAt,
+        };
+      }
+    }
+  } catch {
+    // If raw fetch fails (e.g. offline, network error, or custom branch), fall back to Octokit below
+  }
+
+  // Fallback 2: Octokit REST API
   let octokit: Octokit;
   try {
     octokit = new Octokit();
@@ -104,7 +155,18 @@ export async function generateMetadata({ params }: PublicCogmitPageProps): Promi
   if (!cogmit) {
     return {
       title: "Cogmit Not Found",
-      description: "This Cogmit could not be found or is not public."
+      description: "This Cogmit could not be found or is not public.",
+      openGraph: {
+        title: "Cogmit Not Found",
+        description: "This Cogmit could not be found or is not public.",
+        siteName: "Cogmit",
+        type: "website",
+      },
+      twitter: {
+        card: "summary",
+        title: "Cogmit Not Found",
+        description: "This Cogmit could not be found or is not public.",
+      },
     };
   }
 
@@ -114,10 +176,15 @@ export async function generateMetadata({ params }: PublicCogmitPageProps): Promi
     || "https://cogmit.com";
   const url = getCanonicalCogmitUrl(origin, cogmit.authorId, cogmit.cogmitId);
   
-  const descriptionExcerpt = extractExcerpt(
+  const rawExcerpt = extractExcerpt(
     cogmit.description || cogmit.content,
     200,
     cogmit.title
+  );
+  // Safe fallback if description and content are empty
+  const descriptionExcerpt = rawExcerpt || extractExcerpt(
+    `${cogmit.title} — a public RootCog on Cogmit.`,
+    200
   );
 
   return {
