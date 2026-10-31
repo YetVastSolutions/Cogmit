@@ -104,7 +104,7 @@ export default async function DeletedCogsPage() {
             {cogsWithDetails.map((cog: CogWithDetails) => (
               <div key={cog.id} className="relative group">
                 <div className="border border-border p-6 rounded-xl bg-card transition-colors h-full flex flex-col gap-3 min-w-0 overflow-hidden opacity-80">
-                  <h3 className="text-xl font-semibold text-foreground truncate pr-12">
+                  <h3 className="text-xl font-semibold text-foreground truncate pr-12" title={cog.title || "Untitled RootCog"}>
                     {cog.title || "Untitled RootCog"}
                   </h3>
                   

@@ -28,6 +28,7 @@ import { extractDescription, getCanonicalCogmitUrl } from "@/lib/utils";
 
 import { CogActionRow } from "@/components/CogActionRow";
 import { MarqueeContent } from "@/components/MarqueeContent";
+import { MAX_ROOTCOG_TITLE_LENGTH } from "@/lib/card-renderer";
 
 import {
   PublishCogmitModal,
@@ -157,6 +158,11 @@ export function EditCogClient({
     console.log("[COGMIT_DEBUG] button clicked");
     if (!title.trim()) {
       setError("Title is required");
+      return;
+    }
+
+    if (title.length > MAX_ROOTCOG_TITLE_LENGTH) {
+      setError(`Title must be ${MAX_ROOTCOG_TITLE_LENGTH} characters or fewer`);
       return;
     }
 
@@ -471,6 +477,13 @@ export function EditCogClient({
       return;
     }
 
+    if (title.length > MAX_ROOTCOG_TITLE_LENGTH) {
+      setError(
+        `Title must be ${MAX_ROOTCOG_TITLE_LENGTH} characters or fewer`
+      );
+      return;
+    }
+
     setError(null);
     setIsPending(true);
 
@@ -571,7 +584,7 @@ export function EditCogClient({
             placeholder="Cog Title (e.g., Project Atlas Architecture)"
             className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-lg font-semibold ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             required
-            maxLength={77}
+            maxLength={MAX_ROOTCOG_TITLE_LENGTH}
           />
         }
         actionContent={

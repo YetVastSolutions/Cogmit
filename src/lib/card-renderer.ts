@@ -31,6 +31,9 @@ export const COLOR_YELLOW = "#FFFF11";
 export const CARD_TITLE_MAX = 147;
 export const CARD_DESCRIPTION_MAX = 397;
 
+/** Shared single source of truth for the RootCog title maximum length. */
+export const MAX_ROOTCOG_TITLE_LENGTH = CARD_TITLE_MAX;
+
 export interface CardTemplateOptions {
   title: string;
   excerpt: string;
@@ -268,8 +271,8 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const borderInset = 28;
   const borderRadius = 20;
 
-  // Title: up to 3 lines, ~34 chars per line (portrait width ~772px usable)
-  const titleLines = wrapText(title || "Untitled Cogmit", 34).slice(0, 3);
+  // Title: up to 5 lines for 147 chars, ~34 chars per line (portrait width ~772px usable)
+  const titleLines = wrapText(title || "Untitled Cogmit", 34).slice(0, 5);
 
   // Description: ~44 chars per line (uses full available width)
   const excerptLines = wrapText(excerpt, 44);
@@ -336,8 +339,8 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const borderInset = 32;
   const borderRadius = 24;
 
-  // Title: up to 3 lines, ~42 chars per line (landscape width ~1040px usable)
-  const titleLines = wrapText(title || "Untitled Cogmit", 42).slice(0, 3);
+  // Title: up to 4 lines for 147 chars, ~42 chars per line (landscape width ~1040px usable)
+  const titleLines = wrapText(title || "Untitled Cogmit", 42).slice(0, 4);
 
   // Layout: landscape has more horizontal space — vertically distribute content
   const headerY = 110;

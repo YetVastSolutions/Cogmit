@@ -158,7 +158,7 @@ export default async function MyCogsPage() {
                 <Link href={`/myCogs/${cog.id}/viewCog`} className="min-w-0 block h-full">
                   <div className="border border-border p-6 rounded-xl bg-card hover:border-yellow-500 transition-colors h-full flex flex-col gap-3 min-w-0">
                     {/* ROW 1 */}
-                    <h3 className="text-xl font-semibold text-foreground truncate pr-12">
+                    <h3 className="text-xl font-semibold text-foreground truncate pr-12" title={cog.title || "Untitled RootCog"}>
                       {cog.title || "Untitled RootCog"}
                     </h3>
 

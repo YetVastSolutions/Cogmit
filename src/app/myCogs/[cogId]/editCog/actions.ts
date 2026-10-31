@@ -1,4 +1,5 @@
 "use server";
+import { MAX_ROOTCOG_TITLE_LENGTH } from "@/lib/card-renderer";
 
 import { auth } from "@/auth";
 import { getCogmitDataStatus, getOctokit, resolveRootCogPath, getDefaultBranch } from "@/lib/github";
@@ -15,6 +16,13 @@ export async function saveRootCog(
   const session = await auth();
   if (!session) {
     redirect("/login");
+  }
+
+  if (!title || title.trim().length === 0) {
+    return { success: false, error: "Title is required" };
+  }
+  if (title.length > MAX_ROOTCOG_TITLE_LENGTH) {
+    return { success: false, error: `Title must be ${MAX_ROOTCOG_TITLE_LENGTH} characters or fewer` };
   }
 
   const status = await getCogmitDataStatus();

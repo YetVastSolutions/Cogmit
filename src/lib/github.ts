@@ -635,7 +635,7 @@ A RootCog is represented by its own directory containing:
 - \\\`rootCog.md\\\`: Canonical human-readable RootCog content/cognition.
 - \\\`rootCogInfo.json\\\`: RootCog-specific metadata.
 
-RootCog title maximum: 77 characters.
+RootCog title maximum: 147 characters.
 
 ---
 
