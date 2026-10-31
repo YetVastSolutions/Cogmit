@@ -15,7 +15,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { extractExcerpt, formatTimestamp } from "@/lib/utils";
 import {
   CARD_DESCRIPTION_MAX,
-  CARD_TITLE_MAX,
+  MAX_ROOTCOG_TITLE_LENGTH,
   computeCardSourceHash,
   exportSvgToBlob,
   generateCardSvg,
@@ -130,7 +130,7 @@ export function ShareCogmitModal({
     if (cached) return cached.svgString;
 
     const generatedSvg = generateCardSvg({
-      title: title.slice(0, CARD_TITLE_MAX),
+      title: title.slice(0, MAX_ROOTCOG_TITLE_LENGTH),
       excerpt,
       url: shareUrl,
       authorId,
@@ -436,7 +436,7 @@ export function ShareCogmitModal({
                   {published && ` · ${formatTimestamp(published)}`}
                 </div>
 
-                <h3 className="font-semibold text-base break-words text-foreground">
+                <h3 className="font-semibold text-base break-words text-foreground" title={title}>
                   {title}
                 </h3>
 

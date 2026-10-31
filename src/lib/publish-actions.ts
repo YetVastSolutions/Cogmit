@@ -30,6 +30,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 import { generateCogmitId } from "./id-generator";
+import { MAX_ROOTCOG_TITLE_LENGTH } from "@/lib/card-renderer";
 
 async function getAuthenticatedOwner() {
   const octokit = await getOctokit();
@@ -54,6 +55,13 @@ export async function writePublishedCogmitMarkdown(
 
   if (!session) {
     throw new Error("Unauthorized");
+  }
+
+  if (!title || title.trim().length === 0) {
+    throw new Error("Title is required");
+  }
+  if (title.length > MAX_ROOTCOG_TITLE_LENGTH) {
+    throw new Error(`Title must be ${MAX_ROOTCOG_TITLE_LENGTH} characters or fewer`);
   }
 
   const status = await getCogmitDataStatus();
@@ -180,6 +188,13 @@ export async function updateCogmitsIndex(
 
   if (!session) {
     throw new Error("Unauthorized");
+  }
+
+  if (!title || title.trim().length === 0) {
+    throw new Error("Title is required");
+  }
+  if (title.length > MAX_ROOTCOG_TITLE_LENGTH) {
+    throw new Error(`Title must be ${MAX_ROOTCOG_TITLE_LENGTH} characters or fewer`);
   }
 
   const status = await getCogmitDataStatus();

@@ -2,6 +2,7 @@ import { extractExcerpt } from "./excerpt";
 
 export { cn } from "cn";
 export { extractExcerpt, MAX_EXCERPT_LENGTH, stripMarkdown } from "./excerpt";
+export { MAX_ROOTCOG_TITLE_LENGTH, CARD_TITLE_MAX, CARD_DESCRIPTION_MAX } from "./card-renderer";
 
 export function formatTimestamp(dateInput: string | number | Date | null | undefined): string {
   if (!dateInput) return "Unknown date";

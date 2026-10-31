@@ -572,20 +572,29 @@ export function EditCogClient({
     <>
       <CogWorkspaceShell
         titleContent={
-          <input
-            id="title"
-            type="text"
-            value={title}
-            onChange={(e) =>
-              setTitle(
-                e.target.value
-              )
-            }
-            placeholder="Cog Title (e.g., Project Atlas Architecture)"
-            className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-lg font-semibold ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            required
-            maxLength={MAX_ROOTCOG_TITLE_LENGTH}
-          />
+          <div className="relative w-full flex items-center">
+            <input
+              id="title"
+              type="text"
+              value={title}
+              onChange={(e) =>
+                setTitle(
+                  e.target.value
+                )
+              }
+              placeholder="Cog Title (e.g., Project Atlas Architecture)"
+              className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 pr-20 text-lg font-semibold ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              required
+              maxLength={MAX_ROOTCOG_TITLE_LENGTH}
+            />
+            <span
+              className="absolute right-3 text-xs text-muted-foreground pointer-events-none select-none font-mono"
+              aria-live="polite"
+              aria-label={`${title.length} of ${MAX_ROOTCOG_TITLE_LENGTH} characters`}
+            >
+              {title.length}/{MAX_ROOTCOG_TITLE_LENGTH}
+            </span>
+          </div>
         }
         actionContent={
           <Button

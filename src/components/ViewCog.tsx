@@ -248,6 +248,7 @@ export function ViewCog({
           <input
             type="text"
             value={title}
+            title={title}
             disabled
             className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-lg font-semibold ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
           />
