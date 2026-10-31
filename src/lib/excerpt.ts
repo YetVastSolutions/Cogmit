@@ -2,13 +2,13 @@
  * Excerpt extraction utility for RootCog content.
  * Follows strict YVS and Cogmit rules:
  * - Uses actual RootCog content, preserving original wording.
- * - Enforces a hard maximum of 200 characters.
+ * - Enforces a hard maximum of 397 characters (Cogmit Card description limit).
  * - Handles empty content, short content, Markdown syntax, Unicode, and whitespace safely.
- * - Does not append an ellipsis if doing so would exceed the 200-character limit.
+ * - Does not append an ellipsis if doing so would exceed the character limit.
  * - Does not rewrite or synthesize text.
  */
 
-export const MAX_EXCERPT_LENGTH = 200;
+export const MAX_EXCERPT_LENGTH = 397;
 
 /**
  * Strips Markdown formatting while preserving the author's original words.

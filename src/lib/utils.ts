@@ -31,7 +31,7 @@ export function formatTimestamp(dateInput: string | number | Date | null | undef
 }
 
 export function extractDescription(md: string): string {
-  return extractExcerpt(md, 200);
+  return extractExcerpt(md, 397);
 }
 
 export function getCanonicalCogmitUrl(origin: string, authorId: string, cogmitId: string): string {
