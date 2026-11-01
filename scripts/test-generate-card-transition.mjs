@@ -129,11 +129,11 @@ await test("2. Clicking Generate: transitions away from options and displays 4:3
   assert.ok(container.innerHTML.includes("Landscape 4:3"), "Mode indicator must show Landscape 4:3");
   assert.ok(container.innerHTML.includes("Dark theme"), "Theme indicator must show Dark theme");
 
-  // Footer must make Download, Copy Link, Share available
+  // Actions must make Download Cogmit Card, Copy Link, Share available
   const downloadBtn = Array.from(container.querySelectorAll("button")).find((b) =>
-    b.textContent?.includes("Download PNG")
+    b.textContent?.includes("Download Cogmit Card") || b.textContent?.includes("Download PNG")
   );
-  assert.ok(downloadBtn, "Download PNG button must be available in footer");
+  assert.ok(downloadBtn, "Download Cogmit Card button must be available");
 
   const copyLinkBtn = Array.from(container.querySelectorAll("button")).find((b) =>
     b.textContent?.includes("Copy Link")
