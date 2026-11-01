@@ -112,22 +112,20 @@ await test("2. Clicking Generate: transitions away from options and displays 4:3
     generateBtn.click();
   });
 
-  // Options row must now be hidden
-  const optionsRow = container.querySelector("#toggle-with-description")?.closest("div.flex-wrap");
-  assert.ok(optionsRow?.classList.contains("hidden"), "Initial generation-options row must be hidden after generation");
+  // Configuration buttons are replaced by Change Options after generation
+  const toggleDescAfter = container.querySelector("#toggle-with-description");
+  assert.strictEqual(toggleDescAfter, null, "Selection buttons must be replaced by Change Options after generation");
 
   // Preview image must now be rendered with data URL
   const previewImg = container.querySelector("img[alt^='Cogmit Card']");
   assert.ok(previewImg, "Preview image element must be rendered after clicking generate");
   assert.ok(previewImg.getAttribute("src")?.startsWith("data:image/svg+xml"), "Preview image src must be a valid SVG data URI");
 
-  // Transition bar must display configuration info and 'Change options' button
+  // Change Options button must be visible
   const changeOptionsBtn = Array.from(container.querySelectorAll("button")).find((b) =>
-    b.textContent?.includes("Change options")
+    b.textContent?.toLowerCase().includes("change options")
   );
-  assert.ok(changeOptionsBtn, "Change options button must be visible in preview mode");
-  assert.ok(container.innerHTML.includes("Landscape 4:3"), "Mode indicator must show Landscape 4:3");
-  assert.ok(container.innerHTML.includes("Dark theme"), "Theme indicator must show Dark theme");
+  assert.ok(changeOptionsBtn, "Change Options button must be visible in preview mode");
 
   // Actions must make Download Cogmit Card, Copy Link, Share available
   const downloadBtn = Array.from(container.querySelectorAll("button")).find((b) =>
@@ -152,7 +150,7 @@ await test("2. Clicking Generate: transitions away from options and displays 4:3
 await test("3. Change options, enable 'With description' and generate again: produces portrait preview", async () => {
   // Click Change options
   const changeOptionsBtn = Array.from(container.querySelectorAll("button")).find((b) =>
-    b.textContent?.includes("Change options")
+    b.textContent?.toLowerCase().includes("change options")
   );
   assert.ok(changeOptionsBtn, "Change options button must exist");
 
@@ -181,7 +179,6 @@ await test("3. Change options, enable 'With description' and generate again: pro
   });
 
   // Portrait preview must appear
-  assert.ok(container.innerHTML.includes("Portrait"), "Preview mode indicator must show Portrait");
   const previewImg = container.querySelector("img[alt^='Cogmit Card']");
   assert.ok(previewImg, "Portrait preview image must be rendered");
 
@@ -197,7 +194,7 @@ await test("3. Change options, enable 'With description' and generate again: pro
 await test("4. Dark and Light themes generate valid themed SVGs and switch cleanly", async () => {
   // Click Change options
   const changeOptionsBtn = Array.from(container.querySelectorAll("button")).find((b) =>
-    b.textContent?.includes("Change options")
+    b.textContent?.toLowerCase().includes("change options")
   );
   await act(async () => {
     changeOptionsBtn.click();
@@ -218,7 +215,6 @@ await test("4. Dark and Light themes generate valid themed SVGs and switch clean
     generateBtn.click();
   });
 
-  assert.ok(container.innerHTML.includes("Light theme"), "Preview mode indicator must show Light theme");
   const previewImg = container.querySelector("img[alt^='Cogmit Card']");
   const previewContainer = previewImg.closest("div.overflow-hidden");
   assert.ok(previewContainer.classList.contains("bg-[#F8F5FA]"), "Light theme preview container must use light background bg-[#F8F5FA]");

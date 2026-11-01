@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { extractExcerpt, formatTimestamp } from "@/lib/utils";
+import { formatTimestamp } from "@/lib/utils";
 import {
   CARD_DESCRIPTION_MAX,
   MAX_ROOTCOG_TITLE_LENGTH,
@@ -24,6 +24,7 @@ import {
   setCachedCard,
   triggerImageDownload,
 } from "@/lib/card-renderer";
+import { extractExcerpt } from "@/lib/excerpt";
 
 interface ShareCogmitModalProps {
   open: boolean;
@@ -37,44 +38,36 @@ interface ShareCogmitModalProps {
 }
 
 /**
- * Compact toggle pill used in the generation-options row.
+ * Clickable selection button used in the card configuration row.
+ * Outlined with purple (#4B0084) when disabled, purple background when enabled.
  */
-function TogglePill({
+function SelectionButton({
   id,
-  checked,
-  onChange,
-  label,
+  selected,
+  onClick,
+  children,
 }: {
   id: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
-    <label
-      htmlFor={id}
-      className="flex items-center gap-2 cursor-pointer select-none text-sm"
+    <button
+      id={id}
+      type="button"
+      role="switch"
+      aria-checked={selected}
+      aria-pressed={selected}
+      onClick={onClick}
+      className={`inline-flex items-center justify-center rounded-md text-xs font-medium h-8 px-3 border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+        selected
+          ? "bg-[#4B0084] border-[#4B0084] text-white hover:brightness-110 shadow-sm"
+          : "bg-transparent border-[#4B0084] text-foreground hover:bg-[#4B0084]/15"
+      }`}
     >
-      <button
-        id={id}
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${checked
-            ? "border-[#4B0084] bg-[#4B0084]"
-            : "border-muted-foreground/40 bg-muted"
-          }`}
-      >
-        <span
-          className={`pointer-events-none block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-[14px]" : "translate-x-[2px]"
-            }`}
-        />
-      </button>
-      <span className={checked ? "text-foreground font-medium" : "text-muted-foreground"}>
-        {label}
-      </span>
-    </label>
+      {children}
+    </button>
   );
 }
 
@@ -374,16 +367,11 @@ export function ShareCogmitModal({
       aria-labelledby="share-cogmit-title"
     >
       <div className="w-full max-w-lg rounded-xl border bg-background shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-        {/* A. Modal Header */}
+        {/* Modal Header */}
         <div className="flex items-center justify-between border-b px-5 py-3.5">
-          <div>
-            <h2 id="share-cogmit-title" className="text-lg font-semibold">
-              Share Cogmit
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Public RootCog sharing options
-            </p>
-          </div>
+          <h2 id="share-cogmit-title" className="text-lg font-semibold">
+            Share Cogmit
+          </h2>
 
           <button
             type="button"
@@ -397,19 +385,16 @@ export function ShareCogmitModal({
 
         {/* Modal Body */}
         <div className="overflow-y-auto px-5 py-4 space-y-4">
-          {/* B. Canonical Cogmit Link Component */}
+          {/* Canonical Cogmit URL Component */}
           {shareUrl && (
             <div className="rounded-lg border bg-muted/40 p-2.5">
-              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-1">
-                Canonical Cogmit URL
-              </div>
               <div className="break-all font-mono text-xs text-foreground/90 select-all">
                 {shareUrl}
               </div>
             </div>
           )}
 
-          {/* C. Sharing Actions */}
+          {/* Sharing Actions */}
           <div className="flex flex-wrap items-center gap-2">
             {/* 1. Copy Link */}
             <Button
@@ -444,7 +429,7 @@ export function ShareCogmitModal({
               Share
             </Button>
 
-            {/* 3. Copy Image */}
+            {/* 3. Copy Card */}
             <Button
               type="button"
               variant="outline"
@@ -455,26 +440,14 @@ export function ShareCogmitModal({
               {copiedImage ? (
                 <>
                   <Check className="mr-1.5 h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-                  Copied Image!
+                  Copied Card!
                 </>
               ) : (
                 <>
                   <Clipboard className="mr-1.5 h-3.5 w-3.5" />
-                  Copy Image
+                  Copy Card
                 </>
               )}
-            </Button>
-
-            {/* 4. Download Cogmit Card */}
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              onClick={handleDownloadCard}
-              disabled={!cardGenerated || isExporting || !cardSvg}
-            >
-              <Download className="mr-1.5 h-3.5 w-3.5" />
-              {isExporting ? "Exporting…" : "Download Cogmit Card"}
             </Button>
           </div>
 
@@ -484,7 +457,7 @@ export function ShareCogmitModal({
             </p>
           )}
 
-          {/* 3. Cogmit Card Generation Options */}
+          {/* Generation Error Alert */}
           {generationError && (
             <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive flex items-center justify-between gap-2">
               <span>{generationError}</span>
@@ -501,120 +474,107 @@ export function ShareCogmitModal({
             </div>
           )}
 
-          {/* Generation options row — hidden once card is generated, visible before generation or when editing options */}
-          <div
-            className={`flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border bg-muted/30 px-4 py-3 ${cardGenerated ? "hidden" : "flex"
-              }`}
-          >
-            <TogglePill
-              id="toggle-with-description"
-              checked={withDescription}
-              onChange={handleWithDescriptionChange}
-              label="With description"
-            />
-            <TogglePill
-              id="toggle-dark-theme"
-              checked={darkTheme}
-              onChange={handleDarkThemeChange}
-              label="Dark Cogmit Card"
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="default"
-              className="ml-auto"
-              onClick={handleGenerate}
-              disabled={isGenerating}
-            >
-              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-              {isGenerating ? "Generating…" : "Generate Cogmit Card"}
-            </Button>
+          {/* Configuration and Primary Card Action */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {!cardGenerated ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <SelectionButton
+                    id="toggle-with-description"
+                    selected={withDescription}
+                    onClick={() => handleWithDescriptionChange(!withDescription)}
+                  >
+                    With description
+                  </SelectionButton>
+                  <SelectionButton
+                    id="toggle-dark-theme"
+                    selected={darkTheme}
+                    onClick={() => handleDarkThemeChange(!darkTheme)}
+                  >
+                    Dark Cogmit Card
+                  </SelectionButton>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                >
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                  {isGenerating ? "Generating…" : "Generate Cogmit Card"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCardGenerated(false)}
+                  className="border-[#4B0084] hover:bg-[#4B0084]/15"
+                >
+                  Change Options
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={handleDownloadCard}
+                  disabled={isExporting || !cardSvg}
+                >
+                  <Download className="mr-1.5 h-3.5 w-3.5" />
+                  {isExporting ? "Exporting…" : "Download Cogmit Card"}
+                </Button>
+              </>
+            )}
           </div>
 
-          {/* 4. Preview Area — Dynamically displays State A (Rich Link) or State B (Generated Cogmit Card) */}
+          {/* Dynamic Preview Area */}
           <div className="space-y-2">
             {!cardGenerated ? (
               /* State A: Default Modal State (No Card Generated) — Rich Link preview */
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                  <span className="font-medium text-foreground">Rich Link Preview</span>
-                  <span>Social crawler compatible</span>
+              <div className="rounded-lg border p-4 space-y-2 bg-muted/30">
+                <div className="text-xs text-muted-foreground font-medium">
+                  {authorId ? `${authorId}'s Cogmit` : "Cogmit"}
+                  {published && ` · ${formatTimestamp(published)}`}
                 </div>
 
-                {/* Rich Link Card Preview */}
-                <div className="rounded-lg border p-4 space-y-2 bg-muted/30">
-                  <div className="text-xs text-muted-foreground font-medium">
-                    {authorId ? `${authorId}'s Cogmit` : "Cogmit"}
-                    {published && ` · ${formatTimestamp(published)}`}
-                  </div>
-
-                  <h3 className="font-semibold text-base break-words text-foreground" title={sharingText}>
-                    {sharingText}
-                  </h3>
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                  <span>Open Graph &amp; Twitter summary metadata</span>
-                  <span className="font-mono">{truncatedTitle.length} / {MAX_ROOTCOG_TITLE_LENGTH} chars</span>
-                </div>
+                <h3 className="font-semibold text-base break-words text-foreground" title={sharingText}>
+                  {sharingText}
+                </h3>
               </div>
             ) : (
               /* State B: After Clicking Generate Cogmit Card — Generated Cogmit Card preview */
-              <div className="space-y-2">
-                {/* Transition bar above preview showing active layout & Change options action */}
-                <div className="flex items-center justify-between text-xs px-1">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                      {withDescription ? "Portrait" : "Landscape 4:3"}
-                    </span>
-                    <span>·</span>
-                    <span>{darkTheme ? "Dark" : "Light"} theme</span>
-                    {withDescription && (
-                      <>
-                        <span>·</span>
-                        <span className="font-mono">{excerpt.length} / {CARD_DESCRIPTION_MAX} chars</span>
-                      </>
-                    )}
+              <div
+                className={`overflow-hidden rounded-lg border-2 shadow-sm ${previewBg} flex items-center justify-center w-full max-w-full ${
+                  withDescription ? "" : "aspect-[4/3]"
+                }`}
+                style={{ borderColor: "#4B0084", boxSizing: "border-box" }}
+              >
+                {previewUrl && !imageError ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={previewUrl}
+                    src={previewUrl}
+                    alt={`Cogmit Card - ${title}`}
+                    className="w-full h-auto max-w-full select-none block"
+                    onError={() => setImageError(true)}
+                    style={{ boxSizing: "border-box", width: "100%", maxWidth: "100%", display: "block" }}
+                  />
+                ) : cardSvg ? (
+                  <div
+                    className="w-full max-w-full select-none"
+                    style={{ boxSizing: "border-box", width: "100%", maxWidth: "100%" }}
+                    dangerouslySetInnerHTML={{ __html: cardSvg }}
+                  />
+                ) : (
+                  <div className={`p-8 text-xs ${darkTheme ? "text-[#FFFF11]" : "text-[#4B0084]"}`}>
+                    Generating preview…
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setCardGenerated(false)}
-                  >
-                    Change options
-                  </Button>
-                </div>
-
-                {/* Card preview container */}
-                <div
-                  className={`overflow-hidden rounded-lg border-2 shadow-sm ${previewBg} flex items-center justify-center w-full max-w-full ${withDescription ? "" : "aspect-[4/3]"
-                    }`}
-                  style={{ borderColor: "#4B0084", boxSizing: "border-box" }}
-                >
-                  {previewUrl && !imageError ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={previewUrl}
-                      src={previewUrl}
-                      alt={`Cogmit Card - ${title}`}
-                      className="w-full h-auto max-w-full select-none block"
-                      onError={() => setImageError(true)}
-                      style={{ boxSizing: "border-box", width: "100%", maxWidth: "100%", display: "block" }}
-                    />
-                  ) : cardSvg ? (
-                    <div
-                      className="w-full max-w-full select-none"
-                      style={{ boxSizing: "border-box", width: "100%", maxWidth: "100%" }}
-                      dangerouslySetInnerHTML={{ __html: cardSvg }}
-                    />
-                  ) : (
-                    <div className={`p-8 text-xs ${darkTheme ? "text-[#FFFF11]" : "text-[#4B0084]"}`}>
-                      Generating preview…
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             )}
           </div>

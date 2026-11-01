@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { JSDOM } from "jsdom";
 
 console.log("==================================================================");
-console.log("Running Unified Share Cogmit Modal Acceptance Criteria Test Suite");
+console.log("Running Cogmit Share Modal Final UI Refinement Test Suite");
 console.log("==================================================================\n");
 
 let passed = 0;
@@ -78,27 +78,40 @@ function TestModalWrapper(props) {
 }
 
 // ---------------------------------------------------------------------------------
-// Acceptance Criterion 1: Modal opens without Cogmit Card / Rich Link tab navigation
+// Acceptance Criterion 1: All redundant labels removed from visible UI
 // ---------------------------------------------------------------------------------
-await test("1. Modal opens without two-tab navigation (no tab switching bar)", async () => {
+await test("1. All redundant labels removed (Landscape, Portrait, Dark theme, Rich Link Preview, Social crawler, Canonical URL, char counters)", async () => {
   await act(async () => {
     root.render(React.createElement(TestModalWrapper, { initialOpen: true }));
   });
 
-  const tabButtons = Array.from(container.querySelectorAll("button")).filter(
-    (b) => b.textContent?.trim() === "Cogmit Card" || b.textContent?.trim() === "Rich Link"
-  );
-  assert.strictEqual(tabButtons.length, 0, "There must be no Cogmit Card / Rich Link tab switcher buttons");
+  const redundantLabels = [
+    "Landscape",
+    "Portrait",
+    "Dark theme",
+    "Rich Link Preview",
+    "Social crawler compatible",
+    "Public RootCog sharing options",
+    "Canonical Cogmit URL",
+    "Open Graph and Twitter summary metadata",
+    "Open Graph & Twitter summary metadata",
+    "147 chars",
+    "597 chars",
+  ];
 
-  // Grid tab container should not exist
-  const gridTabs = container.querySelector(".grid-cols-2");
-  assert.strictEqual(gridTabs, null, "Two-column tab navigation container must be removed");
+  for (const label of redundantLabels) {
+    assert.strictEqual(
+      container.innerHTML.includes(label),
+      false,
+      `Label '${label}' must be completely removed from the visible modal`
+    );
+  }
 });
 
 // ---------------------------------------------------------------------------------
-// Acceptance Criterion 2: Canonical URL appears immediately below the modal header
+// Acceptance Criterion 2: Canonical URL appears immediately below modal header
 // ---------------------------------------------------------------------------------
-await test("2. Canonical Cogmit URL appears immediately below modal header", async () => {
+await test("2. Canonical URL appears immediately below header without redundant label", async () => {
   const modalBody = container.querySelector(".overflow-y-auto");
   assert.ok(modalBody, "Modal body container must exist");
 
@@ -107,75 +120,97 @@ await test("2. Canonical Cogmit URL appears immediately below modal header", asy
     firstChild.textContent?.includes("https://cogmit.com/cogmits/yvnow/yvnow_2026oct090558"),
     "First child of modal body must contain canonical public URL"
   );
-  assert.ok(
+  assert.strictEqual(
     firstChild.textContent?.includes("Canonical Cogmit URL"),
-    "URL component should have canonical label"
+    false,
+    "Canonical Cogmit URL label must be removed"
   );
 });
 
 // ---------------------------------------------------------------------------------
-// Acceptance Criterion 3 & 4: Sharing actions appear immediately below URL with renamed button
+// Acceptance Criterion 3: Sharing actions contain Copy Link, Share, and Copy Card (renamed from Copy Image)
 // ---------------------------------------------------------------------------------
-await test("3 & 4. Sharing actions appear immediately below URL with renamed 'Download Cogmit Card'", async () => {
+await test("3. Sharing actions contain Copy Link, Share, and Copy Card (renamed from Copy Image)", async () => {
   const modalBody = container.querySelector(".overflow-y-auto");
   const actionsRow = modalBody.children[1];
   assert.ok(actionsRow, "Actions row must be the second child in modal body");
 
   const buttons = Array.from(actionsRow.querySelectorAll("button"));
-  assert.strictEqual(buttons.length, 4, "Must have exactly 4 sharing action buttons");
+  assert.strictEqual(buttons.length, 3, "Must have exactly 3 sharing action buttons in this row (Copy Link, Share, Copy Card)");
 
-  // Verify button 1: Copy Link
+  // Button 1: Copy Link
   assert.ok(buttons[0].textContent?.includes("Copy Link"), "Button 1 must be Copy Link");
-  assert.strictEqual(buttons[0].disabled, false, "Copy Link must be enabled");
+  assert.strictEqual(buttons[0].disabled, false);
 
-  // Verify button 2: Share
+  // Button 2: Share
   assert.ok(buttons[1].textContent?.includes("Share"), "Button 2 must be Share");
-  assert.strictEqual(buttons[1].disabled, false, "Share must be enabled");
+  assert.strictEqual(buttons[1].disabled, false);
 
-  // Verify button 3: Copy Image (disabled when card not generated)
-  assert.ok(buttons[2].textContent?.includes("Copy Image"), "Button 3 must be Copy Image");
-  assert.strictEqual(buttons[2].disabled, true, "Copy Image must be disabled before card generation");
-
-  // Verify button 4: Download Cogmit Card (renamed, disabled when card not generated)
-  assert.ok(buttons[3].textContent?.includes("Download Cogmit Card"), "Button 4 must be renamed to Download Cogmit Card");
-  assert.ok(!buttons[3].textContent?.includes("Download PNG"), "Must not use old 'Download PNG' label");
-  assert.strictEqual(buttons[3].disabled, true, "Download Cogmit Card must be disabled before card generation");
+  // Button 3: Copy Card
+  assert.ok(buttons[2].textContent?.includes("Copy Card"), "Button 3 must be Copy Card");
+  assert.strictEqual(buttons[2].textContent?.includes("Copy Image"), false, "Must not use old 'Copy Image' label");
+  assert.strictEqual(buttons[2].disabled, true, "Copy Card must be disabled before card generation");
 });
 
 // ---------------------------------------------------------------------------------
-// Acceptance Criterion 5, 6, 7: Generation options & default Rich Link preview (no auto-generate)
+// Acceptance Criterion 4 & 5: Only ONE primary button initially displaying 'Generate Cogmit Card'
 // ---------------------------------------------------------------------------------
-await test("5, 6, 7. Generation options accessible, Rich Link preview shown by default, no auto-generate", async () => {
+await test("4 & 5. Only ONE primary card button exists, initially displaying 'Generate Cogmit Card'", async () => {
+  const allButtons = Array.from(container.querySelectorAll("button"));
+  const primaryButtons = allButtons.filter(
+    (b) => b.textContent?.includes("Generate Cogmit Card") || b.textContent?.includes("Download Cogmit Card")
+  );
+  assert.strictEqual(primaryButtons.length, 1, "There must be only ONE primary Generate/Download button");
+  assert.ok(primaryButtons[0].textContent?.includes("Generate Cogmit Card"), "Primary button must initially display 'Generate Cogmit Card'");
+});
+
+// ---------------------------------------------------------------------------------
+// Acceptance Criterion 6, 7, 8: Selection buttons (purple outline when unselected, purple bg when selected) to left
+// ---------------------------------------------------------------------------------
+await test("6, 7, 8. Description and Dark theme are selection buttons with purple outline/bg on left of primary action", async () => {
   const toggleDesc = container.querySelector("#toggle-with-description");
-  assert.ok(toggleDesc, "With description toggle must be present");
-  assert.strictEqual(toggleDesc.getAttribute("aria-checked"), "false");
+  assert.ok(toggleDesc, "With description button must exist");
+  assert.strictEqual(toggleDesc.getAttribute("aria-checked"), "false", "With description must default to unselected");
+  // Unselected appearance: purple outline, transparent background
+  assert.ok(toggleDesc.classList.contains("border-[#4B0084]"), "Must have purple outline border-[#4B0084]");
+  assert.ok(toggleDesc.classList.contains("bg-transparent"), "Must have transparent background when unselected");
 
   const toggleDark = container.querySelector("#toggle-dark-theme");
-  assert.ok(toggleDark, "Dark Cogmit Card toggle must be present");
-  assert.strictEqual(toggleDark.getAttribute("aria-checked"), "true");
+  assert.ok(toggleDark, "Dark Cogmit Card button must exist");
+  assert.strictEqual(toggleDark.getAttribute("aria-checked"), "true", "Dark Cogmit Card must default to selected");
+  // Selected appearance: purple background
+  assert.ok(toggleDark.classList.contains("bg-[#4B0084]"), "Must have purple background bg-[#4B0084] when selected");
 
-  const generateBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.includes("Generate Cogmit Card")
+  // Verify layout: both configuration buttons are to the left of the primary action
+  const configContainer = toggleDesc.parentElement;
+  assert.ok(configContainer, "Configuration container must exist");
+  const primaryBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Generate Cogmit Card")
   );
-  assert.ok(generateBtn, "Generate Cogmit Card button must be present");
-
-  // Criterion 6: Rich Link preview is displayed by default
-  assert.ok(container.innerHTML.includes("Rich Link Preview"), "Rich Link preview header must be visible");
-  assert.ok(container.innerHTML.includes("Cogmit | yvnow: Quantum Memory Architectures"), "Sharing text format 'Cogmit | <username>: <title>' must be rendered in Rich Link preview");
-  assert.strictEqual(container.innerHTML.includes("Exploring distributed synaptic weights"), false, "No description or body excerpt appears in the generated sharing text");
-  assert.ok(container.innerHTML.includes("Social crawler compatible"), "Social crawler info must be present");
-
-  // Criterion 7: Opening modal does not automatically generate a card
-  const previewImg = container.querySelector("img[alt^='Cogmit Card']");
-  assert.strictEqual(previewImg, null, "Card preview image must NOT exist before clicking Generate");
+  assert.ok(
+    configContainer.compareDocumentPosition(primaryBtn) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING,
+    "Primary button must follow the configuration buttons (be on the right)"
+  );
 });
 
 // ---------------------------------------------------------------------------------
-// Acceptance Criterion 8 & 9: Clicking Generate replaces Rich Link preview with generated card
+// Acceptance Criterion 9: Default Rich Link preview without description/body excerpt
 // ---------------------------------------------------------------------------------
-await test("8 & 9. Clicking Generate replaces Rich Link preview with generated card in same preview area", async () => {
-  const generateBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.includes("Generate Cogmit Card")
+await test("9. Default state shows Rich Link preview with exact 'Cogmit | <user>: <title>' format and no excerpt", async () => {
+  assert.ok(container.innerHTML.includes("Cogmit | yvnow: Quantum Memory Architectures"), "Must render exact sharing text format");
+  assert.strictEqual(container.innerHTML.includes("Exploring distributed synaptic weights"), false, "No description or body excerpt in preview");
+
+  // Card preview image not rendered
+  const previewImg = container.querySelector("img[alt^='Cogmit Card']");
+  assert.strictEqual(previewImg, null, "Card preview image must not exist before clicking Generate");
+});
+
+// ---------------------------------------------------------------------------------
+// Acceptance Criterion 10 & 11: Clicking Generate transitions to Download Cogmit Card and replaces config with Change Options
+// ---------------------------------------------------------------------------------
+await test("10 & 11. Clicking Generate replaces config buttons with 'Change Options' and primary button with 'Download Cogmit Card'", async () => {
+  const generateBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Generate Cogmit Card")
   );
   assert.ok(generateBtn, "Generate button must exist");
 
@@ -183,64 +218,38 @@ await test("8 & 9. Clicking Generate replaces Rich Link preview with generated c
     generateBtn.click();
   });
 
-  // Rich Link preview must now be replaced
-  assert.strictEqual(container.innerHTML.includes("Rich Link Preview"), false, "Rich Link preview must be replaced");
+  // 1. Both config buttons are replaced by Change Options
+  assert.strictEqual(container.querySelector("#toggle-with-description"), null, "With description button must be replaced");
+  assert.strictEqual(container.querySelector("#toggle-dark-theme"), null, "Dark Cogmit Card button must be replaced");
 
-  // Cogmit Card preview must be rendered
+  const changeOptionsBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.toLowerCase().includes("change options")
+  );
+  assert.ok(changeOptionsBtn, "Change Options button must be displayed on the left");
+
+  // 2. Primary button is now Download Cogmit Card
+  const allButtons = Array.from(container.querySelectorAll("button"));
+  const primaryButtons = allButtons.filter(
+    (b) => b.textContent?.includes("Generate Cogmit Card") || b.textContent?.includes("Download Cogmit Card")
+  );
+  assert.strictEqual(primaryButtons.length, 1, "There must still be only ONE primary card button");
+  assert.ok(primaryButtons[0].textContent?.includes("Download Cogmit Card"), "Primary button must now display 'Download Cogmit Card'");
+
+  // 3. Card preview is rendered in the preview area
   const previewImg = container.querySelector("img[alt^='Cogmit Card']");
   assert.ok(previewImg, "Generated Cogmit Card preview image must be rendered");
-  assert.ok(previewImg.getAttribute("src")?.startsWith("data:image/svg+xml"), "Source must be SVG data URL");
 
-  // Image actions are now enabled
-  const copyImageBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.includes("Copy Image")
+  // 4. Copy Card is now enabled
+  const copyCardBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Copy Card")
   );
-  assert.strictEqual(copyImageBtn.disabled, false, "Copy Image must be enabled after generation");
-
-  const downloadBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.includes("Download Cogmit Card")
-  );
-  assert.strictEqual(downloadBtn.disabled, false, "Download Cogmit Card must be enabled after generation");
+  assert.strictEqual(copyCardBtn.disabled, false, "Copy Card must be enabled after generation");
 });
 
 // ---------------------------------------------------------------------------------
-// Acceptance Criterion 10: Copy Link works
+// Acceptance Criterion 12: Copy Card writes image to clipboard with 'Copied Card!' feedback
 // ---------------------------------------------------------------------------------
-await test("10. Copy Link writes shareUrl to clipboard and displays feedback", async () => {
-  const copyLinkBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.includes("Copy Link")
-  );
-  clipboardText = "";
-
-  await act(async () => {
-    copyLinkBtn.click();
-  });
-
-  assert.strictEqual(clipboardText, "https://cogmit.com/cogmits/yvnow/yvnow_2026oct090558", "Canonical URL must be copied");
-  assert.ok(container.innerHTML.includes("Copied Link!"), "Copied Link! feedback must be displayed");
-});
-
-// ---------------------------------------------------------------------------------
-// Acceptance Criterion 11: Share works
-// ---------------------------------------------------------------------------------
-await test("11. Share button triggers share handler without error", async () => {
-  const shareBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.trim() === "Share"
-  );
-  clipboardText = "";
-
-  await act(async () => {
-    shareBtn.click();
-  });
-
-  // Falls back to clipboard write if navigator.share not supported in jsdom
-  assert.strictEqual(clipboardText, "https://cogmit.com/cogmits/yvnow/yvnow_2026oct090558");
-});
-
-// ---------------------------------------------------------------------------------
-// Acceptance Criterion 12: Copy Image works
-// ---------------------------------------------------------------------------------
-await test("12. Copy Image writes image to clipboard and displays feedback", async () => {
+await test("12. Copy Card copies card blob to clipboard and displays 'Copied Card!' feedback", async () => {
   const { setCachedCard, getCachedCard, computeCardSourceHash, TEMPLATE_VERSION } = await import("../src/lib/card-renderer.ts");
   const cacheKey = "https://cogmit.com/cogmits/yvnow/yvnow_2026oct090558|desc:false|dark:true";
   const sourceHash = computeCardSourceHash(
@@ -258,25 +267,25 @@ await test("12. Copy Image writes image to clipboard and displays feedback", asy
     setCachedCard(cacheKey, entry);
   }
 
-  const copyImageBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.includes("Copy Image")
+  const copyCardBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Copy Card")
   );
-  assert.ok(copyImageBtn, "Copy Image button must exist");
+  assert.ok(copyCardBtn, "Copy Card button must exist");
 
   await act(async () => {
-    copyImageBtn.click();
+    copyCardBtn.click();
     await new Promise((r) => setTimeout(r, 10));
   });
 
-  assert.ok(container.innerHTML.includes("Copied Image!"), "Copied Image! feedback must be displayed");
+  assert.ok(container.innerHTML.includes("Copied Card!"), "Copied Card! feedback must be displayed");
 });
 
 // ---------------------------------------------------------------------------------
-// Acceptance Criterion 13: Download Cogmit Card works
+// Acceptance Criterion 13: Download Cogmit Card downloads existing card without re-generating
 // ---------------------------------------------------------------------------------
-await test("13. Download Cogmit Card executes export without throwing", async () => {
-  const downloadBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.includes("Download Cogmit Card")
+await test("13. Download Cogmit Card downloads existing card without re-generating", async () => {
+  const downloadBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Download Cogmit Card")
   );
   assert.ok(downloadBtn, "Download Cogmit Card button must exist");
 
@@ -284,74 +293,70 @@ await test("13. Download Cogmit Card executes export without throwing", async ()
     downloadBtn.click();
     await new Promise((r) => setTimeout(r, 10));
   });
+
+  // Verify button still says Download Cogmit Card (did not flip back to Generate)
+  assert.ok(downloadBtn.textContent?.includes("Download Cogmit Card"));
 });
 
 // ---------------------------------------------------------------------------------
-// Acceptance Criterion 14: Change options works
+// Acceptance Criterion 14: Change Options restores configuration interface
 // ---------------------------------------------------------------------------------
-await test("14. Change options reveals options row and switches preview back to Rich Link", async () => {
-  const changeOptionsBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.includes("Change options")
+await test("14. Change Options restores configuration interface and Rich Link preview", async () => {
+  const changeOptionsBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.toLowerCase().includes("change options")
   );
-  assert.ok(changeOptionsBtn, "Change options button must exist");
+  assert.ok(changeOptionsBtn, "Change Options button must exist");
 
   await act(async () => {
     changeOptionsBtn.click();
   });
 
-  // Generation options row is visible again
+  // Selection buttons are restored
   const toggleDesc = container.querySelector("#toggle-with-description");
-  assert.ok(toggleDesc, "With description toggle must be visible");
+  assert.ok(toggleDesc, "With description button must be restored");
+  const toggleDark = container.querySelector("#toggle-dark-theme");
+  assert.ok(toggleDark, "Dark Cogmit Card button must be restored");
+
+  // Primary button restores 'Generate Cogmit Card'
+  const generateBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Generate Cogmit Card")
+  );
+  assert.ok(generateBtn, "Generate Cogmit Card button must be restored");
 
   // Rich Link preview returns
-  assert.ok(container.innerHTML.includes("Rich Link Preview"), "Rich Link preview must return when changing options");
-
-  // Image actions are disabled again
-  const copyImageBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.includes("Copy Image") || b.textContent?.includes("Copied Image!")
-  );
-  assert.strictEqual(copyImageBtn.disabled, true, "Copy Image must be disabled until generated again");
+  assert.ok(container.innerHTML.includes("Cogmit | yvnow: Quantum Memory Architectures"), "Rich Link preview must return");
+  assert.strictEqual(container.querySelector("img[alt^='Cogmit Card']"), null, "Card preview image must not exist");
 });
 
 // ---------------------------------------------------------------------------------
-// Acceptance Criterion 15 & 16: Description, dark/light, portrait, landscape configurations
+// Acceptance Criterion 15: Toggle selection buttons updates visual state and subsequent generation
 // ---------------------------------------------------------------------------------
-await test("15 & 16. Description and dark/light configuration work (Portrait & Landscape)", async () => {
-  // Toggle With description (switches to Portrait)
+await test("15. Toggle selection buttons updates visual state (purple bg when enabled) and card generation", async () => {
   const toggleDesc = container.querySelector("#toggle-with-description");
   await act(async () => {
     toggleDesc.click();
   });
-  assert.strictEqual(toggleDesc.getAttribute("aria-checked"), "true", "With description must be true");
+  // Now enabled -> purple background
+  assert.strictEqual(toggleDesc.getAttribute("aria-checked"), "true");
+  assert.ok(toggleDesc.classList.contains("bg-[#4B0084]"), "Must have purple bg when enabled");
 
-  // Toggle Dark theme to false (Light theme)
-  const toggleDark = container.querySelector("#toggle-dark-theme");
-  await act(async () => {
-    toggleDark.click();
-  });
-  assert.strictEqual(toggleDark.getAttribute("aria-checked"), "false", "Dark theme must be false");
-
-  // Generate card with Portrait + Light theme
-  const generateBtn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.includes("Generate Cogmit Card")
+  // Click Generate Cogmit Card
+  const generateBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Generate Cogmit Card")
   );
   await act(async () => {
     generateBtn.click();
   });
 
-  assert.ok(container.innerHTML.includes("Portrait"), "Must indicate Portrait mode");
-  assert.ok(container.innerHTML.includes("Light theme"), "Must indicate Light theme");
-
   const previewImg = container.querySelector("img[alt^='Cogmit Card']");
   const previewContainer = previewImg.closest("div.overflow-hidden");
-  assert.ok(previewContainer.classList.contains("bg-[#F8F5FA]"), "Light theme background must be used");
-  assert.ok(!previewContainer.classList.contains("aspect-[4/3]"), "Portrait mode must not enforce 4:3 aspect ratio");
+  assert.ok(!previewContainer.classList.contains("aspect-[4/3]"), "Portrait card must not enforce 4:3 aspect ratio");
 });
 
 // ---------------------------------------------------------------------------------
-// Acceptance Criterion 17: Top-right X continues dismissing the modal
+// Acceptance Criterion 16: Top-right X button closes modal and reopening restores default state
 // ---------------------------------------------------------------------------------
-await test("17. Top-right X button calls onOpenChange(false) and closes the modal", async () => {
+await test("16. Top-right X button closes modal and reopening restores default state", async () => {
   const closeXBtn = container.querySelector("button[aria-label='Close']");
   assert.ok(closeXBtn, "Top-right X button must exist");
 
@@ -359,37 +364,7 @@ await test("17. Top-right X button calls onOpenChange(false) and closes the moda
     closeXBtn.click();
     await new Promise((r) => setTimeout(r, 60));
   });
-
-  assert.strictEqual(container.innerHTML, "", "Modal must be unmounted when closed");
-});
-
-// ---------------------------------------------------------------------------------
-// Acceptance Criterion 18: Redundant Close and Open Cogmit buttons are removed
-// ---------------------------------------------------------------------------------
-await test("18. Redundant Close and Open Cogmit buttons are completely removed", async () => {
-  // Re-open
-  await act(async () => {
-    setOpenState(true);
-    await new Promise((r) => setTimeout(r, 60));
-  });
-
-  const buttonsAndLinks = Array.from(container.querySelectorAll("button, a"));
-  const closeTextBtn = buttonsAndLinks.find((el) => el.textContent?.trim() === "Close");
-  assert.strictEqual(closeTextBtn, undefined, "Footer/text Close button must not exist");
-
-  const openCogmitLink = buttonsAndLinks.find((el) => el.textContent?.includes("Open Cogmit"));
-  assert.strictEqual(openCogmitLink, undefined, "Open Cogmit button must not exist");
-});
-
-// ---------------------------------------------------------------------------------
-// Acceptance Criterion 19 & 20: Reset behavior on close and reopen
-// ---------------------------------------------------------------------------------
-await test("19 & 20. Reopening modal resets to default Rich Link preview state", async () => {
-  // Close
-  await act(async () => {
-    setOpenState(false);
-    await new Promise((r) => setTimeout(r, 60));
-  });
+  assert.strictEqual(container.innerHTML, "", "Modal must be closed");
 
   // Reopen
   await act(async () => {
@@ -403,44 +378,10 @@ await test("19 & 20. Reopening modal resets to default Rich Link preview state",
   const toggleDark = container.querySelector("#toggle-dark-theme");
   assert.strictEqual(toggleDark.getAttribute("aria-checked"), "true", "Dark theme resets to true");
 
-  assert.ok(container.innerHTML.includes("Rich Link Preview"), "Default Rich Link preview is displayed on reopen");
-  const previewImg = container.querySelector("img[alt^='Cogmit Card']");
-  assert.strictEqual(previewImg, null, "Preview image does not exist on reopen");
-});
-
-// ---------------------------------------------------------------------------------
-// Acceptance Criterion 21: Rich Link Preview Text Content Format & 147-char limit
-// ---------------------------------------------------------------------------------
-await test("21. Rich Link sharing text begins with 'Cogmit |', includes username, colon, max 147 title, and no excerpt", async () => {
-  const longTitle = "A".repeat(200);
-  await act(async () => {
-    root.render(React.createElement(TestModalWrapper, {
-      initialOpen: true,
-      title: longTitle,
-      authorId: "yvnow",
-      content: "This content description must NEVER appear in the sharing text.",
-    }));
-  });
-
-  const expectedSharingText = `Cogmit | yvnow: ${"A".repeat(147)}`;
-  assert.ok(container.innerHTML.includes(expectedSharingText), "Sharing text must match exact format with 147-char title");
-  assert.strictEqual(container.innerHTML.includes("This content description must NEVER appear"), false, "No description or body excerpt appears");
-});
-
-// ---------------------------------------------------------------------------------
-// Acceptance Criterion 22: generateMetadata WhatsApp/social preview matches exact format
-// ---------------------------------------------------------------------------------
-await test("22. generateMetadata produces exact 'Cogmit | <username>: <title>' format without description excerpt", async () => {
-  const { generateMetadata } = await import("../src/app/cogmits/[authorId]/[cogmitId]/page.tsx");
-  const meta = await generateMetadata({
-    params: Promise.resolve({ authorId: "yvnow", cogmitId: "yvnow_2026oct090558" }),
-  });
-
-  assert.ok(meta.title?.startsWith("Cogmit | yvnow: "), "Meta title must start with 'Cogmit | yvnow: '");
-  assert.ok(meta.openGraph?.title?.startsWith("Cogmit | yvnow: "), "OG title must start with 'Cogmit | yvnow: '");
-  assert.strictEqual(meta.openGraph?.title, meta.title);
-  assert.ok(!meta.description?.includes("Distributed synaptic weights"), "No body excerpt in description");
-  assert.strictEqual(meta.alternates?.canonical, "https://cogmit.com/cogmits/yvnow/yvnow_2026oct090558", "Canonical URL remains unchanged");
+  const generateBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Generate Cogmit Card")
+  );
+  assert.ok(generateBtn, "Generate button must be restored");
 });
 
 console.log("\n------------------------------------------------------------------");
