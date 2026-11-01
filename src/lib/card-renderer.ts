@@ -11,13 +11,13 @@
  * - Deterministic PNG/JPEG rasterization via HTML5 Canvas.
  */
 
-export const TEMPLATE_VERSION = "1.2.0";
+export const TEMPLATE_VERSION = "1.3.0";
 
 // Canvas dimensions
 export const CARD_WIDTH_PORTRAIT = 900;   // Portrait base width (with description, content-driven height)
 export const CARD_HEIGHT_PORTRAIT = 1200; // Base portrait fallback height
-export const CARD_WIDTH_LANDSCAPE = 1200; // 4:3 landscape (without description)
-export const CARD_HEIGHT_LANDSCAPE = 900;
+export const CARD_WIDTH_LANDSCAPE = 800;  // 2:3 landscape (without description, width:height = 2:3)
+export const CARD_HEIGHT_LANDSCAPE = 1200;
 
 // Legacy exports kept for API compatibility
 export const CARD_WIDTH = CARD_WIDTH_PORTRAIT;
@@ -258,7 +258,7 @@ export function calculatePortraitHeight(opts: Partial<CardTemplateOptions>): num
 
   const divider2Y = contentEndY + 48;
   const footerIntroY = divider2Y + 44;
-  const footerUrlY = footerIntroY + 38;
+  const footerUrlY = footerIntroY + 40;
 
   const borderInset = 28;
   const bottomPadding = 56;
@@ -356,13 +356,13 @@ function buildStyles(c: ThemeColors): string {
       svg { width: 100%; height: auto; max-width: 100%; box-sizing: border-box; display: block; }
       .bg { fill: ${c.bg}; }
       .outer-border { fill: none; stroke: ${c.borderColor}; stroke-width: 3; }
-      .brand { font-family: ${font}; font-size: 22px; font-weight: 700; fill: ${c.brand}; letter-spacing: 3px; }
-      .sep   { font-family: ${font}; font-size: 22px; font-weight: 400; fill: ${c.separator}; letter-spacing: 0; }
-      .author-name { font-family: ${font}; font-size: 22px; font-weight: 700; fill: ${c.authorName}; letter-spacing: 0; }
+      .brand { font-family: ${font}; font-size: 36px; font-weight: 700; fill: ${c.brand}; letter-spacing: 3px; }
+      .sep   { font-family: ${font}; font-size: 36px; font-weight: 400; fill: ${c.separator}; letter-spacing: 0; }
+      .author-name { font-family: ${font}; font-size: 36px; font-weight: 700; fill: ${c.authorName}; letter-spacing: 0; }
       .title-container, .title { font-family: ${font}; font-size: 44px; font-weight: 800; fill: ${c.title}; width: 100%; max-width: 100%; box-sizing: border-box; }
       .description-container, .excerpt, p { font-family: ${font}; font-size: 28px; font-weight: 400; fill: ${c.excerpt}; width: 100%; max-width: 100%; box-sizing: border-box; }
-      .url-intro { font-family: ${mono}; font-size: 22px; font-weight: 500; fill: ${c.urlIntro}; width: 100%; max-width: 100%; box-sizing: border-box; }
-      .url-label { font-family: ${mono}; font-size: 20px; font-weight: 700; fill: ${c.urlLabel}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .url-intro { font-family: ${mono}; font-size: 28px; font-weight: 500; fill: ${c.urlIntro}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .url-label { font-family: ${mono}; font-size: 28px; font-weight: 700; fill: ${c.urlLabel}; width: 100%; max-width: 100%; box-sizing: border-box; }
       .divider { stroke: ${c.divider}; stroke-width: 1.5; stroke-opacity: ${c.dividerOpacity}; }`.trimStart();
 }
 
@@ -393,7 +393,7 @@ function buildFooter(
   <!-- Footer divider -->
   <line x1="${paddingX}" y1="${divider2Y}" x2="${width - paddingX}" y2="${divider2Y}" class="divider" />
 
-  <!-- Footer row 1: intro (matching username font size 22px) -->
+  <!-- Footer row 1: intro (matching description font size 28px) -->
   <text x="${paddingX}" y="${footerIntroY}" class="url-intro">Full content at COGMIT:</text>
 
   <!-- Footer row 2: link -->
@@ -446,7 +446,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   // Footer: dynamic Y based on actual content
   const divider2Y = contentEndY + 48;
   const footerIntroY = divider2Y + 44;
-  const footerUrlY = footerIntroY + 38;
+  const footerUrlY = footerIntroY + 40;
 
   const titleTspans = buildTspans(titleLines, paddingX, titleLineHeight);
   const excerptTspans = buildTspans(excerptLines, paddingX, excerptLineHeight);
@@ -480,7 +480,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
 </svg>`;
 }
 
-// ─── Landscape card (4:3, no description) ────────────────────────────────────
+// ─── Landscape card (2:3, no description) ────────────────────────────────────
 
 function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string {
   const { title, url, authorId } = opts;
@@ -491,27 +491,27 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const safeUsername = escapeXml(authorId ? authorId.toLowerCase() : "");
   const displayUrl = escapeXml(url.replace(/^https?:\/\//, ""));
 
-  const paddingX = 80;
-  const borderInset = 32;
-  const borderRadius = 24;
+  const paddingX = 64;
+  const borderInset = 28;
+  const borderRadius = 20;
 
-  const usableWidth = width - paddingX * 2; // 1040px
-  const maxTextWidth = usableWidth - 20; // 1020px
+  const usableWidth = width - paddingX * 2; // 672px
+  const maxTextWidth = usableWidth - 12; // 660px
 
   // Title: natural multi-line wrapping within usable width, accommodates full 147 chars, never sliced
   const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, 56, true);
 
   const headerY = 110;
-  const headerDividerY = headerY + 24; // 134
+  const headerDividerY = headerY + 32; // 142
 
-  // Footer: strictly 4:3 positions
-  const divider2Y = height - 148; // 752
-  const footerIntroY = height - 104; // 796
-  const footerUrlY = height - 62; // 838
+  // Footer: strictly 2:3 positions
+  const divider2Y = height - 160; // 1040
+  const footerIntroY = divider2Y + 44; // 1084
+  const footerUrlY = footerIntroY + 40; // 1124
 
   const titleLineHeight = 68;
   const titleBlockHeight = (titleLines.length - 1) * titleLineHeight + 56;
-  const availableTitleHeight = divider2Y - headerDividerY; // 618px
+  const availableTitleHeight = divider2Y - headerDividerY; // 898px
 
   // Vertically centre the title block nicely within available title area
   const titleStartY = Math.max(

@@ -543,7 +543,7 @@ export function ShareCogmitModal({
               /* State B: After Clicking Generate Cogmit Card — Generated Cogmit Card preview */
               <div
                 className={`overflow-hidden rounded-lg border-2 shadow-sm ${previewBg} flex items-center justify-center w-full max-w-full ${
-                  withDescription ? "" : "aspect-[4/3]"
+                  withDescription ? "" : "aspect-[2/3]"
                 }`}
                 style={{ borderColor: "#4B0084", boxSizing: "border-box" }}
               >

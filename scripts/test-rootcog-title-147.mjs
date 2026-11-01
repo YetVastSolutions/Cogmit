@@ -94,9 +94,10 @@ test("Landscape SVG cleanly renders 147-character title", () => {
     withDescription: false,
   });
 
-  assert.ok(svg.includes("viewBox=\"0 0 1200 900\""));
+  assert.ok(svg.includes("viewBox=\"0 0 800 1200\""));
   assert.ok(svg.includes("class=\"title\""));
-  assert.ok(svg.includes("Deep Cognitive Exploration:"));
+  assert.ok(svg.includes("Deep Cognitive"));
+  assert.ok(svg.includes("Exploration:"));
 });
 
 // 4. Word wrapping algorithm does not drop text for 147-char titles

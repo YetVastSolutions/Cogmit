@@ -100,9 +100,9 @@ await test("1. Before clicking Generate: options & toggles are visible, card pre
 });
 
 // ---------------------------------------------------------------------------------
-// Test 2: Clicking Generate transitions to 4:3 Landscape Card Preview (Config A)
+// Test 2: Clicking Generate transitions to 2:3 Landscape Card Preview (Config A)
 // ---------------------------------------------------------------------------------
-await test("2. Clicking Generate: transitions away from options and displays 4:3 landscape preview", async () => {
+await test("2. Clicking Generate: transitions away from options and displays 2:3 landscape preview", async () => {
   const generateBtn = Array.from(container.querySelectorAll("button")).find((b) =>
     b.textContent?.includes("Generate Cogmit Card")
   );
@@ -293,8 +293,9 @@ await test("7. Closing and reopening modal restores default options (cardGenerat
 // ---------------------------------------------------------------------------------
 await test("8. Card renderer produces exact dimensions for both Config A (1200x900) and Config B", async () => {
   const dimLandscape = getCardDimensions(false);
-  assert.strictEqual(dimLandscape.width, 1200, "Landscape width must be 1200");
-  assert.strictEqual(dimLandscape.height, 900, "Landscape height must be 900");
+  assert.strictEqual(dimLandscape.width, 800, "Landscape width must be 800");
+  assert.strictEqual(dimLandscape.height, 1200, "Landscape height must be 1200");
+  assert.strictEqual(dimLandscape.width / dimLandscape.height, 2 / 3, "Landscape aspect ratio must be 2:3");
 
   const svgLandscape = generateCardSvg({
     title: "Landscape Card Verification",
@@ -303,7 +304,7 @@ await test("8. Card renderer produces exact dimensions for both Config A (1200x9
     withDescription: false,
     darkTheme: true,
   });
-  assert.ok(svgLandscape.includes('viewBox="0 0 1200 900"'), "Landscape SVG viewBox must be 0 0 1200 900");
+  assert.ok(svgLandscape.includes('viewBox="0 0 800 1200"'), "Landscape SVG viewBox must be 0 0 800 1200");
 
   const dimPortrait = getCardDimensions(true, {
     title: "Portrait Card Verification",

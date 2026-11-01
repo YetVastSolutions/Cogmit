@@ -42,12 +42,12 @@ function test(name, fn) {
 }
 
 // -----------------------------------------------------------------------------
-// 1. Title overflow and 147-character title in 4:3 landscape
+// 1. Title overflow and 147-character title in 2:3 landscape
 // -----------------------------------------------------------------------------
 const title147 = "Designing Scalable Distributed Graph Data Structures for Persistent Cognitive Context and Continuous Agent Verification in Real-World Enterprise Systems".slice(0, 147);
 assert.strictEqual(title147.length, 147, "Test title must be exactly 147 characters");
 
-test("Landscape card uses strictly 4:3 aspect ratio (1200x900) when description is disabled", () => {
+test("Landscape card uses strictly 2:3 aspect ratio (800x1200) when description is disabled", () => {
   const svg = generateCardSvg({
     title: title147,
     excerpt: "Should be ignored when withDescription is false",
@@ -56,17 +56,17 @@ test("Landscape card uses strictly 4:3 aspect ratio (1200x900) when description 
     withDescription: false,
   });
 
-  assert.ok(svg.includes('viewBox="0 0 1200 900"'), "viewBox must be exactly 0 0 1200 900");
-  assert.ok(svg.includes('width="1200"'), "width attribute must be 1200");
-  assert.ok(svg.includes('height="900"'), "height attribute must be 900");
-  assert.strictEqual(1200 / 900, 4 / 3, "Aspect ratio must be strictly 4:3");
+  assert.ok(svg.includes('viewBox="0 0 800 1200"'), "viewBox must be exactly 0 0 800 1200");
+  assert.ok(svg.includes('width="800"'), "width attribute must be 800");
+  assert.ok(svg.includes('height="1200"'), "height attribute must be 1200");
+  assert.strictEqual(800 / 1200, 2 / 3, "Aspect ratio must be strictly 2:3");
 
   const dims = getCardDimensions(false);
-  assert.strictEqual(dims.width, 1200);
-  assert.strictEqual(dims.height, 900);
+  assert.strictEqual(dims.width, 800);
+  assert.strictEqual(dims.height, 1200);
 });
 
-test("147-character title in 4:3 landscape wraps without overflowing horizontal card boundaries", () => {
+test("147-character title in 2:3 landscape wraps without overflowing horizontal card boundaries", () => {
   const svg = generateCardSvg({
     title: title147,
     excerpt: "",
@@ -75,19 +75,19 @@ test("147-character title in 4:3 landscape wraps without overflowing horizontal 
     withDescription: false,
   });
 
-  // Check usable width is 1040px (1200 - 80*2) and border is at 32/1168 (1136px)
-  const lines = wrapTextByWidth(title147, 1020, 56, true);
-  assert.ok(lines.length >= 4, "147-char title should wrap across 4 or more lines");
+  // Check usable width is 672px (800 - 64*2) and text width is 660px
+  const lines = wrapTextByWidth(title147, 660, 56, true);
+  assert.ok(lines.length >= 6, "147-char title should wrap across 6 or more lines in 2:3 ratio");
 
   // Reassembled words must match original title completely (no missing words)
   assert.strictEqual(lines.join(" "), title147, "All words of 147-character title must be preserved");
 
-  // Every line must measure <= 1040px width at 56px bold font
+  // Every line must measure <= 672px width at 56px bold font
   for (const line of lines) {
     const lineWidth = estimateStringWidth(line, 56, true);
     assert.ok(
-      lineWidth <= 1040,
-      `Line "${line}" estimated width (${lineWidth}px) exceeds usable width of 1040px`
+      lineWidth <= 672,
+      `Line "${line}" estimated width (${lineWidth}px) exceeds usable width of 672px`
     );
   }
 
@@ -198,31 +198,64 @@ test("Full 597-character description with 147-character title expands height wit
 });
 
 // -----------------------------------------------------------------------------
-// 5. Footer Typography Matching Author Username
+// 5. Header and Footer Typography Hierarchy
 // -----------------------------------------------------------------------------
-test("Footer introductory text matches username font size exactly (22px)", () => {
-  const svg = generateCardSvg({
-    title: "Test Cogmit",
-    excerpt: "Some description",
-    url: "https://cogmit.com/cogs/test",
-    authorId: "yvs",
-    withDescription: true,
-  });
+test("Header brand title and username are visibly larger than description text (36px vs 28px) in both orientations", () => {
+  for (const withDescription of [false, true]) {
+    const svg = generateCardSvg({
+      title: "Test Cogmit",
+      excerpt: "Some description text for comparison.",
+      url: "https://cogmit.com/cogs/test",
+      authorId: "yvs",
+      withDescription,
+    });
 
-  assert.ok(svg.includes("Full content at COGMIT:"), "Must have introductory text 'Full content at COGMIT:'");
-  
-  // Extract CSS font size for author-name and url-intro
-  const authorMatch = svg.match(/\.author-name\s*\{[^}]*font-size:\s*(\d+)px/);
-  const introMatch = svg.match(/\.url-intro\s*\{[^}]*font-size:\s*(\d+)px/);
+    const brandMatch = svg.match(/\.brand\s*\{[^}]*font-size:\s*(\d+)px/);
+    const authorMatch = svg.match(/\.author-name\s*\{[^}]*font-size:\s*(\d+)px/);
+    const excerptMatch = svg.match(/\.description-container[^{]*\{[^}]*font-size:\s*(\d+)px/);
 
-  assert.ok(authorMatch, "author-name style must be present");
-  assert.ok(introMatch, "url-intro style must be present");
-  assert.strictEqual(
-    introMatch[1],
-    authorMatch[1],
-    `Footer intro font size (${introMatch[1]}px) must match username font size (${authorMatch[1]}px)`
-  );
-  assert.strictEqual(introMatch[1], "22", "Font size should be 22px");
+    assert.ok(brandMatch, "brand style must be present");
+    assert.ok(authorMatch, "author-name style must be present");
+    assert.ok(excerptMatch, "description style must be present");
+
+    const brandSize = parseInt(brandMatch[1], 10);
+    const authorSize = parseInt(authorMatch[1], 10);
+    const descSize = parseInt(excerptMatch[1], 10);
+
+    assert.strictEqual(brandSize, 36, "COGMIT brand title must be 36px");
+    assert.strictEqual(authorSize, 36, "Username must be 36px");
+    assert.strictEqual(descSize, 28, "Description must be 28px");
+    assert.ok(brandSize > descSize, "Header brand must be visibly larger than description text");
+    assert.ok(authorSize > descSize, "Header author must be visibly larger than description text");
+  }
+});
+
+test("Footer text elements match description font size exactly (28px) in both orientations", () => {
+  for (const withDescription of [false, true]) {
+    const svg = generateCardSvg({
+      title: "Test Cogmit",
+      excerpt: "Some description",
+      url: "https://cogmit.com/cogs/test",
+      authorId: "yvs",
+      withDescription,
+    });
+
+    assert.ok(svg.includes("Full content at COGMIT:"), "Must have introductory text 'Full content at COGMIT:'");
+
+    const introMatch = svg.match(/\.url-intro\s*\{[^}]*font-size:\s*(\d+)px/);
+    const labelMatch = svg.match(/\.url-label\s*\{[^}]*font-size:\s*(\d+)px/);
+    const excerptMatch = svg.match(/\.description-container[^{]*\{[^}]*font-size:\s*(\d+)px/);
+
+    assert.ok(introMatch, "url-intro style must be present");
+    assert.ok(labelMatch, "url-label style must be present");
+    assert.ok(excerptMatch, "description style must be present");
+
+    assert.strictEqual(introMatch[1], "28", "url-intro font size must be 28px");
+    assert.strictEqual(labelMatch[1], "28", "url-label font size must be 28px");
+    assert.strictEqual(excerptMatch[1], "28", "description font size must be 28px");
+    assert.strictEqual(introMatch[1], excerptMatch[1], "url-intro must match description font size");
+    assert.strictEqual(labelMatch[1], excerptMatch[1], "url-label must match description font size");
+  }
 });
 
 // -----------------------------------------------------------------------------
@@ -263,8 +296,9 @@ test("Light theme preserves light surface background, YV Indigo Violet border, a
 // -----------------------------------------------------------------------------
 test("getCardDimensions dynamically produces matching dimensions for export", () => {
   const landscapeDims = getCardDimensions(false);
-  assert.strictEqual(landscapeDims.width, 1200);
-  assert.strictEqual(landscapeDims.height, 900);
+  assert.strictEqual(landscapeDims.width, 800);
+  assert.strictEqual(landscapeDims.height, 1200);
+  assert.strictEqual(landscapeDims.width / landscapeDims.height, 2 / 3);
 
   const shortDims = getCardDimensions(true, { title: "Short", excerpt: "Short note" });
   assert.strictEqual(shortDims.width, 900);
