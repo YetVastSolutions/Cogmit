@@ -123,6 +123,8 @@ await test("2. Clicking Generate: transitions away from options and displays 4:3
 
   // Change Options button must be visible
   const changeOptionsBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.id === "btn-change-options" ||
+    b.getAttribute("aria-label")?.toLowerCase().includes("change options") ||
     b.textContent?.toLowerCase().includes("change options")
   );
   assert.ok(changeOptionsBtn, "Change Options button must be visible in preview mode");
@@ -150,6 +152,8 @@ await test("2. Clicking Generate: transitions away from options and displays 4:3
 await test("3. Change options, enable 'With description' and generate again: produces portrait preview", async () => {
   // Click Change options
   const changeOptionsBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.id === "btn-change-options" ||
+    b.getAttribute("aria-label")?.toLowerCase().includes("change options") ||
     b.textContent?.toLowerCase().includes("change options")
   );
   assert.ok(changeOptionsBtn, "Change options button must exist");
@@ -194,6 +198,8 @@ await test("3. Change options, enable 'With description' and generate again: pro
 await test("4. Dark and Light themes generate valid themed SVGs and switch cleanly", async () => {
   // Click Change options
   const changeOptionsBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.id === "btn-change-options" ||
+    b.getAttribute("aria-label")?.toLowerCase().includes("change options") ||
     b.textContent?.toLowerCase().includes("change options")
   );
   await act(async () => {

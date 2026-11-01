@@ -6,6 +6,7 @@ import {
   Clipboard,
   Download,
   Link as LinkIcon,
+  Pencil,
   Share2,
   Sparkles,
   X,
@@ -35,40 +36,6 @@ interface ShareCogmitModalProps {
   description?: string;
   shareUrl: string;
   content?: string;
-}
-
-/**
- * Clickable selection button used in the card configuration row.
- * Outlined with purple (#4B0084) when disabled, purple background when enabled.
- */
-function SelectionButton({
-  id,
-  selected,
-  onClick,
-  children,
-}: {
-  id: string;
-  selected: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      id={id}
-      type="button"
-      role="switch"
-      aria-checked={selected}
-      aria-pressed={selected}
-      onClick={onClick}
-      className={`inline-flex items-center justify-center rounded-md text-xs font-medium h-8 px-3 border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
-        selected
-          ? "bg-[#4B0084] border-[#4B0084] text-white hover:brightness-110 shadow-sm"
-          : "bg-transparent border-[#4B0084] text-foreground hover:bg-[#4B0084]/15"
-      }`}
-    >
-      {children}
-    </button>
-  );
 }
 
 export function ShareCogmitModal({
@@ -474,61 +441,87 @@ export function ShareCogmitModal({
             </div>
           )}
 
-          {/* Configuration and Primary Card Action */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Unified Primary Card Action & Configuration Bar */}
+          <div className="w-full rounded-lg border-2 border-[#4B0084] bg-[#1E0038] p-1.5 flex items-center justify-between gap-2 shadow-sm">
+            {/* Left Section: Primary Action (Generate / Download) */}
+            <button
+              type="button"
+              onClick={!cardGenerated ? handleGenerate : handleDownloadCard}
+              disabled={!cardGenerated ? isGenerating : isExporting || !cardSvg}
+              className="flex items-center gap-2 text-sm font-semibold text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded flex-1 text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            >
+              {!cardGenerated ? (
+                <>
+                  <Sparkles className="h-4 w-4 shrink-0 text-[#FFFF11]" />
+                  <span>{isGenerating ? "Generating…" : "Generate Cogmit Card"}</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 shrink-0 text-[#FFFF11]" />
+                  <span>{isExporting ? "Exporting…" : "Download Cogmit Card"}</span>
+                </>
+              )}
+            </button>
+
+            {/* Right Section: Embedded Options (Description, Dark) or Edit Icon (Pencil) */}
             {!cardGenerated ? (
-              <>
-                <div className="flex flex-wrap items-center gap-2">
-                  <SelectionButton
-                    id="toggle-with-description"
-                    selected={withDescription}
-                    onClick={() => handleWithDescriptionChange(!withDescription)}
-                  >
-                    With description
-                  </SelectionButton>
-                  <SelectionButton
-                    id="toggle-dark-theme"
-                    selected={darkTheme}
-                    onClick={() => handleDarkThemeChange(!darkTheme)}
-                  >
-                    Dark Cogmit Card
-                  </SelectionButton>
-                </div>
-
-                <Button
+              <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <button
+                  id="toggle-with-description"
                   type="button"
-                  variant="default"
-                  size="sm"
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
+                  role="switch"
+                  aria-checked={withDescription}
+                  aria-pressed={withDescription}
+                  aria-label="With description"
+                  title="With description"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleWithDescriptionChange(!withDescription);
+                  }}
+                  className={`inline-flex items-center justify-center rounded px-2.5 py-1 text-xs font-medium border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    withDescription
+                      ? "bg-[#4B0084] border-[#4B0084] text-white shadow-sm font-semibold"
+                      : "bg-transparent border-[#4B0084] text-white/80 hover:bg-[#4B0084]/20 hover:text-white"
+                  }`}
                 >
-                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                  {isGenerating ? "Generating…" : "Generate Cogmit Card"}
-                </Button>
-              </>
+                  Description
+                </button>
+
+                <button
+                  id="toggle-dark-theme"
+                  type="button"
+                  role="switch"
+                  aria-checked={darkTheme}
+                  aria-pressed={darkTheme}
+                  aria-label="Dark Cogmit Card"
+                  title="Dark Cogmit Card"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDarkThemeChange(!darkTheme);
+                  }}
+                  className={`inline-flex items-center justify-center rounded px-2.5 py-1 text-xs font-medium border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    darkTheme
+                      ? "bg-[#4B0084] border-[#4B0084] text-white shadow-sm font-semibold"
+                      : "bg-transparent border-[#4B0084] text-white/80 hover:bg-[#4B0084]/20 hover:text-white"
+                  }`}
+                >
+                  Dark
+                </button>
+              </div>
             ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCardGenerated(false)}
-                  className="border-[#4B0084] hover:bg-[#4B0084]/15"
-                >
-                  Change Options
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  onClick={handleDownloadCard}
-                  disabled={isExporting || !cardSvg}
-                >
-                  <Download className="mr-1.5 h-3.5 w-3.5" />
-                  {isExporting ? "Exporting…" : "Download Cogmit Card"}
-                </Button>
-              </>
+              <button
+                id="btn-change-options"
+                type="button"
+                aria-label="Change options"
+                title="Change options"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCardGenerated(false);
+                }}
+                className="p-1.5 mr-1 rounded text-[#FFFF11] hover:bg-[#4B0084] transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
             )}
           </div>
 
