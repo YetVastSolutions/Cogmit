@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { ViewCog } from "@/components/ViewCog";
 import { headers } from "next/headers";
 import { Metadata } from "next";
-import { getCanonicalCogmitUrl, extractExcerpt } from "@/lib/utils";
+import { getCanonicalCogmitUrl } from "@/lib/utils";
 
 interface PublicCogmitPageProps {
   params: Promise<{ authorId: string; cogmitId: string }>;
@@ -176,26 +176,18 @@ export async function generateMetadata({ params }: PublicCogmitPageProps): Promi
     || "https://cogmit.com";
   const url = getCanonicalCogmitUrl(origin, cogmit.authorId, cogmit.cogmitId);
   
-  const rawExcerpt = extractExcerpt(
-    cogmit.description || cogmit.content,
-    200,
-    cogmit.title
-  );
-  // Safe fallback if description and content are empty
-  const descriptionExcerpt = rawExcerpt || extractExcerpt(
-    `${cogmit.title} — a public RootCog on Cogmit.`,
-    200
-  );
+  const truncatedTitle = (cogmit.title || "").slice(0, 147);
+  const sharingText = `Cogmit | ${cogmit.authorId}: ${truncatedTitle}`;
 
   return {
-    title: cogmit.title,
-    description: descriptionExcerpt,
+    title: sharingText,
+    description: sharingText,
     alternates: {
       canonical: url,
     },
     openGraph: {
-      title: cogmit.title,
-      description: descriptionExcerpt,
+      title: sharingText,
+      description: sharingText,
       url: url,
       siteName: "Cogmit",
       type: "article",
@@ -205,8 +197,8 @@ export async function generateMetadata({ params }: PublicCogmitPageProps): Promi
     },
     twitter: {
       card: cogmit.image ? "summary_large_image" : "summary",
-      title: cogmit.title,
-      description: descriptionExcerpt,
+      title: sharingText,
+      description: sharingText,
       ...(cogmit.image ? { images: [cogmit.image] } : {}),
     }
   };

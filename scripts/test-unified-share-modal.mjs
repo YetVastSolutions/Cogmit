@@ -161,8 +161,8 @@ await test("5, 6, 7. Generation options accessible, Rich Link preview shown by d
 
   // Criterion 6: Rich Link preview is displayed by default
   assert.ok(container.innerHTML.includes("Rich Link Preview"), "Rich Link preview header must be visible");
-  assert.ok(container.innerHTML.includes("Quantum Memory Architectures"), "Title must be rendered in Rich Link preview");
-  assert.ok(container.innerHTML.includes("Exploring distributed synaptic weights"), "Excerpt must be rendered in Rich Link preview");
+  assert.ok(container.innerHTML.includes("Cogmit | yvnow: Quantum Memory Architectures"), "Sharing text format 'Cogmit | <username>: <title>' must be rendered in Rich Link preview");
+  assert.strictEqual(container.innerHTML.includes("Exploring distributed synaptic weights"), false, "No description or body excerpt appears in the generated sharing text");
   assert.ok(container.innerHTML.includes("Social crawler compatible"), "Social crawler info must be present");
 
   // Criterion 7: Opening modal does not automatically generate a card
@@ -406,6 +406,41 @@ await test("19 & 20. Reopening modal resets to default Rich Link preview state",
   assert.ok(container.innerHTML.includes("Rich Link Preview"), "Default Rich Link preview is displayed on reopen");
   const previewImg = container.querySelector("img[alt^='Cogmit Card']");
   assert.strictEqual(previewImg, null, "Preview image does not exist on reopen");
+});
+
+// ---------------------------------------------------------------------------------
+// Acceptance Criterion 21: Rich Link Preview Text Content Format & 147-char limit
+// ---------------------------------------------------------------------------------
+await test("21. Rich Link sharing text begins with 'Cogmit |', includes username, colon, max 147 title, and no excerpt", async () => {
+  const longTitle = "A".repeat(200);
+  await act(async () => {
+    root.render(React.createElement(TestModalWrapper, {
+      initialOpen: true,
+      title: longTitle,
+      authorId: "yvnow",
+      content: "This content description must NEVER appear in the sharing text.",
+    }));
+  });
+
+  const expectedSharingText = `Cogmit | yvnow: ${"A".repeat(147)}`;
+  assert.ok(container.innerHTML.includes(expectedSharingText), "Sharing text must match exact format with 147-char title");
+  assert.strictEqual(container.innerHTML.includes("This content description must NEVER appear"), false, "No description or body excerpt appears");
+});
+
+// ---------------------------------------------------------------------------------
+// Acceptance Criterion 22: generateMetadata WhatsApp/social preview matches exact format
+// ---------------------------------------------------------------------------------
+await test("22. generateMetadata produces exact 'Cogmit | <username>: <title>' format without description excerpt", async () => {
+  const { generateMetadata } = await import("../src/app/cogmits/[authorId]/[cogmitId]/page.tsx");
+  const meta = await generateMetadata({
+    params: Promise.resolve({ authorId: "yvnow", cogmitId: "yvnow_2026oct090558" }),
+  });
+
+  assert.ok(meta.title?.startsWith("Cogmit | yvnow: "), "Meta title must start with 'Cogmit | yvnow: '");
+  assert.ok(meta.openGraph?.title?.startsWith("Cogmit | yvnow: "), "OG title must start with 'Cogmit | yvnow: '");
+  assert.strictEqual(meta.openGraph?.title, meta.title);
+  assert.ok(!meta.description?.includes("Distributed synaptic weights"), "No body excerpt in description");
+  assert.strictEqual(meta.alternates?.canonical, "https://cogmit.com/cogmits/yvnow/yvnow_2026oct090558", "Canonical URL remains unchanged");
 });
 
 console.log("\n------------------------------------------------------------------");

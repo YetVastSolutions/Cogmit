@@ -61,16 +61,14 @@ function TogglePill({
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
-          checked
+        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${checked
             ? "border-[#4B0084] bg-[#4B0084]"
             : "border-muted-foreground/40 bg-muted"
-        }`}
+          }`}
       >
         <span
-          className={`pointer-events-none block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
-            checked ? "translate-x-[14px]" : "translate-x-[2px]"
-          }`}
+          className={`pointer-events-none block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-[14px]" : "translate-x-[2px]"
+            }`}
         />
       </button>
       <span className={checked ? "text-foreground font-medium" : "text-muted-foreground"}>
@@ -108,10 +106,21 @@ export function ShareCogmitModal({
     return typeof navigator !== "undefined" && typeof navigator.share === "function";
   });
 
-  // Description excerpt up to CARD_DESCRIPTION_MAX (597) chars
+  // Description excerpt up to CARD_DESCRIPTION_MAX (597) chars for Cogmit Card rendering
   const excerpt = useMemo(() => {
     return extractExcerpt(content || description || "", CARD_DESCRIPTION_MAX, title);
   }, [content, description, title]);
+
+  // Truncate title to MAX_ROOTCOG_TITLE_LENGTH (147 chars) without appending ChildCog or body content
+  const truncatedTitle = useMemo(() => {
+    return (title || "").slice(0, MAX_ROOTCOG_TITLE_LENGTH);
+  }, [title]);
+
+  // Generated sharing text format: Cogmit | <username>: <cogmit title>
+  const sharingText = useMemo(() => {
+    const username = authorId || "user";
+    return `Cogmit | ${username}: ${truncatedTitle}`;
+  }, [authorId, truncatedTitle]);
 
   // Deterministic source hash — includes both option flags
   const sourceHash = useMemo(() => {
@@ -328,8 +337,8 @@ export function ShareCogmitModal({
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
-            title,
-            text: excerpt,
+            title: sharingText,
+            text: sharingText,
             url: shareUrl,
             files: [file],
           });
@@ -338,8 +347,8 @@ export function ShareCogmitModal({
       }
 
       await navigator.share({
-        title,
-        text: excerpt,
+        title: sharingText,
+        text: sharingText,
         url: shareUrl,
       });
     } catch {
@@ -494,9 +503,8 @@ export function ShareCogmitModal({
 
           {/* Generation options row — hidden once card is generated, visible before generation or when editing options */}
           <div
-            className={`flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border bg-muted/30 px-4 py-3 ${
-              cardGenerated ? "hidden" : "flex"
-            }`}
+            className={`flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border bg-muted/30 px-4 py-3 ${cardGenerated ? "hidden" : "flex"
+              }`}
           >
             <TogglePill
               id="toggle-with-description"
@@ -540,24 +548,14 @@ export function ShareCogmitModal({
                     {published && ` · ${formatTimestamp(published)}`}
                   </div>
 
-                  <h3 className="font-semibold text-base break-words text-foreground" title={title}>
-                    {title}
+                  <h3 className="font-semibold text-base break-words text-foreground" title={sharingText}>
+                    {sharingText}
                   </h3>
-
-                  {excerpt ? (
-                    <p className="text-sm text-muted-foreground break-words leading-relaxed">
-                      {excerpt}
-                    </p>
-                  ) : (
-                    <p className="text-xs italic text-muted-foreground">
-                      (No content excerpt available)
-                    </p>
-                  )}
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                   <span>Open Graph &amp; Twitter summary metadata</span>
-                  <span className="font-mono">{excerpt.length} / {CARD_DESCRIPTION_MAX} chars</span>
+                  <span className="font-mono">{truncatedTitle.length} / {MAX_ROOTCOG_TITLE_LENGTH} chars</span>
                 </div>
               </div>
             ) : (
@@ -591,9 +589,8 @@ export function ShareCogmitModal({
 
                 {/* Card preview container */}
                 <div
-                  className={`overflow-hidden rounded-lg border-2 shadow-sm ${previewBg} flex items-center justify-center w-full max-w-full ${
-                    withDescription ? "" : "aspect-[4/3]"
-                  }`}
+                  className={`overflow-hidden rounded-lg border-2 shadow-sm ${previewBg} flex items-center justify-center w-full max-w-full ${withDescription ? "" : "aspect-[4/3]"
+                    }`}
                   style={{ borderColor: "#4B0084", boxSizing: "border-box" }}
                 >
                   {previewUrl && !imageError ? (
