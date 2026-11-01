@@ -257,12 +257,11 @@ export function calculatePortraitHeight(opts: Partial<CardTemplateOptions>): num
   }
 
   const divider2Y = contentEndY + 48;
-  const footerIntroY = divider2Y + 44;
-  const footerUrlY = footerIntroY + 40;
+  const footerY = divider2Y + 44;
 
   const borderInset = 28;
   const bottomPadding = 56;
-  return Math.round(footerUrlY + bottomPadding + borderInset);
+  return Math.round(footerY + bottomPadding + borderInset);
 }
 
 /**
@@ -379,25 +378,85 @@ function buildHeader(paddingX: number, headerY: number, safeUsername: string): s
   </text>`;
 }
 
-// ─── Footer SVG fragment (two rows) ──────────────────────────────────────────
+// ─── Domain extraction & canonicalization helpers ────────────────────────────
+
+/**
+ * Extracts the domain/host from a URL or origin string.
+ * Strips protocol, port, path, query parameters, and hashes.
+ */
+export function extractDomain(url?: string): string {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.startsWith("/")) return "";
+
+  try {
+    const candidate = trimmed.startsWith("http://") || trimmed.startsWith("https://")
+      ? trimmed
+      : `https://${trimmed}`;
+    const parsed = new URL(candidate);
+    if (parsed.host) {
+      return parsed.host;
+    }
+  } catch {
+    // Fallback string manipulation if URL constructor fails
+  }
+
+  return trimmed
+    .replace(/^https?:\/\//i, "")
+    .split("/")[0]
+    .split("?")[0]
+    .split("#")[0]
+    .trim();
+}
+
+/**
+ * Derives the canonical domain dynamically from the card URL or the application's
+ * deployment / environment configuration (NEXT_PUBLIC_APP_URL, VERCEL_PROJECT_PRODUCTION_URL,
+ * VERCEL_URL, window.location.host, or fallback).
+ */
+export function getCanonicalDomain(url?: string): string {
+  const extracted = extractDomain(url);
+  if (extracted) {
+    return extracted;
+  }
+
+  // Derive from application canonical deployment URL / origin configuration
+  const envUrl = typeof process !== "undefined" && process?.env
+    ? (process.env.NEXT_PUBLIC_APP_URL ||
+       (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined) ||
+       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined))
+    : undefined;
+
+  if (envUrl) {
+    const envExtracted = extractDomain(envUrl);
+    if (envExtracted) {
+      return envExtracted;
+    }
+  }
+
+  if (typeof window !== "undefined" && window.location?.host) {
+    return window.location.host;
+  }
+
+  return "cogmit.vercel.app";
+}
+
+// ─── Footer SVG fragment (single row: Full at COGMIT: <domain>) ───────────────
 
 function buildFooter(
   paddingX: number,
   divider2Y: number,
-  footerIntroY: number,
-  footerUrlY: number,
+  footerY: number,
   width: number,
-  displayUrl: string
+  displayDomain: string
 ): string {
+  const safeDomain = escapeXml(displayDomain);
   return `
   <!-- Footer divider -->
   <line x1="${paddingX}" y1="${divider2Y}" x2="${width - paddingX}" y2="${divider2Y}" class="divider" />
 
-  <!-- Footer row 1: intro (matching description font size 28px) -->
-  <text x="${paddingX}" y="${footerIntroY}" class="url-intro">Full content at COGMIT:</text>
-
-  <!-- Footer row 2: link -->
-  <text x="${paddingX}" y="${footerUrlY}" class="url-label">${displayUrl}</text>`;
+  <!-- Footer: Full at COGMIT: domain (same line) -->
+  <text x="${paddingX}" y="${footerY}" class="url-intro">Full at COGMIT: <tspan class="url-label">${safeDomain}</tspan></text>`;
 }
 
 // ─── Portrait card (content-driven height, with description) ──────────────────
@@ -409,7 +468,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const height = calculatePortraitHeight(opts);
 
   const safeUsername = escapeXml(authorId ? authorId.toLowerCase() : "");
-  const displayUrl = escapeXml(url.replace(/^https?:\/\//, ""));
+  const displayDomain = getCanonicalDomain(url);
 
   const paddingX = 64;
   const borderInset = 28;
@@ -445,8 +504,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
 
   // Footer: dynamic Y based on actual content
   const divider2Y = contentEndY + 48;
-  const footerIntroY = divider2Y + 44;
-  const footerUrlY = footerIntroY + 40;
+  const footerY = divider2Y + 44;
 
   const titleTspans = buildTspans(titleLines, paddingX, titleLineHeight);
   const excerptTspans = buildTspans(excerptLines, paddingX, excerptLineHeight);
@@ -476,7 +534,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   <text x="${paddingX}" y="${excerptStartY}" class="excerpt">
     ${excerptTspans}
   </text>
-  ${buildFooter(paddingX, divider2Y, footerIntroY, footerUrlY, width, displayUrl)}
+  ${buildFooter(paddingX, divider2Y, footerY, width, displayDomain)}
 </svg>`;
 }
 
@@ -489,7 +547,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const height = CARD_HEIGHT_LANDSCAPE;
 
   const safeUsername = escapeXml(authorId ? authorId.toLowerCase() : "");
-  const displayUrl = escapeXml(url.replace(/^https?:\/\//, ""));
+  const displayDomain = getCanonicalDomain(url);
 
   const paddingX = 80;
   const borderInset = 32;
@@ -506,8 +564,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
 
   // Footer: strictly 3:2 positions
   const divider2Y = height - 154; // 646
-  const footerIntroY = divider2Y + 44; // 690
-  const footerUrlY = footerIntroY + 42; // 732
+  const footerY = divider2Y + 68; // 714
 
   const titleLineHeight = 64;
   const titleBlockHeight = (titleLines.length - 1) * titleLineHeight + 56;
@@ -550,7 +607,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
 
   <!-- Divider below title -->
   <line x1="${paddingX}" y1="${divider1Y}" x2="${width - paddingX}" y2="${divider1Y}" class="divider" />
-  ${buildFooter(paddingX, divider2Y, footerIntroY, footerUrlY, width, displayUrl)}
+  ${buildFooter(paddingX, divider2Y, footerY, width, displayDomain)}
 </svg>`;
 }
 

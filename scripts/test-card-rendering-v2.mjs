@@ -19,6 +19,8 @@ import {
   computeCardSourceHash,
   getCachedCard,
   setCachedCard,
+  extractDomain,
+  getCanonicalDomain,
 } from "../src/lib/card-renderer.ts";
 import { extractExcerpt, MAX_EXCERPT_LENGTH } from "../src/lib/excerpt.ts";
 
@@ -191,8 +193,9 @@ test("Full 597-character description with 147-character title expands height wit
   });
 
   // Verify full content is present in SVG
-  assert.ok(svg.includes("Full content at COGMIT:"));
-  assert.ok(svg.includes("cogmit.com/cogs/full"));
+  assert.ok(svg.includes("Full at COGMIT:"), "Must have footer text 'Full at COGMIT:'");
+  assert.ok(svg.includes("cogmit.com"), "Must include domain 'cogmit.com'");
+  assert.ok(!svg.includes("cogmit.com/cogs/full"), "Must not include full URL or path in footer");
   assert.ok(svg.includes(fullDesc.slice(0, 40)));
   assert.ok(svg.includes(fullDesc.slice(-30)));
 });
@@ -240,7 +243,9 @@ test("Footer text elements match description font size exactly (28px) in both or
       withDescription,
     });
 
-    assert.ok(svg.includes("Full content at COGMIT:"), "Must have introductory text 'Full content at COGMIT:'");
+    assert.ok(svg.includes("Full at COGMIT:"), "Must have introductory text 'Full at COGMIT:'");
+    assert.ok(svg.includes("cogmit.com"), "Must include domain 'cogmit.com'");
+    assert.ok(!svg.includes("cogs/test"), "Must not include URL path");
 
     const introMatch = svg.match(/\.url-intro\s*\{[^}]*font-size:\s*(\d+)px/);
     const labelMatch = svg.match(/\.url-label\s*\{[^}]*font-size:\s*(\d+)px/);
@@ -319,6 +324,103 @@ test("wrapText function remains fully backward compatible", () => {
   for (const line of lines) {
     assert.ok(line.length <= 15);
   }
+});
+
+// -----------------------------------------------------------------------------
+// 9. Updated Footer: "Full at COGMIT: <domain>" on Same Line
+// -----------------------------------------------------------------------------
+test("Footer renders 'Full at COGMIT:' and domain on the exact same line in both orientations", () => {
+  for (const withDescription of [false, true]) {
+    const svg = generateCardSvg({
+      title: "Footer Line Test",
+      excerpt: "Description for footer verification",
+      url: "https://cogmit.vercel.app/cogmits/yvs/deep-cog-42",
+      authorId: "yvs",
+      withDescription,
+    });
+
+    // Both "Full at COGMIT:" and "cogmit.vercel.app" must be within the same <text> element
+    const footerTextMatch = svg.match(/<text[^>]*class="url-intro"[^>]*>([\s\S]*?)<\/text>/);
+    assert.ok(footerTextMatch, "Single footer <text> element with url-intro must exist");
+
+    const inner = footerTextMatch[1];
+    assert.ok(inner.includes("Full at COGMIT:"), "Intro text 'Full at COGMIT:' must be present");
+    assert.ok(inner.includes("cogmit.vercel.app"), "Domain 'cogmit.vercel.app' must be present");
+    assert.ok(inner.includes('<tspan class="url-label">cogmit.vercel.app</tspan>'), "Domain must be wrapped in url-label tspan for 700 font weight");
+
+    // Old introductory text "Full content at COGMIT:" must not appear
+    assert.ok(!svg.includes("Full content at COGMIT:"), "Old text 'Full content at COGMIT:' must be replaced");
+  }
+});
+
+test("Footer shows only the domain and strips full Cogmit URL, path, and Cog ID", () => {
+  const svg = generateCardSvg({
+    title: "Domain Only Test",
+    excerpt: "Testing domain-only display",
+    url: "https://cogmit.vercel.app/cogmits/special-user/cog-123456789?param=test#frag",
+    authorId: "special-user",
+    withDescription: true,
+  });
+
+  assert.ok(svg.includes("Full at COGMIT:"), "Footer must have 'Full at COGMIT:'");
+  assert.ok(svg.includes("cogmit.vercel.app"), "Footer must have domain 'cogmit.vercel.app'");
+  assert.ok(!svg.includes("/cogmits/special-user/cog-123456789"), "Must not include path or Cog ID");
+  assert.ok(!svg.includes("cog-123456789"), "Must not include Cog ID");
+  assert.ok(!svg.includes("https://"), "Must not include protocol in footer display");
+  assert.ok(!svg.includes("?param=test"), "Must not include query parameters");
+});
+
+test("getCanonicalDomain dynamically derives domain from URL and canonical configuration", () => {
+  assert.strictEqual(
+    getCanonicalDomain("https://cogmit.vercel.app/cogmits/alice/cog-1"),
+    "cogmit.vercel.app",
+    "Should extract domain from Vercel deployment URL"
+  );
+  assert.strictEqual(
+    getCanonicalDomain("https://cogmit.com/cogs/test"),
+    "cogmit.com",
+    "Should extract domain from custom canonical URL"
+  );
+  assert.strictEqual(
+    getCanonicalDomain("http://localhost:3000/cogmits/test/cog-2"),
+    "localhost:3000",
+    "Should extract domain with port"
+  );
+  assert.strictEqual(
+    getCanonicalDomain("cogmit.vercel.app"),
+    "cogmit.vercel.app",
+    "Should handle domain without protocol"
+  );
+  assert.strictEqual(
+    getCanonicalDomain(""),
+    process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || "cogmit.vercel.app",
+    "Should fall back to deployment configuration when URL is empty"
+  );
+});
+
+test("Footer preserves existing yellow color, JetBrains Mono typography, and font weights", () => {
+  const darkSvg = generateCardSvg({
+    title: "Typography Preservation",
+    excerpt: "Testing visual styles",
+    url: "https://cogmit.vercel.app/cogmits/alice/cog-1",
+    authorId: "alice",
+    darkTheme: true,
+  });
+
+  // Verify CSS styles: JetBrains Mono font family, 28px font size, yellow color, 500/700 font weights
+  assert.ok(darkSvg.includes(".url-intro { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 28px; font-weight: 500; fill: #FFFF11;"), "Dark theme url-intro must be yellow (#FFFF11) with 500 weight");
+  assert.ok(darkSvg.includes(".url-label { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 28px; font-weight: 700; fill: #FFFF11;"), "Dark theme url-label must be yellow (#FFFF11) with 700 weight");
+
+  const lightSvg = generateCardSvg({
+    title: "Light Theme Typography",
+    excerpt: "Testing light visual styles",
+    url: "https://cogmit.vercel.app/cogmits/alice/cog-1",
+    authorId: "alice",
+    darkTheme: false,
+  });
+
+  assert.ok(lightSvg.includes(".url-intro { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 28px; font-weight: 500; fill: #4B0084;"), "Light theme url-intro must be indigo violet (#4B0084)");
+  assert.ok(lightSvg.includes(".url-label { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 28px; font-weight: 700; fill: #4B0084;"), "Light theme url-label must be indigo violet (#4B0084)");
 });
 
 console.log("\n------------------------------------------------------------------");
