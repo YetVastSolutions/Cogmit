@@ -101,6 +101,9 @@ export function ShareCogmitModal({
 
   // Whether the user has clicked "Generate Cogmit Card" in this session
   const [cardGenerated, setCardGenerated] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedImage, setCopiedImage] = useState(false);
@@ -130,27 +133,43 @@ export function ShareCogmitModal({
     const cached = getCachedCard(cacheKey, sourceHash);
     if (cached) return cached.svgString;
 
-    const generatedSvg = generateCardSvg({
-      title: title.slice(0, MAX_ROOTCOG_TITLE_LENGTH),
-      excerpt,
-      url: shareUrl,
-      authorId,
-      published,
-      withDescription,
-      darkTheme,
-    });
+    try {
+      const generatedSvg = generateCardSvg({
+        title: title.slice(0, MAX_ROOTCOG_TITLE_LENGTH),
+        excerpt,
+        url: shareUrl,
+        authorId,
+        published,
+        withDescription,
+        darkTheme,
+      });
 
-    setCachedCard(cacheKey, {
-      cacheKey,
-      sourceHash,
-      excerpt,
-      canonicalUrl: shareUrl,
-      templateVersion: TEMPLATE_VERSION,
-      svgString: generatedSvg,
-    });
+      setCachedCard(cacheKey, {
+        cacheKey,
+        sourceHash,
+        excerpt,
+        canonicalUrl: shareUrl,
+        templateVersion: TEMPLATE_VERSION,
+        svgString: generatedSvg,
+      });
 
-    return generatedSvg;
+      return generatedSvg;
+    } catch (err) {
+      console.error("Failed to generate card SVG:", err);
+      return "";
+    }
   }, [open, cardGenerated, cacheKey, sourceHash, title, excerpt, shareUrl, authorId, published, withDescription, darkTheme]);
+
+  // Convert generated SVG to previewable image data URL
+  const previewUrl = useMemo(() => {
+    if (!cardSvg) return "";
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cardSvg)}`;
+  }, [cardSvg]);
+
+  // Reset imageError when cardSvg changes
+  useEffect(() => {
+    setImageError(false);
+  }, [cardSvg]);
 
   // Card dimensions derived from options and text metrics
   const cardDimensions = useMemo(() => {
@@ -165,6 +184,9 @@ export function ShareCogmitModal({
         setWithDescription(false);
         setDarkTheme(true);
         setCardGenerated(false);
+        setIsGenerating(false);
+        setGenerationError(null);
+        setImageError(false);
         setCopiedLink(false);
         setCopiedImage(false);
         setCopyError(false);
@@ -181,18 +203,57 @@ export function ShareCogmitModal({
   };
 
   const handleGenerate = () => {
-    setCardGenerated(true);
+    if (isGenerating) return;
+    setIsGenerating(true);
+    setGenerationError(null);
+    setImageError(false);
+
+    try {
+      const generatedSvg = generateCardSvg({
+        title: title.slice(0, MAX_ROOTCOG_TITLE_LENGTH),
+        excerpt,
+        url: shareUrl,
+        authorId,
+        published,
+        withDescription,
+        darkTheme,
+      });
+
+      if (!generatedSvg || typeof generatedSvg !== "string") {
+        throw new Error("Card generation produced invalid SVG");
+      }
+
+      setCachedCard(cacheKey, {
+        cacheKey,
+        sourceHash,
+        excerpt,
+        canonicalUrl: shareUrl,
+        templateVersion: TEMPLATE_VERSION,
+        svgString: generatedSvg,
+      });
+
+      setCardGenerated(true);
+    } catch (err) {
+      console.error("Failed to generate Cogmit Card:", err);
+      const msg = err instanceof Error ? err.message : "Failed to generate card";
+      setGenerationError(msg);
+      setCardGenerated(false);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // Re-generate (reset) whenever options change after a card has been generated
   const handleWithDescriptionChange = (v: boolean) => {
     setWithDescription(v);
     setCardGenerated(false);
+    setGenerationError(null);
   };
 
   const handleDarkThemeChange = (v: boolean) => {
     setDarkTheme(v);
     setCardGenerated(false);
+    setGenerationError(null);
   };
 
   const handleCopyLink = async () => {
@@ -291,6 +352,14 @@ export function ShareCogmitModal({
     }
   };
 
+  const handleShare = async () => {
+    if (canShareNative && typeof navigator.share === "function") {
+      await handleNativeShare();
+    } else {
+      await handleCopyLink();
+    }
+  };
+
   const previewBg = darkTheme ? "bg-black" : "bg-[#F8F5FA]";
 
   return (
@@ -356,9 +425,29 @@ export function ShareCogmitModal({
           {/* ── Cogmit Card flow ── */}
           {selectedOption === "card" && (
             <div className="space-y-4">
+              {/* Generation error alert */}
+              {generationError && (
+                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive flex items-center justify-between gap-2">
+                  <span>{generationError}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2 text-xs border-destructive/40 hover:bg-destructive/20"
+                    onClick={handleGenerate}
+                    disabled={isGenerating}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
 
-              {/* Generation options row */}
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border bg-muted/30 px-4 py-3">
+              {/* Generation options row — hidden once card is generated, visible before generation or when editing options */}
+              <div
+                className={`flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border bg-muted/30 px-4 py-3 ${
+                  cardGenerated ? "hidden" : "flex"
+                }`}
+              >
                 <TogglePill
                   id="toggle-with-description"
                   checked={withDescription}
@@ -377,22 +466,59 @@ export function ShareCogmitModal({
                   variant="default"
                   className="ml-auto"
                   onClick={handleGenerate}
+                  disabled={isGenerating}
                 >
                   <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                  Generate Cogmit Card
+                  {isGenerating ? "Generating…" : "Generate Cogmit Card"}
                 </Button>
               </div>
 
-              {/* Card Preview — only shown after Generate is clicked */}
+              {/* Card Preview — shown after Generate is clicked */}
               {cardGenerated && (
                 <div className="space-y-2">
+                  {/* Transition bar above preview showing active layout & Change options action */}
+                  <div className="flex items-center justify-between text-xs px-1">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {withDescription ? "Portrait" : "Landscape 4:3"}
+                      </span>
+                      <span>·</span>
+                      <span>{darkTheme ? "Dark" : "Light"} theme</span>
+                      {withDescription && (
+                        <>
+                          <span>·</span>
+                          <span className="font-mono">{excerpt.length} / {CARD_DESCRIPTION_MAX} chars</span>
+                        </>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2.5 text-xs"
+                      onClick={() => setCardGenerated(false)}
+                    >
+                      Change options
+                    </Button>
+                  </div>
+
+                  {/* Preview container */}
                   <div
                     className={`overflow-hidden rounded-lg border-2 shadow-sm ${previewBg} flex items-center justify-center w-full max-w-full ${
                       withDescription ? "" : "aspect-[4/3]"
                     }`}
                     style={{ borderColor: "#4B0084", boxSizing: "border-box" }}
                   >
-                    {cardSvg ? (
+                    {previewUrl && !imageError ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={previewUrl}
+                        alt={`Cogmit Card - ${title}`}
+                        className="w-full h-auto max-w-full select-none block"
+                        onError={() => setImageError(true)}
+                        style={{ boxSizing: "border-box", width: "100%", maxWidth: "100%", display: "block" }}
+                      />
+                    ) : cardSvg ? (
                       <div
                         className="w-full max-w-full select-none"
                         style={{ boxSizing: "border-box", width: "100%", maxWidth: "100%" }}
@@ -404,21 +530,11 @@ export function ShareCogmitModal({
                       </div>
                     )}
                   </div>
-
-                  <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                    <span>
-                      {withDescription ? "Portrait" : "Landscape 4:3"} ·{" "}
-                      {darkTheme ? "Dark" : "Light"} theme
-                    </span>
-                    {withDescription && (
-                      <span className="font-mono">{excerpt.length} / {CARD_DESCRIPTION_MAX} chars</span>
-                    )}
-                  </div>
                 </div>
               )}
 
               {/* Placeholder when not yet generated */}
-              {!cardGenerated && (
+              {!cardGenerated && !generationError && (
                 <p className="text-xs text-muted-foreground">
                   Configure the options above, then click{" "}
                   <span className="font-medium text-foreground">Generate Cogmit Card</span>{" "}
@@ -497,6 +613,38 @@ export function ShareCogmitModal({
                       {isExporting ? "Exporting…" : "Download PNG"}
                     </Button>
 
+                    {shareUrl && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleCopyLink}
+                      >
+                        {copiedLink ? (
+                          <>
+                            <Check className="mr-2 h-4 w-4 text-green-600 dark:text-green-400" />
+                            Copied Link!
+                          </>
+                        ) : (
+                          <>
+                            <LinkIcon className="mr-2 h-4 w-4" />
+                            {copyError ? "Retry Copy" : "Copy Link"}
+                          </>
+                        )}
+                      </Button>
+                    )}
+
+                    {shareUrl && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleShare}
+                        disabled={isExporting}
+                      >
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Share
+                      </Button>
+                    )}
+
                     <Button
                       type="button"
                       variant="outline"
@@ -551,14 +699,14 @@ export function ShareCogmitModal({
                     Open Cogmit
                   </a>
                 )}
-              </>
-            )}
 
-            {canShareNative && shareUrl && (
-              <Button type="button" variant="outline" onClick={handleNativeShare}>
-                <Share2 className="mr-2 h-4 w-4" />
-                Share
-              </Button>
+                {shareUrl && (
+                  <Button type="button" variant="outline" onClick={handleShare}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
+                  </Button>
+                )}
+              </>
             )}
           </div>
 
