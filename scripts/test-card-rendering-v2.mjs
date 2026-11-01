@@ -42,12 +42,12 @@ function test(name, fn) {
 }
 
 // -----------------------------------------------------------------------------
-// 1. Title overflow and 147-character title in 2:3 landscape
+// 1. Title overflow and 147-character title in 3:2 landscape
 // -----------------------------------------------------------------------------
 const title147 = "Designing Scalable Distributed Graph Data Structures for Persistent Cognitive Context and Continuous Agent Verification in Real-World Enterprise Systems".slice(0, 147);
 assert.strictEqual(title147.length, 147, "Test title must be exactly 147 characters");
 
-test("Landscape card uses strictly 2:3 aspect ratio (800x1200) when description is disabled", () => {
+test("Landscape card uses strictly 3:2 aspect ratio (1200x800) when description is disabled", () => {
   const svg = generateCardSvg({
     title: title147,
     excerpt: "Should be ignored when withDescription is false",
@@ -56,17 +56,17 @@ test("Landscape card uses strictly 2:3 aspect ratio (800x1200) when description 
     withDescription: false,
   });
 
-  assert.ok(svg.includes('viewBox="0 0 800 1200"'), "viewBox must be exactly 0 0 800 1200");
-  assert.ok(svg.includes('width="800"'), "width attribute must be 800");
-  assert.ok(svg.includes('height="1200"'), "height attribute must be 1200");
-  assert.strictEqual(800 / 1200, 2 / 3, "Aspect ratio must be strictly 2:3");
+  assert.ok(svg.includes('viewBox="0 0 1200 800"'), "viewBox must be exactly 0 0 1200 800");
+  assert.ok(svg.includes('width="1200"'), "width attribute must be 1200");
+  assert.ok(svg.includes('height="800"'), "height attribute must be 800");
+  assert.strictEqual(1200 / 800, 3 / 2, "Aspect ratio must be strictly 3:2");
 
   const dims = getCardDimensions(false);
-  assert.strictEqual(dims.width, 800);
-  assert.strictEqual(dims.height, 1200);
+  assert.strictEqual(dims.width, 1200);
+  assert.strictEqual(dims.height, 800);
 });
 
-test("147-character title in 2:3 landscape wraps without overflowing horizontal card boundaries", () => {
+test("147-character title in 3:2 landscape wraps without overflowing horizontal card boundaries", () => {
   const svg = generateCardSvg({
     title: title147,
     excerpt: "",
@@ -75,19 +75,19 @@ test("147-character title in 2:3 landscape wraps without overflowing horizontal 
     withDescription: false,
   });
 
-  // Check usable width is 672px (800 - 64*2) and text width is 660px
-  const lines = wrapTextByWidth(title147, 660, 56, true);
-  assert.ok(lines.length >= 6, "147-char title should wrap across 6 or more lines in 2:3 ratio");
+  // Check usable width is 1040px (1200 - 80*2) and text width is 1020px
+  const lines = wrapTextByWidth(title147, 1020, 56, true);
+  assert.ok(lines.length >= 4, "147-char title should wrap across 4 or more lines in 3:2 ratio");
 
   // Reassembled words must match original title completely (no missing words)
   assert.strictEqual(lines.join(" "), title147, "All words of 147-character title must be preserved");
 
-  // Every line must measure <= 672px width at 56px bold font
+  // Every line must measure <= 1040px width at 56px bold font
   for (const line of lines) {
     const lineWidth = estimateStringWidth(line, 56, true);
     assert.ok(
-      lineWidth <= 672,
-      `Line "${line}" estimated width (${lineWidth}px) exceeds usable width of 672px`
+      lineWidth <= 1040,
+      `Line "${line}" estimated width (${lineWidth}px) exceeds usable width of 1040px`
     );
   }
 
@@ -296,9 +296,9 @@ test("Light theme preserves light surface background, YV Indigo Violet border, a
 // -----------------------------------------------------------------------------
 test("getCardDimensions dynamically produces matching dimensions for export", () => {
   const landscapeDims = getCardDimensions(false);
-  assert.strictEqual(landscapeDims.width, 800);
-  assert.strictEqual(landscapeDims.height, 1200);
-  assert.strictEqual(landscapeDims.width / landscapeDims.height, 2 / 3);
+  assert.strictEqual(landscapeDims.width, 1200);
+  assert.strictEqual(landscapeDims.height, 800);
+  assert.strictEqual(landscapeDims.width / landscapeDims.height, 3 / 2);
 
   const shortDims = getCardDimensions(true, { title: "Short", excerpt: "Short note" });
   assert.strictEqual(shortDims.width, 900);

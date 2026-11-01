@@ -16,8 +16,8 @@ export const TEMPLATE_VERSION = "1.3.0";
 // Canvas dimensions
 export const CARD_WIDTH_PORTRAIT = 900;   // Portrait base width (with description, content-driven height)
 export const CARD_HEIGHT_PORTRAIT = 1200; // Base portrait fallback height
-export const CARD_WIDTH_LANDSCAPE = 800;  // 2:3 landscape (without description, width:height = 2:3)
-export const CARD_HEIGHT_LANDSCAPE = 1200;
+export const CARD_WIDTH_LANDSCAPE = 1200; // 3:2 landscape (without description, width:height = 3:2)
+export const CARD_HEIGHT_LANDSCAPE = 800;
 
 // Legacy exports kept for API compatibility
 export const CARD_WIDTH = CARD_WIDTH_PORTRAIT;
@@ -480,7 +480,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
 </svg>`;
 }
 
-// ─── Landscape card (2:3, no description) ────────────────────────────────────
+// ─── Landscape card (3:2, no description) ────────────────────────────────────
 
 function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string {
   const { title, url, authorId } = opts;
@@ -491,35 +491,35 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const safeUsername = escapeXml(authorId ? authorId.toLowerCase() : "");
   const displayUrl = escapeXml(url.replace(/^https?:\/\//, ""));
 
-  const paddingX = 64;
-  const borderInset = 28;
-  const borderRadius = 20;
+  const paddingX = 80;
+  const borderInset = 32;
+  const borderRadius = 24;
 
-  const usableWidth = width - paddingX * 2; // 672px
-  const maxTextWidth = usableWidth - 12; // 660px
+  const usableWidth = width - paddingX * 2; // 1040px
+  const maxTextWidth = usableWidth - 20; // 1020px
 
   // Title: natural multi-line wrapping within usable width, accommodates full 147 chars, never sliced
   const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, 56, true);
 
   const headerY = 110;
-  const headerDividerY = headerY + 32; // 142
+  const headerDividerY = headerY + 28; // 138
 
-  // Footer: strictly 2:3 positions
-  const divider2Y = height - 160; // 1040
-  const footerIntroY = divider2Y + 44; // 1084
-  const footerUrlY = footerIntroY + 40; // 1124
+  // Footer: strictly 3:2 positions
+  const divider2Y = height - 154; // 646
+  const footerIntroY = divider2Y + 44; // 690
+  const footerUrlY = footerIntroY + 42; // 732
 
-  const titleLineHeight = 68;
+  const titleLineHeight = 64;
   const titleBlockHeight = (titleLines.length - 1) * titleLineHeight + 56;
-  const availableTitleHeight = divider2Y - headerDividerY; // 898px
+  const availableTitleHeight = divider2Y - headerDividerY; // 508px
 
   // Vertically centre the title block nicely within available title area
   const titleStartY = Math.max(
-    190,
+    180,
     Math.round(headerDividerY + (availableTitleHeight - titleBlockHeight) / 2)
   );
   const titleEndY = titleStartY + (titleLines.length - 1) * titleLineHeight;
-  const divider1Y = Math.min(divider2Y - 30, titleEndY + 50);
+  const divider1Y = Math.min(divider2Y - 30, titleEndY + 46);
 
   const titleTspans = buildTspans(titleLines, paddingX, titleLineHeight);
 
