@@ -152,6 +152,11 @@ export function ShareCogmitModal({
     return generatedSvg;
   }, [open, cardGenerated, cacheKey, sourceHash, title, excerpt, shareUrl, authorId, published, withDescription, darkTheme]);
 
+  // Card dimensions derived from options and text metrics
+  const cardDimensions = useMemo(() => {
+    return getCardDimensions(withDescription, { title, excerpt });
+  }, [withDescription, title, excerpt]);
+
   // Reset all session state whenever the modal closes
   useEffect(() => {
     if (!open) {
@@ -205,9 +210,6 @@ export function ShareCogmitModal({
     }
   };
 
-  const cardDimensions = useMemo(() => {
-    return getCardDimensions(withDescription, { title, excerpt });
-  }, [withDescription, title, excerpt]);
 
   const getOrGenerateCardBlob = async (): Promise<Blob> => {
     const cached = getCachedCard(cacheKey, sourceHash);

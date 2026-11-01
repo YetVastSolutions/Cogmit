@@ -20,7 +20,6 @@ import { micromark } from "micromark";
 import { gfm, gfmHtml } from "micromark-extension-gfm";
 import showdown from "showdown";
 import { Parser as CommonmarkParser, HtmlRenderer as CommonmarkRenderer } from "commonmark";
-import DOMPurify from "isomorphic-dompurify";
 import Link from "next/link";
 import { cn, formatTimestamp, getCanonicalCogmitUrl } from "@/lib/utils";
 import { CogActionRow } from "@/components/CogActionRow";
@@ -161,6 +160,8 @@ export function ViewCog({
       try {
         const parser = parsers[currentViewIndex];
         const htmlContent = await parser.parse(content);
+        const domPurifyModule = await import("dompurify");
+        const DOMPurify = domPurifyModule.default || domPurifyModule;
         const sanitizedHtml = DOMPurify.sanitize(htmlContent);
         
         if (isMounted) {
@@ -211,7 +212,11 @@ export function ViewCog({
       ? getCanonicalCogmitUrl(window.location.origin, authorId, cogmitId)
       : "");
 
-  const handleShare = async () => {
+  const handleShare = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (resolvedShareUrl) {
       setShowShareModal(true);
     }
@@ -410,6 +415,7 @@ export function ViewCog({
                 id: "share",
                 node: (
                   <Button
+                    type="button"
                     variant="outline"
                     onClick={handleShare}
                     className="shrink-0 h-10 w-full md:w-auto px-4 flex-none"
@@ -421,6 +427,7 @@ export function ViewCog({
                 ),
                 compactNode: (
                   <Button
+                    type="button"
                     variant="outline"
                     onClick={handleShare}
                     className="shrink-0 h-10 w-10 px-0 flex-none"

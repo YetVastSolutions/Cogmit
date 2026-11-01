@@ -29,7 +29,7 @@ export default async function AboutCogmitPage() {
   const title = "About Cogmit";
   const projectValue = "No Parent Project";
 
-  const session = await auth();
+  const session = await auth().catch(() => null);
   const currentUsername = session?.user?.name || (session?.user as { login?: string })?.login || "";
   const authorId = "Cogmit";
   const isAuthor = currentUsername === authorId;

@@ -227,11 +227,24 @@ export default async function CogmitPage({ params }: PublicCogmitPageProps) {
     );
   }
 
-  const headersList = await headers();
-  const host = headersList.get("x-forwarded-host") ?? headersList.get("host");
-  const protocol = headersList.get("x-forwarded-proto") ?? "http";
+  let host = "";
+  let protocol = "https";
+  try {
+    const headersList = await headers();
+    host = headersList.get("x-forwarded-host") ?? headersList.get("host") ?? "";
+    protocol = headersList.get("x-forwarded-proto") ?? "https";
+  } catch {
+    // Request scope fallback
+  }
 
-  const shareUrl = getCanonicalCogmitUrl(`${protocol}://${host}`, cogmit.authorId, cogmit.cogmitId);
+  const baseOrigin = host
+    ? `${protocol}://${host}`
+    : (process.env.NEXT_PUBLIC_APP_URL 
+      || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined)
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)
+      || "https://cogmit.com");
+
+  const shareUrl = getCanonicalCogmitUrl(baseOrigin, cogmit.authorId, cogmit.cogmitId);
   const currentUsername = session?.user?.name || (session?.user as { login?: string })?.login || "";
   const isAuthor = currentUsername === cogmit.authorId;
 
@@ -241,6 +254,7 @@ export default async function CogmitPage({ params }: PublicCogmitPageProps) {
       description={cogmit.description}
       project={""}
       content={cogmit.content}
+      published={cogmit.publishedAt}
       mode="cogmit"
       authorId={cogmit.authorId}
       cogmitId={cogmit.cogmitId}
