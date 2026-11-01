@@ -1,0 +1,30 @@
+/* ===================================================================
+   Yappout — scoped styles
+   All classes prefixed with .yappout-* to avoid collision with Cogmit
+   =================================================================== */
+
+/* Active word highlight: double outline (YVS Yellow inner + YVS Indigo outer) */
+.yappout-word-active {
+  position: relative;
+  display: inline;
+  outline: 2px solid #FFFF11;
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px #4B0084;
+  border-radius: 2px;
+  padding-inline: 1px;
+}
+
+/* Yappout word wrapper — inline, no layout impact */
+.yappout-word {
+  cursor: default;
+  display: inline;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Speed button — fixed width for numeric label stability */
+.yappout-speed-btn {
+  font-variant-numeric: tabular-nums;
+  min-width: 3.5rem;
+}
+

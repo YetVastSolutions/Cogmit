@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { CogWorkspaceShell } from "@/components/CogWorkspaceShell";
 import { ResponsiveActionGroups, ToolbarItem } from "@/components/ResponsiveActionGroups";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Volume2, User, Share, Heart, MessageSquare, BookPlus, Eye } from "lucide-react";
+import { useYappout } from "@/yappout/hooks/useYappout";
+import { YappoutButton } from "@/yappout/components/YappoutButton";
+import { YappoutSpeed } from "@/yappout/components/YappoutSpeed";
+import { YappoutHighlight } from "@/yappout/components/YappoutHighlight";
 
 import MarkdownIt from "markdown-it";
 // @ts-expect-error missing types
@@ -142,6 +146,27 @@ export function ViewCog({
   const [isLiked, setIsLiked] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
 
+  // Yappout refs
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+
+  // Yappout hook (cogmit mode only — title/content always provided)
+  const {
+    playbackState,
+    speedLabel,
+    activeRange,
+    play,
+    stop,
+    cycleSpeed,
+  } = useYappout({
+    title,
+    content,
+    titleRef,
+    bodyRef,
+    scrollContainerRef,
+  });
+
   // Custom parsers state
   const [currentViewIndex, setCurrentViewIndex] = useState(0);
   const [renderedHtml, setRenderedHtml] = useState<string | null>(null);
@@ -271,6 +296,7 @@ export function ViewCog({
         ) : undefined
       }
       metadataContent={mode === "private" ? metadataContent : undefined}
+      scrollContainerRef={scrollContainerRef}
       actionRowContent={
         mode === "private" ? (
           <CogActionRow
@@ -439,7 +465,9 @@ export function ViewCog({
               },
               {
                 id: "like",
-                node: (
+                node: playbackState === 'playing' ? (
+                  <YappoutSpeed speedLabel={speedLabel} onCycle={cycleSpeed} />
+                ) : (
                   <Button
                     variant="outline"
                     onClick={() => setIsLiked(!isLiked)}
@@ -450,7 +478,9 @@ export function ViewCog({
                     <Heart className={cn("w-4 h-4 ml-2 shrink-0", isLiked ? "fill-red-500 text-red-500" : "")} />
                   </Button>
                 ),
-                compactNode: (
+                compactNode: playbackState === 'playing' ? (
+                  <YappoutSpeed speedLabel={speedLabel} onCycle={cycleSpeed} compact />
+                ) : (
                   <Button
                     variant="outline"
                     onClick={() => setIsLiked(!isLiked)}
@@ -464,21 +494,19 @@ export function ViewCog({
               {
                 id: "yappout",
                 node: (
-                  <Button variant="outline" className="w-full md:w-auto shrink-0 h-10 px-4 group relative cursor-help flex-none" disabled>
-                    <span className="whitespace-nowrap">YappOut</span>
-                    <Volume2 className="w-4 h-4 ml-2 shrink-0" />
-                    <div className="absolute right-0 top-full mt-2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-md border border-border">
-                      YappOut
-                    </div>
-                  </Button>
+                  <YappoutButton
+                    playbackState={playbackState}
+                    onPlay={play}
+                    onStop={stop}
+                  />
                 ),
                 compactNode: (
-                  <Button variant="outline" className="shrink-0 h-10 w-10 px-0 group relative cursor-help flex-none" disabled>
-                    <Volume2 className="w-4 h-4 shrink-0" />
-                    <div className="absolute right-0 top-full mt-2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-md border border-border">
-                      YappOut
-                    </div>
-                  </Button>
+                  <YappoutButton
+                    playbackState={playbackState}
+                    onPlay={play}
+                    onStop={stop}
+                    compact
+                  />
                 )
               }
             ]}
@@ -503,11 +531,11 @@ export function ViewCog({
             </div>
           )}
           {shouldShowTitle && (
-            <h1 className="text-4xl font-extrabold tracking-tight mb-8 mt-2 text-foreground break-words">
+            <h1 ref={titleRef} className="text-4xl font-extrabold tracking-tight mb-8 mt-2 text-foreground break-words">
               {title}
             </h1>
           )}
-          <div className="markdown-content" dangerouslySetInnerHTML={{ __html: renderedHtml || "" }} />
+          <div ref={bodyRef} className="markdown-content" dangerouslySetInnerHTML={{ __html: renderedHtml || "" }} />
         </div>
       ) : (
         <div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground w-full">
@@ -525,6 +553,14 @@ export function ViewCog({
         shareUrl={resolvedShareUrl}
         content={content}
       />
+
+      {/* Yappout: fixed-position highlight overlay (position:fixed, renders anywhere in JSX) */}
+      {mode === "cogmit" && (
+        <YappoutHighlight
+          activeRange={activeRange}
+          scrollContainerRef={scrollContainerRef}
+        />
+      )}
     </CogWorkspaceShell>
   );
 }

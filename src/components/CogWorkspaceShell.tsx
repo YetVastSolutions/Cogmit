@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, RefObject } from "react";
 
 
 interface CogWorkspaceShellProps {
@@ -6,6 +6,8 @@ interface CogWorkspaceShellProps {
   actionContent: ReactNode;
   metadataContent?: ReactNode;
   actionRowContent?: ReactNode;
+  /** Optional ref attached to the scrollable content container for Yappout auto-scroll */
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
   children: ReactNode;
 }
 
@@ -14,6 +16,7 @@ export function CogWorkspaceShell({
   actionContent,
   metadataContent,
   actionRowContent,
+  scrollContainerRef,
   children,
 }: CogWorkspaceShellProps) {
   return (
@@ -50,7 +53,7 @@ export function CogWorkspaceShell({
       </div>
 
       {/* SCROLLABLE CONTENT AREA */}
-      <div className="flex-1 overflow-y-auto min-h-0 py-6">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0 py-6">
         {children}
       </div>
     </div>
