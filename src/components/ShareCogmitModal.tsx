@@ -343,7 +343,7 @@ export function ShareCogmitModal({
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors inline-flex items-center justify-center"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -362,7 +362,7 @@ export function ShareCogmitModal({
           )}
 
           {/* Sharing Actions */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {/* 1. Copy Link */}
             <Button
               type="button"
@@ -419,20 +419,20 @@ export function ShareCogmitModal({
           </div>
 
           {copyError && (
-            <p className="text-xs text-destructive">
+            <p className="text-xs text-destructive text-center">
               Failed to copy to clipboard. Please copy manually or use download.
             </p>
           )}
 
           {/* Generation Error Alert */}
           {generationError && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive flex items-center justify-between gap-2">
+            <div className="w-full sm:w-[70%] mx-auto rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive flex items-center justify-between gap-2">
               <span>{generationError}</span>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-6 px-2 text-xs border-destructive/40 hover:bg-destructive/20"
+                className="h-6 px-2 text-xs border-destructive/40 hover:bg-destructive/20 inline-flex items-center justify-center"
                 onClick={handleGenerate}
                 disabled={isGenerating}
               >
@@ -442,13 +442,13 @@ export function ShareCogmitModal({
           )}
 
           {/* Unified Primary Card Action & Configuration Bar */}
-          <div className="w-full rounded-lg border-2 border-[#4B0084] bg-[#1E0038] p-1.5 flex items-center justify-between gap-2 shadow-sm">
+          <div className="w-full sm:w-[70%] mx-auto rounded-lg border-2 border-[#4B0084] bg-[#1E0038] p-1.5 flex items-center justify-between gap-2 shadow-sm">
             {/* Left Section: Primary Action (Generate / Download) */}
             <button
               type="button"
               onClick={!cardGenerated ? handleGenerate : handleDownloadCard}
               disabled={!cardGenerated ? isGenerating : isExporting || !cardSvg}
-              className="flex items-center gap-2 text-sm font-semibold text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded flex-1 text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className="flex items-center gap-2 text-sm font-semibold text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded flex-1 text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 min-w-0"
             >
               {!cardGenerated ? (
                 <>
@@ -518,7 +518,7 @@ export function ShareCogmitModal({
                   e.stopPropagation();
                   setCardGenerated(false);
                 }}
-                className="p-1.5 mr-1 rounded text-[#FFFF11] hover:bg-[#4B0084] transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex items-center justify-center p-1.5 mr-1 rounded text-[#FFFF11] hover:bg-[#4B0084] transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Pencil className="h-4 w-4" />
               </button>

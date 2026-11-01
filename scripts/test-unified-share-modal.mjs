@@ -319,6 +319,64 @@ await test("14. Closing and reopening modal restores default state", async () =>
   assert.ok(generateBtn, "Generate Cogmit Card button is restored");
 });
 
+// ---------------------------------------------------------------------------------
+// Acceptance Criterion 15 & 16: Button Width, Centering, and Alignment
+// ---------------------------------------------------------------------------------
+await test("15. Unified component is horizontally centered with 70% width on desktop/tablet layouts", async () => {
+  const generateBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Generate Cogmit Card")
+  );
+  assert.ok(generateBtn, "Generate Cogmit Card button must exist");
+
+  const unifiedBar = generateBtn.closest("div");
+  assert.ok(unifiedBar, "Unified bar container must exist");
+
+  const classList = unifiedBar.className;
+  assert.ok(classList.includes("mx-auto"), "Unified component must be horizontally centered (mx-auto)");
+  assert.ok(
+    classList.includes("w-[70%]") || classList.includes("sm:w-[70%]"),
+    "Unified component must occupy 70% width on desktop/tablet layouts"
+  );
+  assert.ok(
+    classList.includes("w-full"),
+    "Unified component must expand to full width on narrow mobile screens to avoid clipping"
+  );
+
+  // Preserve internal left-aligned primary action and right-aligned options
+  assert.ok(generateBtn.className.includes("text-left"), "Primary action must remain left-aligned");
+  const optionsDiv = unifiedBar.querySelector("#toggle-with-description")?.parentElement;
+  assert.ok(optionsDiv?.className.includes("shrink-0"), "Options container must remain right-aligned (shrink-0)");
+});
+
+await test("16. Sharing action button group is horizontally centered and standalone buttons are centered", async () => {
+  const copyLinkBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Copy Link")
+  );
+  assert.ok(copyLinkBtn, "Copy Link button must exist");
+
+  const sharingActionsContainer = copyLinkBtn.parentElement;
+  assert.ok(sharingActionsContainer, "Sharing actions container must exist");
+  assert.ok(
+    sharingActionsContainer.className.includes("justify-center"),
+    "Sharing actions group must be horizontally centered (justify-center)"
+  );
+
+  // Standalone buttons have center alignment for their content
+  const shareBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Share")
+  );
+  const copyCardBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Copy Card")
+  );
+  const toggleDesc = container.querySelector("#toggle-with-description");
+  const toggleDark = container.querySelector("#toggle-dark-theme");
+
+  assert.ok(shareBtn, "Share button must exist");
+  assert.ok(copyCardBtn, "Copy Card button must exist");
+  assert.ok(toggleDesc?.className.includes("justify-center"), "Description button must be center-aligned");
+  assert.ok(toggleDark?.className.includes("justify-center"), "Dark button must be center-aligned");
+});
+
 console.log("\n------------------------------------------------------------------");
 console.log(`Results: ${passed} passed, ${failed} failed`);
 console.log("==================================================================");
