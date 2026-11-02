@@ -32,7 +32,7 @@ export interface CardFontOption {
 export const CARD_FONTS: CardFontOption[] = [
   { id: "Arial", label: "Arial", fontFamily: "Arial, Helvetica, sans-serif" },
   { id: "Verdana", label: "Verdana", fontFamily: "Verdana, Geneva, sans-serif" },
-  { id: "Times New Roman", label: "Times New Roman", fontFamily: '"Times New Roman", Times, serif' },
+  { id: "Times New Roman", label: "Times New Roman", fontFamily: "'Times New Roman', Times, serif" },
 ];
 
 export const DEFAULT_CARD_FONT = "Arial";
@@ -146,9 +146,16 @@ let cardMeasureContext: CanvasRenderingContext2D | null | undefined;
 export function estimateStringWidth(
   str: string,
   fontSize: number,
-  isBold = false
+  isBold = false,
+  font?: string
 ): number {
   if (!str) return 0;
+
+  const resolvedFont = resolveCardFontStack(font);
+  const fontLower = (font || resolvedFont).toLowerCase();
+  const isVerdana = !font || fontLower.includes("verdana");
+  const isArial = fontLower.includes("arial");
+  const isTimes = fontLower.includes("times");
 
   if (typeof document !== "undefined") {
     if (cardMeasureContext === undefined) {
@@ -156,8 +163,12 @@ export function estimateStringWidth(
     }
 
     if (cardMeasureContext) {
-      cardMeasureContext.font = `${isBold ? FONT_TITLE_WEIGHT : FONT_BODY_WEIGHT} ${fontSize}px ${CARD_FONT_FAMILY}`;
-      return cardMeasureContext.measureText(str).width * 1.06;
+      if (isVerdana) {
+        cardMeasureContext.font = `${isBold ? FONT_TITLE_WEIGHT : FONT_BODY_WEIGHT} ${fontSize}px ${CARD_FONT_FAMILY}`;
+        return cardMeasureContext.measureText(str).width * 1.06;
+      }
+      cardMeasureContext.font = `${isBold ? FONT_TITLE_WEIGHT : FONT_BODY_WEIGHT} ${fontSize}px ${resolvedFont}`;
+      return cardMeasureContext.measureText(str).width * 1.01;
     }
   }
 
@@ -165,7 +176,17 @@ export function estimateStringWidth(
   for (const char of Array.from(str)) {
     total += getCharWidthFactor(char, isBold) * fontSize;
   }
-  return total * 1.18;
+
+  if (isVerdana) {
+    return total * 1.18;
+  }
+  if (isArial) {
+    return total * 0.94;
+  }
+  if (isTimes) {
+    return total * 0.85;
+  }
+  return total * 1.0;
 }
 
 /**
@@ -176,7 +197,8 @@ export function wrapTextByWidth(
   text: string,
   maxWidth: number,
   fontSize: number,
-  isBold = false
+  isBold = false,
+  font?: string
 ): string[] {
   if (!text || maxWidth <= 0) return [];
 
@@ -190,7 +212,7 @@ export function wrapTextByWidth(
     for (const word of words) {
       const candidate = currentLine ? `${currentLine} ${word}` : word;
 
-      if (estimateStringWidth(candidate, fontSize, isBold) <= maxWidth) {
+      if (estimateStringWidth(candidate, fontSize, isBold, font) <= maxWidth) {
         currentLine = candidate;
         continue;
       }
@@ -204,7 +226,7 @@ export function wrapTextByWidth(
       let chunk = "";
       for (const char of Array.from(word)) {
         const nextChunk = chunk + char;
-        if (chunk && estimateStringWidth(nextChunk, fontSize, isBold) > maxWidth) {
+        if (chunk && estimateStringWidth(nextChunk, fontSize, isBold, font) > maxWidth) {
           resultLines.push(chunk);
           chunk = char;
         } else {
@@ -358,18 +380,18 @@ function getLightTheme(): ThemeColors {
 
 function buildStyles(c: ThemeColors, font: string = CARD_FONT_FAMILY): string {
   return `
-      svg { width: 100%; height: auto; max-width: 100%; box-sizing: border-box; display: block; font-family: ${font}; }
-      text, tspan { font-family: ${font}; text-rendering: geometricPrecision; -webkit-font-smoothing: antialiased; }
-      .bg { fill: ${c.bg}; }
-      .outer-border { fill: none; stroke: ${c.borderColor}; stroke-width: 3; }
-      .brand { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.brand}; letter-spacing: 3px; }
-      .sep   { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.separator}; letter-spacing: 0; }
-      .author-name { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.authorName}; letter-spacing: 0; }
-      .title-container, .title { font-family: ${font}; font-size: ${FONT_TITLE_SIZE}px; font-weight: ${FONT_TITLE_WEIGHT}; fill: ${c.title}; width: 100%; max-width: 100%; box-sizing: border-box; }
-      .description-container, .excerpt, p { font-family: ${font}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.excerpt}; width: 100%; max-width: 100%; box-sizing: border-box; }
-      .url-intro { font-family: ${font}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.urlIntro}; width: 100%; max-width: 100%; box-sizing: border-box; }
-      .url-label { font-family: ${font}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.urlLabel}; width: 100%; max-width: 100%; box-sizing: border-box; }
-      .divider { stroke: ${c.divider}; stroke-width: 1.5; stroke-opacity: ${c.dividerOpacity}; }`.trimStart();
+      .cogmit-card-svg { width: 100%; height: auto; max-width: 100%; box-sizing: border-box; display: block; font-family: ${font}; }
+      .cogmit-card-svg text, .cogmit-card-svg tspan { font-family: ${font}; text-rendering: geometricPrecision; -webkit-font-smoothing: antialiased; }
+      .cogmit-card-svg .bg, .bg { fill: ${c.bg}; }
+      .cogmit-card-svg .outer-border, .outer-border { fill: none; stroke: ${c.borderColor}; stroke-width: 3; }
+      .cogmit-card-svg .brand, .brand { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.brand}; letter-spacing: 3px; }
+      .cogmit-card-svg .sep, .sep   { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.separator}; letter-spacing: 0; }
+      .cogmit-card-svg .author-name, .author-name { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.authorName}; letter-spacing: 0; }
+      .cogmit-card-svg .title-container, .cogmit-card-svg .title, .title-container, .title { font-family: ${font}; font-size: ${FONT_TITLE_SIZE}px; font-weight: ${FONT_TITLE_WEIGHT}; fill: ${c.title}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .cogmit-card-svg .description-container, .cogmit-card-svg .excerpt, .description-container, .excerpt { font-family: ${font}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.excerpt}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .cogmit-card-svg .url-intro, .url-intro { font-family: ${font}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.urlIntro}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .cogmit-card-svg .url-label, .url-label { font-family: ${font}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.urlLabel}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .cogmit-card-svg .divider, .divider { stroke: ${c.divider}; stroke-width: 1.5; stroke-opacity: ${c.dividerOpacity}; }`.trimStart();
 }
 
 // ─── Header SVG fragment ──────────────────────────────────────────────────────
@@ -485,18 +507,21 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const borderRadius = 20;
 
   const usableWidth = width - paddingX * 2;
-  // Keep a larger safety inset so glyphs never touch the purple border.
-  const maxTextWidth = usableWidth - 48;
+  const isVerdana = !opts.font || opts.font.toLowerCase().includes("verdana") || font.toLowerCase().includes("verdana");
+  // Keep the larger safety inset for Verdana as the visual baseline reference,
+  // while allowing Arial and Times New Roman to naturally utilize the intended content width.
+  const maxTextWidth = isVerdana ? usableWidth - 48 : usableWidth - 16;
 
   // Measure title at its actual semibold weight and body at regular weight.
   const titleLines = wrapTextByWidth(
     title || "Untitled Cogmit",
     maxTextWidth,
     FONT_TITLE_SIZE,
-    true
+    true,
+    font
   );
   const excerptLines = excerpt
-    ? wrapTextByWidth(excerpt, maxTextWidth, FONT_BODY_SIZE, false)
+    ? wrapTextByWidth(excerpt, maxTextWidth, FONT_BODY_SIZE, false, font)
     : [];
 
   const headerY = 91;
@@ -522,7 +547,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
     if (excerptLines.length > 0) {
       const lastIndex = excerptLines.length - 1;
       let lastLine = excerptLines[lastIndex].replace(/[\s.]+$/, "");
-      while (lastLine && estimateStringWidth(`${lastLine}...`, FONT_BODY_SIZE, false) > maxTextWidth) {
+      while (lastLine && estimateStringWidth(`${lastLine}...`, FONT_BODY_SIZE, false, font) > maxTextWidth) {
         lastLine = lastLine.slice(0, -1);
       }
       excerptLines[lastIndex] = `${lastLine}...`;
@@ -533,7 +558,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const excerptTspans = buildTspans(excerptLines, paddingX, excerptLineHeight);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family="${font}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box; font-family: ${font};">
+<svg xmlns="http://www.w3.org/2000/svg" class="cogmit-card-svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family="${font}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box; font-family: ${font};">
   <defs>
     <style>${buildStyles(c, font)}</style>
     <clipPath id="portrait-title-clip"><rect x="${paddingX}" y="${titleStartY - FONT_TITLE_SIZE}" width="${maxTextWidth}" height="${Math.max(1, divider1Y - titleStartY + FONT_TITLE_SIZE - 8)}" /></clipPath>
@@ -586,13 +611,15 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const borderRadius = 20;
 
   const usableWidth = width - paddingX * 2;
-  const maxTextWidth = usableWidth - 48;
+  const isVerdana = !opts.font || opts.font.toLowerCase().includes("verdana") || font.toLowerCase().includes("verdana");
+  const maxTextWidth = isVerdana ? usableWidth - 48 : usableWidth - 16;
 
   const titleLines = wrapTextByWidth(
     title || "Untitled Cogmit",
     maxTextWidth,
     FONT_TITLE_SIZE,
-    true
+    true,
+    font
   );
 
   const headerY = 91;
@@ -614,7 +641,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const titleTspans = buildTspans(titleLines, paddingX, titleLineHeight);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family="${font}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box; font-family: ${font};">
+<svg xmlns="http://www.w3.org/2000/svg" class="cogmit-card-svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family="${font}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box; font-family: ${font};">
   <defs>
     <style>${buildStyles(c, font)}</style>
     <clipPath id="landscape-title-clip"><rect x="${paddingX}" y="${headerDividerY + 12}" width="${maxTextWidth}" height="${Math.max(1, divider2Y - headerDividerY - 28)}" /></clipPath>

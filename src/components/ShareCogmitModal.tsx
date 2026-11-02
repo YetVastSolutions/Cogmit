@@ -468,14 +468,14 @@ export function ShareCogmitModal({
                 type="button"
                 onClick={!cardGenerated ? handleGenerate : handleDownloadCard}
                 disabled={!cardGenerated ? isGenerating : isExporting || !cardSvg}
-                className="inline-flex items-center gap-2 text-sm font-semibold hover:bg-[#4B0084] text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 text-sm font-semibold hover:bg-[#4B0084] text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
               >
                 {!cardGenerated ? (
-                  <span>{isGenerating ? "Generating…" : "Generate Cogmit Card"}</span>
+                  <span className="whitespace-nowrap">{isGenerating ? "Generating…" : "Generate Cogmit Card"}</span>
                 ) : (
                   <>
-                    <Download className="h-4 w-4 shrink-0 text-[#FFFF11]" />
-                    <span>{isExporting ? "Exporting…" : "Download Cogmit Card"}</span>
+                    <Download className="h-4 w-4 shrink-0 min-w-4 min-h-4 max-w-4 max-h-4 text-[#FFFF11]" />
+                    <span className="whitespace-nowrap">{isExporting ? "Exporting…" : "Download Cogmit Card"}</span>
                   </>
                 )}
               </button>
@@ -491,11 +491,11 @@ export function ShareCogmitModal({
                   e.stopPropagation();
                   setIsOptionsExpanded((prev) => !prev);
                 }}
-                className={`inline-flex items-center justify-center p-1.5 mr-1 rounded text-[#FFFF11] hover:bg-[#4B0084] transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer ${
+                className={`inline-flex items-center justify-center p-1.5 mr-1 rounded text-[#FFFF11] hover:bg-[#4B0084] transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0 ${
                   isOptionsExpanded ? "bg-[#4B0084]" : ""
                 }`}
               >
-                <Pencil className="h-4 w-4" />
+                <Pencil className="h-4 w-4 shrink-0 min-w-4 min-h-4 max-w-4 max-h-4" />
               </button>
             </div>
 
