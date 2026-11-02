@@ -142,14 +142,14 @@ test("197-character title in 3:2 landscape wraps without overflowing horizontal 
 // -----------------------------------------------------------------------------
 test("Portrait description occupies full available inner width (~1020px) rather than narrow 44-char column", () => {
   const longSentence = "Cognitive architectures represent the next foundational paradigm shift in AI system design. Rather than relying on fragile single-shot inference or unstructured conversation loops, a cognitive architecture provides deterministic state machines.";
-  
+
   const usableWidth = 1200 - 80 * 2; // 1040px
   const maxTextWidth = usableWidth - 20; // 1020px
   const lines = wrapTextByWidth(longSentence, maxTextWidth, 28, false);
 
   // In the new code with 1200px width, lines pack up to ~1020px
   assert.ok(lines[0].length >= 50, `First line length should be >= 50 characters (got ${lines[0].length})`);
-  
+
   const firstLineWidth = estimateStringWidth(lines[0], 28, false);
   assert.ok(
     firstLineWidth >= 650 && firstLineWidth <= 1040,
@@ -187,7 +187,7 @@ test("extractDescription helper uses 597 characters", () => {
 test("Portrait card uses strictly 2:3 aspect ratio (1200x1600) when description is enabled", () => {
   const shortTitle = "Quick Cogmit";
   const shortDesc = "A brief cognitive insight.";
-  
+
   const height = calculatePortraitHeight({ title: shortTitle, excerpt: shortDesc });
   assert.strictEqual(height, 1600, `Portrait target height must be 1600px (got ${height}px)`);
 
@@ -230,7 +230,7 @@ test("Full 597-character description with 147-character title renders within 120
   });
 
   // Verify full content is present in SVG
-  assert.ok(svg.includes("Full at COGMIT:"), "Must have footer text 'Full at COGMIT:'");
+  assert.ok(svg.includes("Full:"), "Must have footer text 'Full:'");
   assert.ok(svg.includes("cogmit.com"), "Must include domain 'cogmit.com'");
   assert.ok(!svg.includes("cogmit.com/cogs/full"), "Must not include full URL or path in footer");
   assert.ok(svg.includes(fullDesc.slice(0, 40)));
@@ -253,7 +253,7 @@ test("Full 597-character description with 197-character title renders within 120
   });
 
   // Verify full content is present in SVG
-  assert.ok(svg.includes("Full at COGMIT:"), "Must have footer text 'Full at COGMIT:'");
+  assert.ok(svg.includes("Full:"), "Must have footer text 'Full:'");
   assert.ok(svg.includes("cogmit.com"), "Must include domain 'cogmit.com'");
   assert.ok(!svg.includes("cogmit.com/cogs/full"), "Must not include full URL or path in footer");
   assert.ok(svg.includes(fullDesc.slice(0, 40)));
@@ -304,7 +304,7 @@ test("Footer text elements match description font size exactly (28px) in both or
       withDescription,
     });
 
-    assert.ok(svg.includes("Full at COGMIT:"), "Must have introductory text 'Full at COGMIT:'");
+    assert.ok(svg.includes("Full:"), "Must have introductory text 'Full:'");
     assert.ok(svg.includes("cogmit.com"), "Must include domain 'cogmit.com'");
     assert.ok(!svg.includes("cogs/test"), "Must not include URL path");
 
@@ -392,9 +392,9 @@ test("wrapText function remains fully backward compatible", () => {
 });
 
 // -----------------------------------------------------------------------------
-// 9. Updated Footer: "Full at COGMIT: <domain>" on Same Line
+// 9. Updated Footer: "Full: <domain>" on Same Line
 // -----------------------------------------------------------------------------
-test("Footer renders 'Full at COGMIT:' and domain on the exact same line in both orientations", () => {
+test("Footer renders 'Full:' and domain on the exact same line in both orientations", () => {
   for (const withDescription of [false, true]) {
     const svg = generateCardSvg({
       title: "Footer Line Test",
@@ -404,12 +404,12 @@ test("Footer renders 'Full at COGMIT:' and domain on the exact same line in both
       withDescription,
     });
 
-    // Both "Full at COGMIT:" and "cogmit.vercel.app" must be within the same <text> element
+    // Both "Full:" and "cogmit.vercel.app" must be within the same <text> element
     const footerTextMatch = svg.match(/<text[^>]*class="url-intro"[^>]*>([\s\S]*?)<\/text>/);
     assert.ok(footerTextMatch, "Single footer <text> element with url-intro must exist");
 
     const inner = footerTextMatch[1];
-    assert.ok(inner.includes("Full at COGMIT:"), "Intro text 'Full at COGMIT:' must be present");
+    assert.ok(inner.includes("Full:"), "Intro text 'Full:' must be present");
     assert.ok(inner.includes("cogmit.vercel.app"), "Domain 'cogmit.vercel.app' must be present");
     assert.ok(inner.includes('<tspan class="url-label">cogmit.vercel.app</tspan>'), "Domain must be wrapped in url-label tspan for 700 font weight");
 
@@ -427,7 +427,7 @@ test("Footer shows only the domain and strips full Cogmit URL, path, and Cog ID"
     withDescription: true,
   });
 
-  assert.ok(svg.includes("Full at COGMIT:"), "Footer must have 'Full at COGMIT:'");
+  assert.ok(svg.includes("Full:"), "Footer must have 'Full:'");
   assert.ok(svg.includes("cogmit.vercel.app"), "Footer must have domain 'cogmit.vercel.app'");
   assert.ok(!svg.includes("/cogmits/special-user/cog-123456789"), "Must not include path or Cog ID");
   assert.ok(!svg.includes("cog-123456789"), "Must not include Cog ID");

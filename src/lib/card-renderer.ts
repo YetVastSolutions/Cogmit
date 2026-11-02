@@ -417,7 +417,7 @@ export function getCanonicalDomain(url?: string): string {
   return "cogmit.vercel.app";
 }
 
-// ─── Footer SVG fragment (single row: Full at COGMIT: <domain>) ───────────────
+// ─── Footer SVG fragment (single row: Full: <domain>) ───────────────
 
 function buildFooter(
   paddingX: number,
@@ -431,8 +431,8 @@ function buildFooter(
   <!-- Footer divider -->
   <line x1="${paddingX}" y1="${divider2Y}" x2="${width - paddingX}" y2="${divider2Y}" class="divider" />
 
-  <!-- Footer: Full at COGMIT: domain (same line) -->
-  <text x="${paddingX}" y="${footerY}" class="url-intro">Full at COGMIT: <tspan class="url-label">${safeDomain}</tspan></text>`;
+  <!-- Footer: Full: domain (same line) -->
+  <text x="${paddingX}" y="${footerY}" class="url-intro">Full: <tspan class="url-label">${safeDomain}</tspan></text>`;
 }
 
 // ─── Portrait card (3:4, with description) ────────────────────────────────────
