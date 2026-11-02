@@ -448,11 +448,11 @@ export function ShareCogmitModal({
               type="button"
               onClick={!cardGenerated ? handleGenerate : handleDownloadCard}
               disabled={!cardGenerated ? isGenerating : isExporting || !cardSvg}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 text-sm font-semibold border-[#4B0084] text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
             >
               {!cardGenerated ? (
                 <>
-                  <Sparkles className="h-4 w-4 shrink-0 text-[#FFFF11]" />
+                  {/* <Sparkles className="h-4 w-4 shrink-0 text-[#FFFF11]" /> */}
                   <span>{isGenerating ? "Generating…" : "Generate Cogmit Card"}</span>
                 </>
               ) : (
@@ -478,11 +478,10 @@ export function ShareCogmitModal({
                     e.stopPropagation();
                     handleWithDescriptionChange(!withDescription);
                   }}
-                  className={`inline-flex items-center justify-center rounded px-2.5 py-1 text-xs font-medium border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                    withDescription
-                      ? "bg-[#4B0084] border-[#4B0084] text-[#FFFF11] shadow-sm font-semibold"
-                      : "bg-transparent border-[#4B0084] text-white/80 hover:bg-[#4B0084]/20 hover:text-white"
-                  }`}
+                  className={`inline-flex items-center justify-center rounded px-2.5 py-1 text-xs font-medium border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring ${withDescription
+                    ? "bg-[#4B0084] border-[#4B0084] text-[#FFFF11] shadow-sm font-semibold"
+                    : "bg-transparent border-[#4B0084] text-white/80 hover:bg-[#4B0084]/20 hover:text-white"
+                    }`}
                 >
                   Description
                 </button>
@@ -499,11 +498,10 @@ export function ShareCogmitModal({
                     e.stopPropagation();
                     handleDarkThemeChange(!darkTheme);
                   }}
-                  className={`inline-flex items-center justify-center rounded px-2.5 py-1 text-xs font-medium border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                    darkTheme
-                      ? "bg-[#4B0084] border-[#4B0084] text-[#FFFF11] shadow-sm font-semibold"
-                      : "bg-transparent border-[#4B0084] text-white/80 hover:bg-[#4B0084]/20 hover:text-white"
-                  }`}
+                  className={`inline-flex items-center justify-center rounded px-2.5 py-1 text-xs font-medium border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring ${darkTheme
+                    ? "bg-[#4B0084] border-[#4B0084] text-[#FFFF11] shadow-sm font-semibold"
+                    : "bg-transparent border-[#4B0084] text-white/80 hover:bg-[#4B0084]/20 hover:text-white"
+                    }`}
                 >
                   Dark
                 </button>
@@ -542,9 +540,8 @@ export function ShareCogmitModal({
             ) : (
               /* State B: After Clicking Generate Cogmit Card — Generated Cogmit Card preview */
               <div
-                className={`overflow-hidden rounded-lg ${previewBg} flex items-center justify-center w-full max-w-full ${
-                  withDescription ? "aspect-[2/3]" : "aspect-[3/2]"
-                }`}
+                className={`overflow-hidden rounded-lg ${previewBg} flex items-center justify-center w-full max-w-full ${withDescription ? "aspect-[2/3]" : "aspect-[3/2]"
+                  }`}
               >
                 {previewUrl && !imageError ? (
                   // eslint-disable-next-line @next/next/no-img-element
