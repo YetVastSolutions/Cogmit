@@ -3,7 +3,8 @@
    All classes prefixed with .yappout-* to avoid collision with Cogmit
    =================================================================== */
 
-/* Active word highlight: double outline (YVS Yellow inner + YVS Indigo outer) */
+/* Active segment and word highlight: double outline (YVS Yellow inner + YVS Indigo outer) */
+.yappout-segment-active,
 .yappout-word-active {
   position: relative;
   display: inline;
@@ -14,7 +15,8 @@
   padding-inline: 1px;
 }
 
-/* Yappout word wrapper — inline, no layout impact */
+/* Yappout segment and word wrapper — inline, no layout impact */
+.yappout-segment,
 .yappout-word {
   cursor: default;
   display: inline;

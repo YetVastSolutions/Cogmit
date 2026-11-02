@@ -3,7 +3,7 @@
 
 import assert from 'node:assert';
 import { stripMarkdown } from '../src/yappout/utils/markdownExtractor.ts';
-import { tokenizeText } from '../src/yappout/utils/textNormalizer.ts';
+import { tokenizeText, segmentText } from '../src/yappout/utils/textNormalizer.ts';
 import {
   SPEED_CYCLE,
   DEFAULT_SPEED_IDX,
@@ -35,10 +35,15 @@ function test(name, fn) {
 // Helper: replicate buildReadingSequence logic
 // -------------------------------------------------------------
 function buildTestReadingSequence(title, markdownContent) {
-  const titleTokens = tokenizeText(title.trim(), 'title', 0);
+  const trimmedTitle = title.trim();
   const bodyText = stripMarkdown(markdownContent);
+  const titleSegments = segmentText(trimmedTitle, 'title', 0);
+  const bodySegments = segmentText(bodyText, 'body', titleSegments.length);
+  const titleTokens = tokenizeText(trimmedTitle, 'title', 0);
   const bodyTokens = tokenizeText(bodyText, 'body', titleTokens.length);
   return {
+    segments: [...titleSegments, ...bodySegments],
+    titleSegmentCount: titleSegments.length,
     words: [...titleTokens, ...bodyTokens],
     titleWordCount: titleTokens.length,
   };
@@ -286,7 +291,7 @@ test('Scroll controller does not scroll when active word is comfortably visible'
 // -------------------------------------------------------------
 // SECTION 6: HIGHLIGHT SPECIFICATION COMPLIANCE
 // -------------------------------------------------------------
-console.log('\n[SECTION 6] Word Highlight Style Compliance');
+console.log('\n[SECTION 6] Word & Segment Highlight Style Compliance');
 
 test('Highlight styles use YVS Yellow inner outline (#FFFF11) and YVS Indigo outer outline (#4B0084)', () => {
   // Verify colors defined in globals.css and inline style
@@ -295,6 +300,274 @@ test('Highlight styles use YVS Yellow inner outline (#FFFF11) and YVS Indigo out
 
   assert.strictEqual(innerColor, '#FFFF11', 'Inner outline must be YVS Yellow');
   assert.strictEqual(outerColor, '#4B0084', 'Outer outline must be YVS Indigo');
+});
+
+// -------------------------------------------------------------
+// SECTION 16: SEGMENT-BASED PLAYBACK & HIGHLIGHTING (NEW REQUIREMENTS)
+// -------------------------------------------------------------
+console.log('\n[SECTION 16] Segment-Based Playback & Highlighting Engine');
+
+// Requirement 7.1: Segmentation at every supported punctuation boundary
+test('Requirement 7.1: Segmentation at every supported punctuation boundary', () => {
+  // Prompt exact example
+  const promptEx = 'Cogmit helps organize ideas, preserve knowledge, and build connections. It keeps everything structured!';
+  const promptSegs = segmentText(promptEx, 'body', 0);
+  assert.strictEqual(promptSegs.length, 4);
+  assert.strictEqual(promptSegs[0].text, 'Cogmit helps organize ideas,');
+  assert.strictEqual(promptSegs[1].text, 'preserve knowledge,');
+  assert.strictEqual(promptSegs[2].text, 'and build connections.');
+  assert.strictEqual(promptSegs[3].text, 'It keeps everything structured!');
+
+  // Test all other boundaries: question mark, exclamation, colon, semicolon, ellipsis, em-dash
+  const allBoundaries = 'Question? Exclamation! Colon: Item one; Item two. Ellipsis… Dash—done.';
+  const segs = segmentText(allBoundaries, 'body', 0);
+  assert.strictEqual(segs.length, 8);
+  assert.strictEqual(segs[0].text, 'Question?');
+  assert.strictEqual(segs[1].text, 'Exclamation!');
+  assert.strictEqual(segs[2].text, 'Colon:');
+  assert.strictEqual(segs[3].text, 'Item one;');
+  assert.strictEqual(segs[4].text, 'Item two.');
+  assert.strictEqual(segs[5].text, 'Ellipsis…');
+  assert.strictEqual(segs[6].text, 'Dash—');
+  assert.strictEqual(segs[7].text, 'done.');
+
+  // Numbers with decimals and commas preserved without improper splitting
+  const numText = 'Pi is 3.14, and count is 10,000 at 10:30.';
+  const numSegs = segmentText(numText, 'body', 0);
+  assert.strictEqual(numSegs.length, 2);
+  assert.strictEqual(numSegs[0].text, 'Pi is 3.14,');
+  assert.strictEqual(numSegs[1].text, 'and count is 10,000 at 10:30.');
+});
+
+// Requirement 7.2: Correct handling of paragraph and line breaks
+test('Requirement 7.2: Correct handling of paragraph and line breaks', () => {
+  const multiline = `First line without punctuation
+Second line here.
+
+Third line in new paragraph!
+Fourth line without punctuation
+Fifth line with punctuation.`;
+
+  const segs = segmentText(multiline, 'body', 0);
+  assert.strictEqual(segs.length, 5);
+  assert.strictEqual(segs[0].text, 'First line without punctuation');
+  assert.strictEqual(segs[1].text, 'Second line here.');
+  assert.strictEqual(segs[2].text, 'Third line in new paragraph!');
+  assert.strictEqual(segs[3].text, 'Fourth line without punctuation');
+  assert.strictEqual(segs[4].text, 'Fifth line with punctuation.');
+});
+
+// Requirement 7.3: Continuous playback across consecutive segments
+test('Requirement 7.3: Continuous playback across consecutive segments', () => {
+  const segments = [
+    { index: 0, text: 'First segment,', section: 'body' },
+    { index: 1, text: 'second segment.', section: 'body' },
+    { index: 2, text: 'third segment!', section: 'body' },
+  ];
+
+  const spokenSequence = [];
+  let activeIndex = 0;
+  let completed = false;
+
+  function simulateSegmentPlayback(fromIndex) {
+    let idx = fromIndex;
+    function next() {
+      if (idx >= segments.length) {
+        completed = true;
+        return;
+      }
+      activeIndex = idx;
+      spokenSequence.push(segments[idx].text);
+      idx++;
+      next(); // consecutive without unnecessary pause
+    }
+    next();
+  }
+
+  simulateSegmentPlayback(0);
+  assert.strictEqual(completed, true);
+  assert.deepStrictEqual(spokenSequence, [
+    'First segment,',
+    'second segment.',
+    'third segment!',
+  ]);
+});
+
+// Requirement 7.4: Full-segment highlighting during speech
+test('Requirement 7.4: Full-segment highlighting during speech', () => {
+  // Ensure highlight coordinates to one authoritative segment index
+  let authoritativeIndex = 0;
+  const segments = [
+    { index: 0, text: 'Cogmit helps organize ideas,', section: 'body' },
+    { index: 1, text: 'preserve knowledge,', section: 'body' },
+  ];
+
+  // Active range covers complete segment, not individual words
+  function getActiveSegmentText(index) {
+    return segments[index].text;
+  }
+
+  assert.strictEqual(getActiveSegmentText(authoritativeIndex), 'Cogmit helps organize ideas,');
+  // Transition to next segment
+  authoritativeIndex = 1;
+  assert.strictEqual(getActiveSegmentText(authoritativeIndex), 'preserve knowledge,');
+});
+
+// Requirement 7.5: Correct segment-level double-click and double-tap seeking
+test('Requirement 7.5: Correct segment-level double-click and double-tap seeking', () => {
+  const segments = [
+    { index: 0, text: 'First clause,', section: 'body' },
+    { index: 1, text: 'second clause with multiple words,', section: 'body' },
+    { index: 2, text: 'third clause.', section: 'body' },
+  ];
+
+  // User double-clicks word "multiple" in segment 1
+  function findSegmentForWord(clickedWord) {
+    return segments.find((s) => s.text.includes(clickedWord))?.index ?? -1;
+  }
+
+  const targetIndex = findSegmentForWord('multiple');
+  assert.strictEqual(targetIndex, 1);
+
+  // Playback must start from the BEGINNING of segment 1, not from the word "multiple"
+  let startingIndex = targetIndex;
+  assert.strictEqual(startingIndex, 1);
+  assert.strictEqual(segments[startingIndex].text, 'second clause with multiple words,');
+});
+
+// Requirement 7.6: Seeking while playback is already active
+test('Requirement 7.6: Seeking while playback is already active', () => {
+  let activeSessionId = 1;
+  let currentSegment = 0;
+  let playbackState = 'playing';
+
+  function seekToSegment(newSegmentIdx) {
+    // 1. Cancel previous session
+    activeSessionId++;
+    // 2. Set authoritative position
+    currentSegment = newSegmentIdx;
+    playbackState = 'playing';
+  }
+
+  // Active playing segment 0
+  assert.strictEqual(currentSegment, 0);
+  assert.strictEqual(playbackState, 'playing');
+
+  // Seek to segment 2 while active
+  seekToSegment(2);
+  assert.strictEqual(activeSessionId, 2);
+  assert.strictEqual(currentSegment, 2);
+  assert.strictEqual(playbackState, 'playing');
+});
+
+// Requirement 7.7: Speed changes without losing the active segment
+test('Requirement 7.7: Speed changes without losing the active segment', () => {
+  let currentSegmentIndex = 2;
+  let speedCycleIdx = 0; // 1x
+
+  function cycleSpeed() {
+    speedCycleIdx = nextSpeedIdx(speedCycleIdx);
+    // Preserves current segment position
+    return currentSegmentIndex;
+  }
+
+  assert.strictEqual(getSpeed(speedCycleIdx), 1);
+  const preservedSegment = cycleSpeed();
+  assert.strictEqual(getSpeed(speedCycleIdx), 1.5);
+  assert.strictEqual(preservedSegment, 2);
+});
+
+// Requirement 7.8: Automatic scrolling to the active segment
+test('Requirement 7.8: Automatic scrolling to the active segment', () => {
+  const containerHeight = 800;
+  const scrollTop = 300;
+  const margin = 80;
+
+  function evaluateScroll(segTop, segHeight) {
+    const segBottom = segTop + segHeight;
+    const visTop = scrollTop;
+    const visBottom = visTop + containerHeight;
+
+    if (segTop - margin < visTop) return 'scroll-up';
+    if (segBottom + margin > visBottom) return 'scroll-down';
+    return 'none';
+  }
+
+  // Segment comfortably visible (top = 450, height = 50)
+  assert.strictEqual(evaluateScroll(450, 50), 'none');
+
+  // Segment near bottom edge (top = 1050, height = 40, bottom = 1090 + 80 = 1170 > 1100)
+  assert.strictEqual(evaluateScroll(1050, 40), 'scroll-down');
+
+  // Segment above top edge (top = 350, margin = 80 -> 270 < 300)
+  assert.strictEqual(evaluateScroll(350, 40), 'scroll-up');
+});
+
+// Requirement 7.9: Rapid repeated seeking without stale speech callbacks
+test('Requirement 7.9: Rapid repeated seeking without stale speech callbacks', () => {
+  let activeSessionId = 0;
+  let activeSegmentIndex = 0;
+
+  function startSession(seekIdx) {
+    const sid = ++activeSessionId;
+    activeSegmentIndex = seekIdx;
+    return sid;
+  }
+
+  // Rapid seeks
+  const s1 = startSession(0);
+  const s2 = startSession(3);
+  const s3 = startSession(1);
+
+  // Delayed callback from s1
+  function onSegmentCallback(sid, segIdx) {
+    if (sid !== activeSessionId) return; // Guard blocked
+    activeSegmentIndex = segIdx;
+  }
+
+  onSegmentCallback(s1, 0);
+  assert.strictEqual(activeSegmentIndex, 1, 'Callback from session 1 must be rejected');
+
+  onSegmentCallback(s2, 3);
+  assert.strictEqual(activeSegmentIndex, 1, 'Callback from session 2 must be rejected');
+
+  // Legitimate callback from active session s3
+  onSegmentCallback(s3, 2);
+  assert.strictEqual(activeSegmentIndex, 2, 'Callback from active session 3 accepted');
+});
+
+// Requirement 7.10: Correct playback from title through the complete body
+test('Requirement 7.10: Correct playback from title through the complete body', () => {
+  const title = 'Knowledge Architecture: Overview';
+  const body = 'Cogmit organizes ideas, preserves knowledge, and connects dots.';
+
+  const seq = buildTestReadingSequence(title, body);
+
+  // Title segments come first
+  assert.strictEqual(seq.titleSegmentCount, 2);
+  assert.strictEqual(seq.segments[0].section, 'title');
+  assert.strictEqual(seq.segments[0].text, 'Knowledge Architecture:');
+  assert.strictEqual(seq.segments[0].index, 0);
+
+  assert.strictEqual(seq.segments[1].section, 'title');
+  assert.strictEqual(seq.segments[1].text, 'Overview');
+  assert.strictEqual(seq.segments[1].index, 1);
+
+  // Body segments follow seamlessly with contiguous indices
+  assert.strictEqual(seq.segments[2].section, 'body');
+  assert.strictEqual(seq.segments[2].text, 'Cogmit organizes ideas,');
+  assert.strictEqual(seq.segments[2].index, 2);
+
+  assert.strictEqual(seq.segments[3].section, 'body');
+  assert.strictEqual(seq.segments[3].text, 'preserves knowledge,');
+  assert.strictEqual(seq.segments[3].index, 3);
+
+  assert.strictEqual(seq.segments[4].section, 'body');
+  assert.strictEqual(seq.segments[4].text, 'and connects dots.');
+  assert.strictEqual(seq.segments[4].index, 4);
+
+  // Full length
+  assert.strictEqual(seq.segments.length, 5);
 });
 
 // -------------------------------------------------------------

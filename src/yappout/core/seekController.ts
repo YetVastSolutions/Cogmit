@@ -2,7 +2,8 @@
 // Helper types and utilities for seek operations
 
 export interface SeekRequest {
-  wordIndex: number;
+  segmentIndex: number;
   sessionId: number;
+  wordIndex?: number;
 }
 

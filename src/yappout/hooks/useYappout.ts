@@ -1,12 +1,19 @@
 'use client';
 // src/yappout/hooks/useYappout.ts
-// Central React hook for Yappout TTS + synchronized reading
+// Central React hook for Yappout TTS + synchronized segment reading
 
 import { useState, useEffect, useRef, useCallback, useMemo, RefObject } from 'react';
 import { buildReadingSequence, ReadingSequence } from '../core/readingSequence';
-import { buildWordDOMMap, WordDOMMap, findWordIndexFromCaretRange } from '../core/wordTracker';
-import { scrollWordIntoView } from '../core/scrollController';
-import { speakWordByWord } from '../core/playbackController';
+import {
+  buildSegmentDOMMap,
+  SegmentDOMMap,
+  findSegmentIndexFromCaretRange,
+  buildWordDOMMap,
+  WordDOMMap,
+  findWordIndexFromCaretRange,
+} from '../core/wordTracker';
+import { scrollSegmentIntoView } from '../core/scrollController';
+import { speakSegmentBySegment } from '../core/playbackController';
 import { SPEED_CYCLE, DEFAULT_SPEED_IDX, getSpeedLabel, getSpeed, nextSpeedIdx } from '../core/speedController';
 import { attachDoubleTapHandler } from '../utils/doubleTapDetector';
 
@@ -20,17 +27,19 @@ interface UseYappoutOptions {
   scrollContainerRef: RefObject<HTMLElement | null>;
 }
 
-interface UseYappoutReturn {
+export interface UseYappoutReturn {
   playbackState: PlaybackState;
-  currentWordIndex: number;
+  currentSegmentIndex: number;
+  currentWordIndex: number; // alias for backward compatibility
   readingSequence: ReadingSequence;
   speed: number;
   speedLabel: string;
   activeRange: Range | null;
-  wordDOMMap: WordDOMMap;
+  segmentDOMMap: SegmentDOMMap;
+  wordDOMMap: WordDOMMap; // alias for backward compatibility
   play: () => void;
   stop: () => void;
-  seekTo: (wordIndex: number) => void;
+  seekTo: (segmentIndex: number) => void;
   cycleSpeed: () => void;
 }
 
@@ -42,27 +51,35 @@ export function useYappout({
   scrollContainerRef,
 }: UseYappoutOptions): UseYappoutReturn {
   const [playbackState, setPlaybackState] = useState<PlaybackState>('idle');
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0);
   const [speedCycleIdx, setSpeedCycleIdx] = useState(DEFAULT_SPEED_IDX);
+  const [segmentDOMMap, setSegmentDOMMap] = useState<SegmentDOMMap>([]);
   const [wordDOMMap, setWordDOMMap] = useState<WordDOMMap>([]);
 
-  // Purely derived reading sequence
+  // Purely derived reading sequence containing segments and words
   const readingSequence = useMemo(() => {
-    if (!title && !content) return { words: [], titleWordCount: 0 };
+    if (!title && !content) {
+      return {
+        segments: [],
+        titleSegmentCount: 0,
+        words: [],
+        titleWordCount: 0,
+      };
+    }
     return buildReadingSequence(title, content);
   }, [title, content]);
 
-  // Purely derived active Range based on wordDOMMap and currentWordIndex
+  // One authoritative active Range based on segmentDOMMap and currentSegmentIndex
   const activeRange = useMemo(() => {
     if (playbackState !== 'playing') return null;
-    const entry = wordDOMMap.find((e) => e.wordIndex === currentWordIndex);
+    const entry = segmentDOMMap.find((e) => e.segmentIndex === currentSegmentIndex);
     return entry ? entry.range : null;
-  }, [playbackState, currentWordIndex, wordDOMMap]);
+  }, [playbackState, currentSegmentIndex, segmentDOMMap]);
 
   // Stable refs for event callbacks & session guards
   const sessionIdRef = useRef(0);
   const playbackStateRef = useRef<PlaybackState>('idle');
-  const currentWordIndexRef = useRef(0);
+  const currentSegmentIndexRef = useRef(0);
   const speedRef = useRef<number>(SPEED_CYCLE[DEFAULT_SPEED_IDX]);
   const readingSequenceRef = useRef<ReadingSequence>(readingSequence);
 
@@ -76,9 +93,9 @@ export function useYappout({
     setPlaybackState(state);
   }, []);
 
-  const updateCurrentWordIndex = useCallback((idx: number) => {
-    currentWordIndexRef.current = idx;
-    setCurrentWordIndex(idx);
+  const updateCurrentSegmentIndex = useCallback((idx: number) => {
+    currentSegmentIndexRef.current = idx;
+    setCurrentSegmentIndex(idx);
   }, []);
 
   // When content changes, cancel any ongoing playback and reset state
@@ -92,9 +109,9 @@ export function useYappout({
         window.speechSynthesis.cancel();
       }
       updatePlaybackState('idle');
-      updateCurrentWordIndex(0);
+      updateCurrentSegmentIndex(0);
     }
-  }, [title, content, updatePlaybackState, updateCurrentWordIndex]);
+  }, [title, content, updatePlaybackState, updateCurrentSegmentIndex]);
 
   // Clean up on component unmount
   useEffect(() => {
@@ -109,24 +126,33 @@ export function useYappout({
 
   // Rebuild DOM map after sequence changes with a debounce to allow DOM rendering
   useEffect(() => {
-    if (readingSequence.words.length === 0) {
+    if (readingSequence.segments.length === 0 && readingSequence.words.length === 0) {
+      setSegmentDOMMap([]);
+      setWordDOMMap([]);
       return;
     }
     const timer = setTimeout(() => {
-      const map = buildWordDOMMap(
+      const segMap = buildSegmentDOMMap(
+        titleRef.current,
+        bodyRef.current,
+        readingSequence.segments,
+      );
+      setSegmentDOMMap(segMap);
+
+      const wMap = buildWordDOMMap(
         titleRef.current,
         bodyRef.current,
         readingSequence.words,
       );
-      setWordDOMMap(map);
+      setWordDOMMap(wMap);
     }, 150);
     return () => clearTimeout(timer);
   }, [readingSequence, titleRef, bodyRef]);
 
-  // Auto-scroll active word into view within scrollContainer
+  // Auto-scroll active segment into view within scrollContainer
   useEffect(() => {
     if (activeRange && scrollContainerRef.current) {
-      scrollWordIntoView(activeRange, scrollContainerRef.current);
+      scrollSegmentIntoView(activeRange, scrollContainerRef.current);
     }
   }, [activeRange, scrollContainerRef]);
 
@@ -139,30 +165,30 @@ export function useYappout({
       const sessionId = ++sessionIdRef.current;
       updatePlaybackState('playing');
 
-      speakWordByWord(
-        readingSequenceRef.current.words,
+      speakSegmentBySegment(
+        readingSequenceRef.current.segments,
         fromIndex,
         speedRef.current,
         sessionId,
         () => sessionIdRef.current,
         {
-          onWordChange: (idx) => {
-            updateCurrentWordIndex(idx);
+          onSegmentChange: (idx) => {
+            updateCurrentSegmentIndex(idx);
           },
           onComplete: () => {
             updatePlaybackState('completed');
-            updateCurrentWordIndex(0);
+            updateCurrentSegmentIndex(0);
           },
         },
       );
     },
-    [updatePlaybackState, updateCurrentWordIndex],
+    [updatePlaybackState, updateCurrentSegmentIndex],
   );
 
   const play = useCallback(() => {
     if (playbackStateRef.current === 'playing') return;
     const startIdx =
-      playbackStateRef.current === 'completed' ? 0 : currentWordIndexRef.current;
+      playbackStateRef.current === 'completed' ? 0 : currentSegmentIndexRef.current;
     doPlay(startIdx);
   }, [doPlay]);
 
@@ -172,18 +198,19 @@ export function useYappout({
       window.speechSynthesis.cancel();
     }
     updatePlaybackState('stopped');
-    updateCurrentWordIndex(0);
-  }, [updatePlaybackState, updateCurrentWordIndex]);
+    updateCurrentSegmentIndex(0);
+  }, [updatePlaybackState, updateCurrentSegmentIndex]);
 
   const seekTo = useCallback(
-    (wordIndex: number) => {
+    (segmentIndex: number) => {
       sessionIdRef.current++;
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
-      doPlay(wordIndex);
+      updateCurrentSegmentIndex(segmentIndex);
+      doPlay(segmentIndex);
     },
-    [doPlay],
+    [doPlay, updateCurrentSegmentIndex],
   );
 
   const cycleSpeed = useCallback(() => {
@@ -191,26 +218,26 @@ export function useYappout({
       const next = nextSpeedIdx(prev);
       speedRef.current = SPEED_CYCLE[next];
 
-      // If playing, restart from current word with new speed
+      // If playing, restart from current segment with new speed
       if (playbackStateRef.current === 'playing') {
-        const currentIdx = currentWordIndexRef.current;
+        const currentIdx = currentSegmentIndexRef.current;
         setTimeout(() => {
           if (playbackStateRef.current === 'playing') {
             if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
               window.speechSynthesis.cancel();
             }
             const newSessionId = ++sessionIdRef.current;
-            speakWordByWord(
-              readingSequenceRef.current.words,
+            speakSegmentBySegment(
+              readingSequenceRef.current.segments,
               currentIdx,
               speedRef.current,
               newSessionId,
               () => sessionIdRef.current,
               {
-                onWordChange: (idx) => updateCurrentWordIndex(idx),
+                onSegmentChange: (idx) => updateCurrentSegmentIndex(idx),
                 onComplete: () => {
                   updatePlaybackState('completed');
-                  updateCurrentWordIndex(0);
+                  updateCurrentSegmentIndex(0);
                 },
               },
             );
@@ -220,19 +247,41 @@ export function useYappout({
 
       return next;
     });
-  }, [updatePlaybackState, updateCurrentWordIndex]);
+  }, [updatePlaybackState, updateCurrentSegmentIndex]);
 
-  // Attach double-click / double-tap handlers for word seeking
+  // Attach double-click / double-tap handlers for segment seeking
   useEffect(() => {
     const titleEl = titleRef.current;
     const bodyEl = bodyRef.current;
 
     function handleDoubleTap(x: number, y: number) {
       const caretRange = getCaretRangeFromPoint(x, y);
-      if (!caretRange) return;
-      const wordIndex = findWordIndexFromCaretRange(caretRange, wordDOMMap);
-      if (wordIndex !== -1) {
-        seekTo(wordIndex);
+      if (caretRange) {
+        const segmentIndex = findSegmentIndexFromCaretRange(caretRange, segmentDOMMap);
+        if (segmentIndex !== -1) {
+          seekTo(segmentIndex);
+          return;
+        }
+      }
+
+      // Fallback: check element under point
+      if (typeof document !== 'undefined' && typeof document.elementFromPoint === 'function') {
+        const el = document.elementFromPoint(x, y);
+        if (el) {
+          for (const entry of segmentDOMMap) {
+            try {
+              if (
+                entry.range.intersectsNode(el) ||
+                el.contains(entry.range.commonAncestorContainer)
+              ) {
+                seekTo(entry.segmentIndex);
+                return;
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
       }
     }
 
@@ -241,18 +290,20 @@ export function useYappout({
     if (bodyEl) cleanups.push(attachDoubleTapHandler(bodyEl, handleDoubleTap));
 
     return () => cleanups.forEach((fn) => fn());
-  }, [titleRef, bodyRef, wordDOMMap, seekTo]);
+  }, [titleRef, bodyRef, segmentDOMMap, seekTo]);
 
   const speed = getSpeed(speedCycleIdx);
   const speedLabel = getSpeedLabel(speedCycleIdx);
 
   return {
     playbackState,
-    currentWordIndex,
+    currentSegmentIndex,
+    currentWordIndex: currentSegmentIndex, // alias for backward compatibility
     readingSequence,
     speed,
     speedLabel,
     activeRange,
+    segmentDOMMap,
     wordDOMMap,
     play,
     stop,
@@ -280,6 +331,12 @@ function getCaretRangeFromPoint(x: number, y: number): Range | null {
       range.setStart(pos.offsetNode, pos.offset);
       range.collapse(true);
       return range;
+    }
+  }
+  if (typeof window !== 'undefined' && window.getSelection) {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      return sel.getRangeAt(0);
     }
   }
   return null;
