@@ -75,7 +75,7 @@ test("Portrait SVG cleanly renders 147-character title", () => {
     withDescription: true,
   });
 
-  assert.ok(svg.includes("viewBox=\"0 0 900 "));
+  assert.ok(svg.includes("viewBox=\"0 0 1200 1600\""));
   assert.ok(svg.includes("class=\"title\""));
   // First words of title should be present
   assert.ok(svg.includes("Deep Cognitive Exploration:"));

@@ -14,8 +14,8 @@
 export const TEMPLATE_VERSION = "1.3.0";
 
 // Canvas dimensions
-export const CARD_WIDTH_PORTRAIT = 900;   // Portrait base width (with description, content-driven height)
-export const CARD_HEIGHT_PORTRAIT = 1200; // Base portrait fallback height
+export const CARD_WIDTH_PORTRAIT = 1200;  // 2:3 portrait (with description, target dimensions: 1200x1600)
+export const CARD_HEIGHT_PORTRAIT = 1600; // Target portrait height
 export const CARD_WIDTH_LANDSCAPE = 1200; // 3:2 landscape (without description, width:height = 3:2)
 export const CARD_HEIGHT_LANDSCAPE = 800;
 
@@ -225,43 +225,11 @@ export function wrapText(text: string, maxCharsPerLine: number): string[] {
 }
 
 /**
- * Calculates the dynamic, content-driven height of a portrait Cogmit card.
- * Adapts to title and description lengths, supporting up to 597 description chars
- * while eliminating excessive blank space when the description is short.
+ * Returns the target height of a portrait Cogmit card (1600px).
+ * Target dimensions: 1200 × 1600px (2:3 width:height ratio).
  */
-export function calculatePortraitHeight(opts: Partial<CardTemplateOptions>): number {
-  const title = (opts.title || "Untitled Cogmit").slice(0, MAX_ROOTCOG_TITLE_LENGTH);
-  const excerpt = (opts.excerpt || "").slice(0, CARD_DESCRIPTION_MAX);
-
-  const paddingX = 64;
-  const usableWidth = CARD_WIDTH_PORTRAIT - paddingX * 2; // 772px
-  const maxTextWidth = usableWidth - 12; // 760px
-
-  const titleLines = wrapTextByWidth(title, maxTextWidth, 44, true);
-  const excerptLines = excerpt ? wrapTextByWidth(excerpt, maxTextWidth, 28, false) : [];
-
-  const titleStartY = 200;
-  const titleLineHeight = 54;
-  const titleEndY = titleStartY + Math.max(0, titleLines.length - 1) * titleLineHeight;
-
-  const divider1Y = titleEndY + 46;
-
-  let contentEndY: number;
-  if (excerptLines.length > 0) {
-    const excerptStartY = divider1Y + 52;
-    const excerptLineHeight = 44;
-    const excerptEndY = excerptStartY + (excerptLines.length - 1) * excerptLineHeight;
-    contentEndY = excerptEndY + 12;
-  } else {
-    contentEndY = divider1Y + 20;
-  }
-
-  const divider2Y = contentEndY + 48;
-  const footerY = divider2Y + 44;
-
-  const borderInset = 28;
-  const bottomPadding = 56;
-  return Math.round(footerY + bottomPadding + borderInset);
+export function calculatePortraitHeight(_opts?: Partial<CardTemplateOptions>): number {
+  return CARD_HEIGHT_PORTRAIT;
 }
 
 /**
@@ -459,52 +427,45 @@ function buildFooter(
   <text x="${paddingX}" y="${footerY}" class="url-intro">Full at COGMIT: <tspan class="url-label">${safeDomain}</tspan></text>`;
 }
 
-// ─── Portrait card (content-driven height, with description) ──────────────────
+// ─── Portrait card (2:3, with description) ────────────────────────────────────
 
 function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string {
   const { title, excerpt, url, authorId } = opts;
 
   const width = CARD_WIDTH_PORTRAIT;
-  const height = calculatePortraitHeight(opts);
+  const height = CARD_HEIGHT_PORTRAIT;
 
   const safeUsername = escapeXml(authorId ? authorId.toLowerCase() : "");
   const displayDomain = getCanonicalDomain(url);
 
-  const paddingX = 64;
-  const borderInset = 28;
-  const borderRadius = 20;
+  const paddingX = 80;
+  const borderInset = 32;
+  const borderRadius = 24;
 
-  const usableWidth = width - paddingX * 2; // 772px
-  const maxTextWidth = usableWidth - 12; // 760px
+  const usableWidth = width - paddingX * 2; // 1040px
+  const maxTextWidth = usableWidth - 20; // 1020px
 
   // Title: natural multi-line wrapping, never sliced
   const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, 44, true);
 
-  // Description: occupies full available inner width (~760px), wraps naturally only when width exhausted
+  // Description: occupies full available inner width (~1020px), wraps naturally only when width exhausted
   const excerptLines = excerpt ? wrapTextByWidth(excerpt, maxTextWidth, 28, false) : [];
 
-  const headerY = 108;
+  const headerY = 110;
+  const headerDividerY = headerY + 28; // 138
 
-  const titleStartY = 200;
-  const titleLineHeight = 54;
+  const titleStartY = 230;
+  const titleLineHeight = 58;
   const titleEndY = titleStartY + Math.max(0, titleLines.length - 1) * titleLineHeight;
 
   const divider1Y = titleEndY + 46;
 
-  let contentEndY: number;
-  const excerptStartY = divider1Y + 52;
+  const excerptStartY = divider1Y + 54;
   const excerptLineHeight = 44;
 
-  if (excerptLines.length > 0) {
-    const excerptEndY = excerptStartY + (excerptLines.length - 1) * excerptLineHeight;
-    contentEndY = excerptEndY + 12;
-  } else {
-    contentEndY = divider1Y + 20;
-  }
-
-  // Footer: dynamic Y based on actual content
-  const divider2Y = contentEndY + 48;
-  const footerY = divider2Y + 44;
+  // Footer: strictly 2:3 positions within 1600px canvas
+  const divider2Y = height - 154; // 1446
+  const footerY = divider2Y + 68; // 1514
 
   const titleTspans = buildTspans(titleLines, paddingX, titleLineHeight);
   const excerptTspans = buildTspans(excerptLines, paddingX, excerptLineHeight);
@@ -521,6 +482,9 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
 
   <!-- Header: COGMIT | username -->
   ${buildHeader(paddingX, headerY, safeUsername)}
+
+  <!-- Divider below header -->
+  <line x1="${paddingX}" y1="${headerDividerY}" x2="${width - paddingX}" y2="${headerDividerY}" class="divider" />
 
   <!-- Title -->
   <text x="${paddingX}" y="${titleStartY}" class="title">

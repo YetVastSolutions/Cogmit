@@ -104,21 +104,20 @@ test("147-character title in 3:2 landscape wraps without overflowing horizontal 
 // -----------------------------------------------------------------------------
 // 2. Portrait Description Width & Eliminating Narrow Column
 // -----------------------------------------------------------------------------
-test("Portrait description occupies full available inner width (~760px) rather than narrow 44-char column", () => {
+test("Portrait description occupies full available inner width (~1020px) rather than narrow 44-char column", () => {
   const longSentence = "Cognitive architectures represent the next foundational paradigm shift in AI system design. Rather than relying on fragile single-shot inference or unstructured conversation loops, a cognitive architecture provides deterministic state machines.";
   
-  const usableWidth = 900 - 64 * 2; // 772px
-  const maxTextWidth = usableWidth - 12; // 760px
+  const usableWidth = 1200 - 80 * 2; // 1040px
+  const maxTextWidth = usableWidth - 20; // 1020px
   const lines = wrapTextByWidth(longSentence, maxTextWidth, 28, false);
 
-  // In the old code with wrapText(..., 44), lines had <= 44 chars and width was ~580px
-  // In the new code, lines should pack up to ~760px (around 52-58 chars)
+  // In the new code with 1200px width, lines pack up to ~1020px
   assert.ok(lines[0].length >= 50, `First line length should be >= 50 characters (got ${lines[0].length})`);
   
   const firstLineWidth = estimateStringWidth(lines[0], 28, false);
   assert.ok(
-    firstLineWidth >= 650 && firstLineWidth <= 772,
-    `First line width should occupy full usable width (got ${firstLineWidth}px / 772px)`
+    firstLineWidth >= 650 && firstLineWidth <= 1040,
+    `First line width should occupy full usable width (got ${firstLineWidth}px / 1040px)`
   );
 });
 
@@ -147,14 +146,14 @@ test("extractDescription helper uses 597 characters", () => {
 });
 
 // -----------------------------------------------------------------------------
-// 4. Portrait Card Height is Content-Driven
+// 4. Portrait Card Target Dimensions (1200x1600, 2:3 ratio)
 // -----------------------------------------------------------------------------
-test("Short descriptions produce compact portrait card height, reducing empty space", () => {
+test("Portrait card uses strictly 2:3 aspect ratio (1200x1600) when description is enabled", () => {
   const shortTitle = "Quick Cogmit";
   const shortDesc = "A brief cognitive insight.";
   
   const height = calculatePortraitHeight({ title: shortTitle, excerpt: shortDesc });
-  assert.ok(height < 600, `Short card height (${height}px) should be compact (< 600px)`);
+  assert.strictEqual(height, 1600, `Portrait target height must be 1600px (got ${height}px)`);
 
   const svg = generateCardSvg({
     title: shortTitle,
@@ -164,25 +163,27 @@ test("Short descriptions produce compact portrait card height, reducing empty sp
     withDescription: true,
   });
 
-  assert.ok(svg.includes(`viewBox="0 0 900 ${height}"`), "SVG viewBox should match content-driven height");
-  assert.ok(svg.includes(`height="${height}"`), "SVG height attribute should match content-driven height");
-  assert.ok(svg.includes(`height="${height - 28 * 2}"`), "Outer border rect height should match inset content height");
+  assert.ok(svg.includes('viewBox="0 0 1200 1600"'), "SVG viewBox should be '0 0 1200 1600'");
+  assert.ok(svg.includes('width="1200"'), "SVG width attribute should be 1200");
+  assert.ok(svg.includes('height="1600"'), "SVG height attribute should be 1600");
+  assert.strictEqual(height, 1600, "Portrait height must be 1600");
+  assert.ok(svg.includes(`height="${1600 - 32 * 2}"`), "Outer border rect height should match inset content height");
 });
 
-test("Medium descriptions (397 chars) scale portrait card height appropriately", () => {
+test("Medium descriptions scale cleanly within 1200x1600 Portrait target dimensions", () => {
   const medDesc = "Cognitive architectures represent the next foundational paradigm shift in AI system design. Rather than relying on fragile single-shot inference or unstructured conversation loops, a cognitive architecture provides deterministic state machines, durable semantic memory, and verifiable self-correction boundaries. Each Cogmit represents an immutable unit of cognition for specialized autonomous agents.".slice(0, 397);
   assert.strictEqual(medDesc.length, 397);
 
   const height = calculatePortraitHeight({ title: "Medium Cogmit Title", excerpt: medDesc });
-  assert.ok(height >= 750 && height <= 950, `Medium card height (${height}px) should be ~750-950px`);
+  assert.strictEqual(height, 1600, "Medium card height should be 1600px");
 });
 
-test("Full 597-character description with 147-character title expands height without clipping or overflow", () => {
+test("Full 597-character description with 147-character title renders within 1200x1600 Portrait canvas", () => {
   const fullDesc = "Cognitive architectures represent the next foundational paradigm shift in AI system design. Rather than relying on fragile single-shot inference or unstructured conversation loops, a cognitive architecture provides deterministic state machines, durable semantic memory, and verifiable self-correction boundaries. Each Cogmit represents an immutable unit of cognition that can be composed into collaborative graphs of specialized autonomous agents. By grounding intelligence in structured cognitive artifacts, systems achieve unprecedented levels of reliability, explainability, and autonomy across workflows.".slice(0, 597);
   assert.strictEqual(fullDesc.length, 597);
 
   const height = calculatePortraitHeight({ title: title147, excerpt: fullDesc });
-  assert.ok(height >= 1100, `Full 597-char card height (${height}px) should expand sufficiently (>= 1100px)`);
+  assert.strictEqual(height, 1600, "Full 597-char card height should be 1600px");
 
   const svg = generateCardSvg({
     title: title147,
@@ -305,13 +306,17 @@ test("getCardDimensions dynamically produces matching dimensions for export", ()
   assert.strictEqual(landscapeDims.height, 800);
   assert.strictEqual(landscapeDims.width / landscapeDims.height, 3 / 2);
 
+  const portraitDims = getCardDimensions(true);
+  assert.strictEqual(portraitDims.width, 1200);
+  assert.strictEqual(portraitDims.height, 1600);
+
   const shortDims = getCardDimensions(true, { title: "Short", excerpt: "Short note" });
-  assert.strictEqual(shortDims.width, 900);
-  assert.ok(shortDims.height < 600);
+  assert.strictEqual(shortDims.width, 1200);
+  assert.strictEqual(shortDims.height, 1600);
 
   const longDims = getCardDimensions(true, { title: title147, excerpt: "A".repeat(597) });
-  assert.strictEqual(longDims.width, 900);
-  assert.ok(longDims.height > 1000);
+  assert.strictEqual(longDims.width, 1200);
+  assert.strictEqual(longDims.height, 1600);
 });
 
 // -----------------------------------------------------------------------------

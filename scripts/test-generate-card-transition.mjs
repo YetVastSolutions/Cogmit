@@ -186,10 +186,11 @@ await test("3. Change options, enable 'With description' and generate again: pro
   const previewImg = container.querySelector("img[alt^='Cogmit Card']");
   assert.ok(previewImg, "Portrait preview image must be rendered");
 
-  // Aspect-[4/3] class should NOT be on the container when withDescription is true
+  // Portrait preview must have 2:3 aspect ratio class
   const previewContainer = previewImg.closest("div.overflow-hidden");
   assert.ok(previewContainer, "Preview container must exist");
-  assert.ok(!previewContainer.classList.contains("aspect-[4/3]"), "Portrait card must not enforce aspect-[4/3]");
+  assert.ok(previewContainer.classList.contains("aspect-[2/3]"), "Portrait card must enforce aspect-[2/3]");
+  assert.ok(!previewContainer.classList.contains("aspect-[3/2]"), "Portrait card must not enforce aspect-[3/2]");
 });
 
 // ---------------------------------------------------------------------------------
@@ -291,7 +292,7 @@ await test("7. Closing and reopening modal restores default options (cardGenerat
 // ---------------------------------------------------------------------------------
 // Test 8: Generation options and dimensions accuracy for both configurations
 // ---------------------------------------------------------------------------------
-await test("8. Card renderer produces exact dimensions for both Config A (1200x800) and Config B", async () => {
+await test("8. Card renderer produces exact dimensions for both Config A (1200x800) and Config B (1200x1600)", async () => {
   const dimLandscape = getCardDimensions(false);
   assert.strictEqual(dimLandscape.width, 1200, "Landscape width must be 1200");
   assert.strictEqual(dimLandscape.height, 800, "Landscape height must be 800");
@@ -310,8 +311,8 @@ await test("8. Card renderer produces exact dimensions for both Config A (1200x8
     title: "Portrait Card Verification",
     excerpt: "Detailed description of content.",
   });
-  assert.strictEqual(dimPortrait.width, 900, "Portrait width must be 900");
-  assert.ok(dimPortrait.height >= 400 && dimPortrait.height <= 2000, "Portrait height must be content-driven");
+  assert.strictEqual(dimPortrait.width, 1200, "Portrait width must be 1200");
+  assert.strictEqual(dimPortrait.height, 1600, "Portrait height must be 1600");
 
   const svgPortrait = generateCardSvg({
     title: "Portrait Card Verification",
@@ -320,7 +321,7 @@ await test("8. Card renderer produces exact dimensions for both Config A (1200x8
     withDescription: true,
     darkTheme: true,
   });
-  assert.ok(svgPortrait.includes(`viewBox="0 0 900 ${dimPortrait.height}"`), "Portrait SVG viewBox must match content height");
+  assert.ok(svgPortrait.includes('viewBox="0 0 1200 1600"'), "Portrait SVG viewBox must match 0 0 1200 1600");
 });
 
 console.log("\n------------------------------------------------------------------");
