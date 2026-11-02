@@ -448,7 +448,7 @@ export function ShareCogmitModal({
               type="button"
               onClick={!cardGenerated ? handleGenerate : handleDownloadCard}
               disabled={!cardGenerated ? isGenerating : isExporting || !cardSvg}
-              className="inline-flex items-center gap-2 text-sm font-semibold border-[#4B0084] text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 text-sm font-semibold hover:bg-[#4B0084] text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
             >
               {!cardGenerated ? (
                 <>
