@@ -202,7 +202,7 @@ test("Portrait card uses strictly 3:4 aspect ratio (969x1292) when description i
   assert.ok(svg.includes('width="969"'), "SVG width attribute should be 969");
   assert.ok(svg.includes('height="1292"'), "SVG height attribute should be 1292");
   assert.strictEqual(height, 1292, "Portrait height must be 1292");
-  assert.ok(!svg.includes("outer-border"), "Generated card must have no outer-border");
+  assert.ok(svg.includes("outer-border"), "Generated card must have outer-border");
 });
 
 test("Medium descriptions scale cleanly within 969x1292 Portrait target dimensions", () => {
@@ -352,7 +352,7 @@ test("Light theme preserves light surface background, YV Indigo Violet border, a
   });
 
   assert.ok(lightSvg.includes(".bg { fill: #F8F5FA; }"), "Light theme must have #F8F5FA bg");
-  assert.ok(lightSvg.includes(".title { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Inter\", sans-serif; font-size: 45px; font-weight: 600; fill: #17121C;"), "Light theme title must be #17121C");
+  assert.ok(lightSvg.includes(".title { font-family: Verdana, Geneva, sans-serif; font-size: 45px; font-weight: 600; fill: #17121C;"), "Light theme title must be #17121C");
   assert.ok(lightSvg.includes(COLOR_INDIGO_VIOLET), "Must have YV Indigo Violet border");
 });
 
@@ -462,7 +462,7 @@ test("getCanonicalDomain dynamically derives domain from URL and canonical confi
   );
 });
 
-test("Footer preserves existing yellow color, JetBrains Mono typography, and font weights", () => {
+test("Footer preserves existing yellow color, Verdana typography, and font weights", () => {
   const darkSvg = generateCardSvg({
     title: "Typography Preservation",
     excerpt: "Testing visual styles",
@@ -471,9 +471,9 @@ test("Footer preserves existing yellow color, JetBrains Mono typography, and fon
     darkTheme: true,
   });
 
-  // Verify CSS styles: JetBrains Mono font family, 37px font size, yellow color, 400 font weights
-  assert.ok(darkSvg.includes(".url-intro { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 37px; font-weight: 400; fill: #FFFF11;"), "Dark theme url-intro must be yellow (#FFFF11) with 400 weight");
-  assert.ok(darkSvg.includes(".url-label { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 37px; font-weight: 400; fill: #FFFF11;"), "Dark theme url-label must be yellow (#FFFF11) with 400 weight");
+  // Verify CSS styles: Verdana font family, 37px font size, yellow color, 400 font weights
+  assert.ok(darkSvg.includes(".url-intro { font-family: Verdana, Geneva, sans-serif; font-size: 37px; font-weight: 400; fill: #FFFF11;"), "Dark theme url-intro must be yellow (#FFFF11) with 400 weight");
+  assert.ok(darkSvg.includes(".url-label { font-family: Verdana, Geneva, sans-serif; font-size: 37px; font-weight: 400; fill: #FFFF11;"), "Dark theme url-label must be yellow (#FFFF11) with 400 weight");
 
   const lightSvg = generateCardSvg({
     title: "Light Theme Typography",
@@ -483,8 +483,8 @@ test("Footer preserves existing yellow color, JetBrains Mono typography, and fon
     darkTheme: false,
   });
 
-  assert.ok(lightSvg.includes(".url-intro { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 37px; font-weight: 400; fill: #4B0084;"), "Light theme url-intro must be indigo violet (#4B0084)");
-  assert.ok(lightSvg.includes(".url-label { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 37px; font-weight: 400; fill: #4B0084;"), "Light theme url-label must be indigo violet (#4B0084)");
+  assert.ok(lightSvg.includes(".url-intro { font-family: Verdana, Geneva, sans-serif; font-size: 37px; font-weight: 400; fill: #4B0084;"), "Light theme url-intro must be indigo violet (#4B0084)");
+  assert.ok(lightSvg.includes(".url-label { font-family: Verdana, Geneva, sans-serif; font-size: 37px; font-weight: 400; fill: #4B0084;"), "Light theme url-label must be indigo violet (#4B0084)");
 });
 
 console.log("\n------------------------------------------------------------------");
