@@ -292,10 +292,10 @@ await test("7. Closing and reopening modal restores default options (cardGenerat
 // ---------------------------------------------------------------------------------
 // Test 8: Generation options and dimensions accuracy for both configurations
 // ---------------------------------------------------------------------------------
-await test("8. Card renderer produces exact dimensions for both Config A (1200x800) and Config B (1200x1600)", async () => {
+await test("8. Card renderer produces exact dimensions for both Config A (969x646) and Config B (969x1292)", async () => {
   const dimLandscape = getCardDimensions(false);
-  assert.strictEqual(dimLandscape.width, 1200, "Landscape width must be 1200");
-  assert.strictEqual(dimLandscape.height, 800, "Landscape height must be 800");
+  assert.strictEqual(dimLandscape.width, 969, "Landscape width must be 969");
+  assert.strictEqual(dimLandscape.height, 646, "Landscape height must be 646");
   assert.strictEqual(dimLandscape.width / dimLandscape.height, 3 / 2, "Landscape aspect ratio must be 3:2");
 
   const svgLandscape = generateCardSvg({
@@ -305,14 +305,14 @@ await test("8. Card renderer produces exact dimensions for both Config A (1200x8
     withDescription: false,
     darkTheme: true,
   });
-  assert.ok(svgLandscape.includes('viewBox="0 0 1200 800"'), "Landscape SVG viewBox must be 0 0 1200 800");
+  assert.ok(svgLandscape.includes('viewBox="0 0 969 646"'), "Landscape SVG viewBox must be 0 0 969 646");
 
   const dimPortrait = getCardDimensions(true, {
     title: "Portrait Card Verification",
     excerpt: "Detailed description of content.",
   });
-  assert.strictEqual(dimPortrait.width, 1200, "Portrait width must be 1200");
-  assert.strictEqual(dimPortrait.height, 1600, "Portrait height must be 1600");
+  assert.strictEqual(dimPortrait.width, 969, "Portrait width must be 969");
+  assert.strictEqual(dimPortrait.height, 1292, "Portrait height must be 1292");
 
   const svgPortrait = generateCardSvg({
     title: "Portrait Card Verification",
@@ -321,7 +321,7 @@ await test("8. Card renderer produces exact dimensions for both Config A (1200x8
     withDescription: true,
     darkTheme: true,
   });
-  assert.ok(svgPortrait.includes('viewBox="0 0 1200 1600"'), "Portrait SVG viewBox must match 0 0 1200 1600");
+  assert.ok(svgPortrait.includes('viewBox="0 0 969 1292"'), "Portrait SVG viewBox must match 0 0 969 1292");
 });
 
 console.log("\n------------------------------------------------------------------");

@@ -322,7 +322,7 @@ await test("14. Closing and reopening modal restores default state", async () =>
 // ---------------------------------------------------------------------------------
 // Acceptance Criterion 15 & 16: Button Width, Centering, and Alignment
 // ---------------------------------------------------------------------------------
-await test("15. Unified component is horizontally centered with 70% width on desktop/tablet layouts", async () => {
+await test("15. Unified component is horizontally centered with 75% width on desktop/tablet layouts", async () => {
   const generateBtn = Array.from(container.querySelectorAll("button")).find((b) =>
     b.textContent?.includes("Generate Cogmit Card")
   );
@@ -334,8 +334,16 @@ await test("15. Unified component is horizontally centered with 70% width on des
   const classList = unifiedBar.className;
   assert.ok(classList.includes("mx-auto"), "Unified component must be horizontally centered (mx-auto)");
   assert.ok(
-    classList.includes("w-[70%]") || classList.includes("sm:w-[70%]"),
-    "Unified component must occupy 70% width on desktop/tablet layouts"
+    classList.includes("w-[75%]") || classList.includes("sm:w-[75%]"),
+    "Unified component must occupy 75% width on desktop/tablet layouts"
+  );
+  assert.ok(
+    classList.includes("border-[#4B0084]"),
+    "Unified component must preserve YV Indigo Violet border"
+  );
+  assert.ok(
+    classList.includes("bg-[#1E0038]"),
+    "Unified component must preserve background color"
   );
   assert.ok(
     classList.includes("w-full"),
@@ -375,6 +383,204 @@ await test("16. Sharing action button group is horizontally centered and standal
   assert.ok(copyCardBtn, "Copy Card button must exist");
   assert.ok(toggleDesc?.className.includes("justify-center"), "Description button must be center-aligned");
   assert.ok(toggleDark?.className.includes("justify-center"), "Dark button must be center-aligned");
+});
+
+// ---------------------------------------------------------------------------------
+// Acceptance Criterion 17: Correct Clickable Area
+// ---------------------------------------------------------------------------------
+await test("17. Clicking surrounding container or empty space does NOT trigger card generation; only the button does", async () => {
+  // Reset modal state by closing and reopening
+  const closeXBtn = container.querySelector("button[aria-label='Close']");
+  await act(async () => {
+    closeXBtn.click();
+    await new Promise((r) => setTimeout(r, 60));
+  });
+
+  await act(async () => {
+    setOpenState(true);
+    await new Promise((r) => setTimeout(r, 60));
+  });
+
+  const generateBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Generate Cogmit Card")
+  );
+  assert.ok(generateBtn, "Generate Cogmit Card button must exist");
+
+  const unifiedBar = generateBtn.closest("div");
+  assert.ok(unifiedBar, "Unified bar container must exist");
+
+  // Click the surrounding container / empty space directly
+  await act(async () => {
+    unifiedBar.click();
+    await new Promise((r) => setTimeout(r, 20));
+  });
+
+  // Nothing should be triggered
+  assert.strictEqual(
+    container.querySelector("img[alt^='Cogmit Card']"),
+    null,
+    "Card preview must NOT be generated when clicking container"
+  );
+  assert.ok(
+    Array.from(container.querySelectorAll("button")).some((b) =>
+      b.textContent?.includes("Generate Cogmit Card")
+    ),
+    "Primary button must remain 'Generate Cogmit Card'"
+  );
+
+  // Now click the actual Generate button
+  await act(async () => {
+    generateBtn.click();
+    await new Promise((r) => setTimeout(r, 20));
+  });
+
+  // Generation should now be triggered
+  assert.ok(
+    container.querySelector("img[alt^='Cogmit Card']"),
+    "Card preview must be rendered when clicking the Generate button"
+  );
+  assert.ok(
+    Array.from(container.querySelectorAll("button")).some((b) =>
+      b.textContent?.includes("Download Cogmit Card")
+    ),
+    "Primary button must change to 'Download Cogmit Card'"
+  );
+});
+
+// ---------------------------------------------------------------------------------
+// Acceptance Criterion 18: Description and Dark Toggle Active States
+// ---------------------------------------------------------------------------------
+await test("18. Description and Dark toggles display YV Yellow (#FFFF11) text on YV Indigo Violet (#4B0084) when active", async () => {
+  // Click edit button to restore options
+  const editBtn = container.querySelector("#btn-change-options");
+  if (editBtn) {
+    await act(async () => {
+      editBtn.click();
+    });
+  }
+
+  const toggleDesc = container.querySelector("#toggle-with-description");
+  const toggleDark = container.querySelector("#toggle-dark-theme");
+  assert.ok(toggleDesc && toggleDark, "Both toggles must exist");
+
+  // Default state: Description is inactive, Dark is active
+  assert.ok(
+    toggleDark.className.includes("bg-[#4B0084]"),
+    "Active Dark button must have YV Indigo Violet (#4B0084) background"
+  );
+  assert.ok(
+    toggleDark.className.includes("text-[#FFFF11]"),
+    "Active Dark button must have YV Yellow (#FFFF11) text"
+  );
+  assert.ok(
+    toggleDesc.className.includes("bg-transparent"),
+    "Inactive Description button must have transparent background"
+  );
+  assert.ok(
+    toggleDesc.className.includes("text-white/80"),
+    "Inactive Description button must have white/80 text"
+  );
+
+  // Activate Description
+  await act(async () => {
+    toggleDesc.click();
+  });
+  assert.ok(
+    toggleDesc.className.includes("bg-[#4B0084]"),
+    "Active Description button must have YV Indigo Violet (#4B0084) background"
+  );
+  assert.ok(
+    toggleDesc.className.includes("text-[#FFFF11]"),
+    "Active Description button must have YV Yellow (#FFFF11) text"
+  );
+
+  // Deactivate Dark
+  await act(async () => {
+    toggleDark.click();
+  });
+  assert.ok(
+    toggleDark.className.includes("bg-transparent"),
+    "Inactive Dark button must have transparent background"
+  );
+  assert.ok(
+    toggleDark.className.includes("text-white/80"),
+    "Inactive Dark button must have white/80 text"
+  );
+});
+
+// ---------------------------------------------------------------------------------
+// Acceptance Criterion 19: Generated Card has NO outer outline border & preserves dimensions
+// ---------------------------------------------------------------------------------
+await test("19. Generated Card has NO outer outline border & preserves exact dimensions", async () => {
+  const { generateCardSvg } = await import("../src/lib/card-renderer.ts");
+
+  // Landscape
+  const landscapeSvg = generateCardSvg({
+    title: "Quantum Cognitive Architecture",
+    excerpt: "Exploring synapse distribution",
+    url: "https://cogmit.com/cogs/quantum",
+    withDescription: false,
+    darkTheme: true,
+  });
+
+  assert.ok(!landscapeSvg.includes("outer-border"), "Landscape SVG must NOT contain outer-border class or rect");
+  assert.ok(landscapeSvg.includes('viewBox="0 0 969 646"'), "Landscape must preserve 969x646 (3:2) viewBox");
+  assert.ok(landscapeSvg.includes('width="969"'), "Landscape width must be 969");
+  assert.ok(landscapeSvg.includes('height="646"'), "Landscape height must be 646");
+  assert.ok(landscapeSvg.includes('<rect width="969" height="646" class="bg"'), "Landscape preserves background surface rect");
+
+  // Portrait
+  const portraitSvg = generateCardSvg({
+    title: "Quantum Cognitive Architecture",
+    excerpt: "Exploring synapse distribution in cognitive models.",
+    url: "https://cogmit.com/cogs/quantum",
+    withDescription: true,
+    darkTheme: true,
+  });
+
+  assert.ok(!portraitSvg.includes("outer-border"), "Portrait SVG must NOT contain outer-border class or rect");
+  assert.ok(portraitSvg.includes('viewBox="0 0 969 1292"'), "Portrait must preserve 969x1292 (3:4) viewBox");
+  assert.ok(portraitSvg.includes('width="969"'), "Portrait width must be 969");
+  assert.ok(portraitSvg.includes('height="1292"'), "Portrait height must be 1292");
+  assert.ok(portraitSvg.includes('<rect width="969" height="1292" class="bg"'), "Portrait preserves background surface rect");
+
+  // UI Preview Container in modal
+  // Generate a card in modal to inspect preview container
+  const generateBtn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes("Generate Cogmit Card")
+  );
+  if (generateBtn) {
+    await act(async () => {
+      generateBtn.click();
+    });
+  }
+
+  const previewImg = container.querySelector("img[alt^='Cogmit Card']");
+  assert.ok(previewImg, "Preview image must exist");
+  const previewDiv = previewImg.closest("div");
+  assert.ok(previewDiv, "Preview container div must exist");
+
+  assert.ok(!previewDiv.className.includes("border-2"), "Preview container must NOT have border-2");
+  assert.ok(!previewDiv.className.includes("shadow-sm"), "Preview container must NOT have shadow-sm outline frame");
+  assert.strictEqual(previewDiv.style.borderColor, "", "Preview container must NOT have inline borderColor");
+});
+
+// ---------------------------------------------------------------------------------
+// Acceptance Criterion 20: Footer preservation
+// ---------------------------------------------------------------------------------
+await test("20. Footer does NOT contain 'at COGMIT' and preserves canonical URL wording", async () => {
+  const { generateCardSvg } = await import("../src/lib/card-renderer.ts");
+  const svg = generateCardSvg({
+    title: "Footer Verification",
+    excerpt: "Testing footer wording",
+    url: "https://cogmit.com/cogs/footer",
+    withDescription: true,
+    darkTheme: true,
+  });
+
+  assert.ok(!svg.includes("at COGMIT"), "Footer must NOT contain 'at COGMIT'");
+  assert.ok(svg.includes("Full:"), "Footer must contain 'Full:'");
+  assert.ok(svg.includes("cogmit.com"), "Footer must contain domain");
 });
 
 console.log("\n------------------------------------------------------------------");

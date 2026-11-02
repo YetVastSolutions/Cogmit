@@ -426,7 +426,7 @@ export function ShareCogmitModal({
 
           {/* Generation Error Alert */}
           {generationError && (
-            <div className="w-full sm:w-[70%] mx-auto rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive flex items-center justify-between gap-2">
+            <div className="w-full sm:w-[75%] mx-auto rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive flex items-center justify-between gap-2">
               <span>{generationError}</span>
               <Button
                 type="button"
@@ -442,13 +442,13 @@ export function ShareCogmitModal({
           )}
 
           {/* Unified Primary Card Action & Configuration Bar */}
-          <div className="w-full sm:w-[70%] mx-auto rounded-lg border-2 border-[#4B0084] bg-[#1E0038] p-1.5 flex items-center justify-between gap-2 shadow-sm">
+          <div className="w-full sm:w-[75%] mx-auto rounded-lg border-2 border-[#4B0084] bg-[#1E0038] p-1.5 flex items-center justify-between gap-2 shadow-sm">
             {/* Left Section: Primary Action (Generate / Download) */}
             <button
               type="button"
               onClick={!cardGenerated ? handleGenerate : handleDownloadCard}
               disabled={!cardGenerated ? isGenerating : isExporting || !cardSvg}
-              className="flex items-center gap-2 text-sm font-semibold text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded flex-1 text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 min-w-0"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
             >
               {!cardGenerated ? (
                 <>
@@ -480,7 +480,7 @@ export function ShareCogmitModal({
                   }}
                   className={`inline-flex items-center justify-center rounded px-2.5 py-1 text-xs font-medium border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     withDescription
-                      ? "bg-[#4B0084] border-[#4B0084] text-white shadow-sm font-semibold"
+                      ? "bg-[#4B0084] border-[#4B0084] text-[#FFFF11] shadow-sm font-semibold"
                       : "bg-transparent border-[#4B0084] text-white/80 hover:bg-[#4B0084]/20 hover:text-white"
                   }`}
                 >
@@ -501,7 +501,7 @@ export function ShareCogmitModal({
                   }}
                   className={`inline-flex items-center justify-center rounded px-2.5 py-1 text-xs font-medium border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     darkTheme
-                      ? "bg-[#4B0084] border-[#4B0084] text-white shadow-sm font-semibold"
+                      ? "bg-[#4B0084] border-[#4B0084] text-[#FFFF11] shadow-sm font-semibold"
                       : "bg-transparent border-[#4B0084] text-white/80 hover:bg-[#4B0084]/20 hover:text-white"
                   }`}
                 >
@@ -542,10 +542,9 @@ export function ShareCogmitModal({
             ) : (
               /* State B: After Clicking Generate Cogmit Card — Generated Cogmit Card preview */
               <div
-                className={`overflow-hidden rounded-lg border-2 shadow-sm ${previewBg} flex items-center justify-center w-full max-w-full ${
+                className={`overflow-hidden rounded-lg ${previewBg} flex items-center justify-center w-full max-w-full ${
                   withDescription ? "aspect-[2/3]" : "aspect-[3/2]"
                 }`}
-                style={{ borderColor: "#4B0084", boxSizing: "border-box" }}
               >
                 {previewUrl && !imageError ? (
                   // eslint-disable-next-line @next/next/no-img-element

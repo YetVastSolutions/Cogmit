@@ -96,7 +96,7 @@ test("Portrait SVG cleanly renders 197-character title", () => {
     withDescription: true,
   });
 
-  assert.ok(svg.includes("viewBox=\"0 0 1200 1600\""));
+  assert.ok(svg.includes("viewBox=\"0 0 969 1292\""));
   assert.ok(svg.includes("class=\"title\""));
   assert.ok(svg.includes("Designing Scalable Distributed"));
   assert.ok(svg.includes("Resilient Edge Node"));
@@ -111,7 +111,7 @@ test("Landscape SVG cleanly renders 197-character title", () => {
     withDescription: false,
   });
 
-  assert.ok(svg.includes("viewBox=\"0 0 1200 800\""));
+  assert.ok(svg.includes("viewBox=\"0 0 969 646\""));
   assert.ok(svg.includes("class=\"title\""));
   assert.ok(svg.includes("Designing Scalable Distributed"));
   assert.ok(svg.includes("Resilient Edge Node"));

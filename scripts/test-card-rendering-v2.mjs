@@ -52,7 +52,7 @@ assert.strictEqual(title147.length, 147, "Test title must be exactly 147 charact
 const title197 = "Designing Scalable Distributed Graph Data Structures for Persistent Cognitive Context and Continuous Agent Verification in Real-World Enterprise Systems with Fault Tolerance and Resilient Edge Node";
 assert.strictEqual(title197.length, 197, "Test title must be exactly 197 characters");
 
-test("Landscape card uses strictly 3:2 aspect ratio (1200x800) when description is disabled", () => {
+test("Landscape card uses strictly 3:2 aspect ratio (969x646) when description is disabled", () => {
   const svg = generateCardSvg({
     title: title147,
     excerpt: "Should be ignored when withDescription is false",
@@ -61,14 +61,14 @@ test("Landscape card uses strictly 3:2 aspect ratio (1200x800) when description 
     withDescription: false,
   });
 
-  assert.ok(svg.includes('viewBox="0 0 1200 800"'), "viewBox must be exactly 0 0 1200 800");
-  assert.ok(svg.includes('width="1200"'), "width attribute must be 1200");
-  assert.ok(svg.includes('height="800"'), "height attribute must be 800");
-  assert.strictEqual(1200 / 800, 3 / 2, "Aspect ratio must be strictly 3:2");
+  assert.ok(svg.includes('viewBox="0 0 969 646"'), "viewBox must be exactly 0 0 969 646");
+  assert.ok(svg.includes('width="969"'), "width attribute must be 969");
+  assert.ok(svg.includes('height="646"'), "height attribute must be 646");
+  assert.strictEqual(969 / 646, 3 / 2, "Aspect ratio must be strictly 3:2");
 
   const dims = getCardDimensions(false);
-  assert.strictEqual(dims.width, 1200);
-  assert.strictEqual(dims.height, 800);
+  assert.strictEqual(dims.width, 969);
+  assert.strictEqual(dims.height, 646);
 });
 
 test("147-character title in 3:2 landscape wraps without overflowing horizontal card boundaries", () => {
@@ -80,19 +80,19 @@ test("147-character title in 3:2 landscape wraps without overflowing horizontal 
     withDescription: false,
   });
 
-  // Check usable width is 1040px (1200 - 80*2) and text width is 1020px
-  const lines = wrapTextByWidth(title147, 1020, 56, true);
+  // Check usable width is 839px (969 - 65*2) and text width is 823px (839 - 16)
+  const lines = wrapTextByWidth(title147, 823, 45, false);
   assert.ok(lines.length >= 4, "147-char title should wrap across 4 or more lines in 3:2 ratio");
 
   // Reassembled words must match original title completely (no missing words)
   assert.strictEqual(lines.join(" "), title147, "All words of 147-character title must be preserved");
 
-  // Every line must measure <= 1040px width at 56px bold font
+  // Every line must measure <= 839px width at 45px font
   for (const line of lines) {
-    const lineWidth = estimateStringWidth(line, 56, true);
+    const lineWidth = estimateStringWidth(line, 45, false);
     assert.ok(
-      lineWidth <= 1040,
-      `Line "${line}" estimated width (${lineWidth}px) exceeds usable width of 1040px`
+      lineWidth <= 839,
+      `Line "${line}" estimated width (${lineWidth}px) exceeds usable width of 839px`
     );
   }
 
@@ -113,19 +113,18 @@ test("197-character title in 3:2 landscape wraps without overflowing horizontal 
     withDescription: false,
   });
 
-  // Check usable width is 1040px (1200 - 80*2) and text width is 1020px
-  const lines = wrapTextByWidth(title197, 1020, 56, true);
+  const lines = wrapTextByWidth(title197, 823, 45, false);
   assert.ok(lines.length >= 4, "197-char title should wrap across 4 or more lines in 3:2 ratio");
 
   // Reassembled words must match original title completely (no missing words)
   assert.strictEqual(lines.join(" "), title197, "All words of 197-character title must be preserved");
 
-  // Every line must measure <= 1040px width at 56px bold font
+  // Every line must measure <= 839px width at 45px font
   for (const line of lines) {
-    const lineWidth = estimateStringWidth(line, 56, true);
+    const lineWidth = estimateStringWidth(line, 45, false);
     assert.ok(
-      lineWidth <= 1040,
-      `Line "${line}" estimated width (${lineWidth}px) exceeds usable width of 1040px`
+      lineWidth <= 839,
+      `Line "${line}" estimated width (${lineWidth}px) exceeds usable width of 839px`
     );
   }
 
@@ -182,14 +181,14 @@ test("extractDescription helper uses 597 characters", () => {
 });
 
 // -----------------------------------------------------------------------------
-// 4. Portrait Card Target Dimensions (1200x1600, 2:3 ratio)
+// 4. Portrait Card Target Dimensions (969x1292, 3:4 ratio)
 // -----------------------------------------------------------------------------
-test("Portrait card uses strictly 2:3 aspect ratio (1200x1600) when description is enabled", () => {
+test("Portrait card uses strictly 3:4 aspect ratio (969x1292) when description is enabled", () => {
   const shortTitle = "Quick Cogmit";
   const shortDesc = "A brief cognitive insight.";
 
   const height = calculatePortraitHeight({ title: shortTitle, excerpt: shortDesc });
-  assert.strictEqual(height, 1600, `Portrait target height must be 1600px (got ${height}px)`);
+  assert.strictEqual(height, 1292, `Portrait target height must be 1292px (got ${height}px)`);
 
   const svg = generateCardSvg({
     title: shortTitle,
@@ -199,27 +198,27 @@ test("Portrait card uses strictly 2:3 aspect ratio (1200x1600) when description 
     withDescription: true,
   });
 
-  assert.ok(svg.includes('viewBox="0 0 1200 1600"'), "SVG viewBox should be '0 0 1200 1600'");
-  assert.ok(svg.includes('width="1200"'), "SVG width attribute should be 1200");
-  assert.ok(svg.includes('height="1600"'), "SVG height attribute should be 1600");
-  assert.strictEqual(height, 1600, "Portrait height must be 1600");
-  assert.ok(svg.includes(`height="${1600 - 32 * 2}"`), "Outer border rect height should match inset content height");
+  assert.ok(svg.includes('viewBox="0 0 969 1292"'), "SVG viewBox should be '0 0 969 1292'");
+  assert.ok(svg.includes('width="969"'), "SVG width attribute should be 969");
+  assert.ok(svg.includes('height="1292"'), "SVG height attribute should be 1292");
+  assert.strictEqual(height, 1292, "Portrait height must be 1292");
+  assert.ok(!svg.includes("outer-border"), "Generated card must have no outer-border");
 });
 
-test("Medium descriptions scale cleanly within 1200x1600 Portrait target dimensions", () => {
+test("Medium descriptions scale cleanly within 969x1292 Portrait target dimensions", () => {
   const medDesc = "Cognitive architectures represent the next foundational paradigm shift in AI system design. Rather than relying on fragile single-shot inference or unstructured conversation loops, a cognitive architecture provides deterministic state machines, durable semantic memory, and verifiable self-correction boundaries. Each Cogmit represents an immutable unit of cognition for specialized autonomous agents.".slice(0, 397);
   assert.strictEqual(medDesc.length, 397);
 
   const height = calculatePortraitHeight({ title: "Medium Cogmit Title", excerpt: medDesc });
-  assert.strictEqual(height, 1600, "Medium card height should be 1600px");
+  assert.strictEqual(height, 1292, "Medium card height should be 1292px");
 });
 
-test("Full 597-character description with 147-character title renders within 1200x1600 Portrait canvas", () => {
+test("Full 597-character description with 147-character title renders within 969x1292 Portrait canvas", () => {
   const fullDesc = "Cognitive architectures represent the next foundational paradigm shift in AI system design. Rather than relying on fragile single-shot inference or unstructured conversation loops, a cognitive architecture provides deterministic state machines, durable semantic memory, and verifiable self-correction boundaries. Each Cogmit represents an immutable unit of cognition that can be composed into collaborative graphs of specialized autonomous agents. By grounding intelligence in structured cognitive artifacts, systems achieve unprecedented levels of reliability, explainability, and autonomy across workflows.".slice(0, 597);
   assert.strictEqual(fullDesc.length, 597);
 
   const height = calculatePortraitHeight({ title: title147, excerpt: fullDesc });
-  assert.strictEqual(height, 1600, "Full 597-char card height should be 1600px");
+  assert.strictEqual(height, 1292, "Full 597-char card height should be 1292px");
 
   const svg = generateCardSvg({
     title: title147,
@@ -237,12 +236,12 @@ test("Full 597-character description with 147-character title renders within 120
   assert.ok(svg.includes(fullDesc.slice(-30)));
 });
 
-test("Full 597-character description with 197-character title renders within 1200x1600 Portrait canvas", () => {
+test("Full 597-character description with 197-character title renders within 969x1292 Portrait canvas", () => {
   const fullDesc = "Cognitive architectures represent the next foundational paradigm shift in AI system design. Rather than relying on fragile single-shot inference or unstructured conversation loops, a cognitive architecture provides deterministic state machines, durable semantic memory, and verifiable self-correction boundaries. Each Cogmit represents an immutable unit of cognition that can be composed into collaborative graphs of specialized autonomous agents. By grounding intelligence in structured cognitive artifacts, systems achieve unprecedented levels of reliability, explainability, and autonomy across workflows.".slice(0, 597);
   assert.strictEqual(fullDesc.length, 597);
 
   const height = calculatePortraitHeight({ title: title197, excerpt: fullDesc });
-  assert.strictEqual(height, 1600, "Full 597-char card height should be 1600px");
+  assert.strictEqual(height, 1292, "Full 597-char card height should be 1292px");
 
   const svg = generateCardSvg({
     title: title197,
@@ -264,7 +263,7 @@ test("Full 597-character description with 197-character title renders within 120
 // -----------------------------------------------------------------------------
 // 5. Header and Footer Typography Hierarchy
 // -----------------------------------------------------------------------------
-test("Header brand title and username are visibly larger than description text (36px vs 28px) in both orientations", () => {
+test("Header brand title and username are visibly larger than description text (49px vs 37px) in both orientations", () => {
   for (const withDescription of [false, true]) {
     const svg = generateCardSvg({
       title: "Test Cogmit",
@@ -286,15 +285,15 @@ test("Header brand title and username are visibly larger than description text (
     const authorSize = parseInt(authorMatch[1], 10);
     const descSize = parseInt(excerptMatch[1], 10);
 
-    assert.strictEqual(brandSize, 36, "COGMIT brand title must be 36px");
-    assert.strictEqual(authorSize, 36, "Username must be 36px");
-    assert.strictEqual(descSize, 28, "Description must be 28px");
+    assert.strictEqual(brandSize, 49, "COGMIT brand title must be 49px");
+    assert.strictEqual(authorSize, 49, "Username must be 49px");
+    assert.strictEqual(descSize, 37, "Description must be 37px");
     assert.ok(brandSize > descSize, "Header brand must be visibly larger than description text");
     assert.ok(authorSize > descSize, "Header author must be visibly larger than description text");
   }
 });
 
-test("Footer text elements match description font size exactly (28px) in both orientations", () => {
+test("Footer text elements match description font size exactly (37px) in both orientations", () => {
   for (const withDescription of [false, true]) {
     const svg = generateCardSvg({
       title: "Test Cogmit",
@@ -316,9 +315,9 @@ test("Footer text elements match description font size exactly (28px) in both or
     assert.ok(labelMatch, "url-label style must be present");
     assert.ok(excerptMatch, "description style must be present");
 
-    assert.strictEqual(introMatch[1], "28", "url-intro font size must be 28px");
-    assert.strictEqual(labelMatch[1], "28", "url-label font size must be 28px");
-    assert.strictEqual(excerptMatch[1], "28", "description font size must be 28px");
+    assert.strictEqual(introMatch[1], "37", "url-intro font size must be 37px");
+    assert.strictEqual(labelMatch[1], "37", "url-label font size must be 37px");
+    assert.strictEqual(excerptMatch[1], "37", "description font size must be 37px");
     assert.strictEqual(introMatch[1], excerptMatch[1], "url-intro must match description font size");
     assert.strictEqual(labelMatch[1], excerptMatch[1], "url-label must match description font size");
   }
@@ -353,7 +352,7 @@ test("Light theme preserves light surface background, YV Indigo Violet border, a
   });
 
   assert.ok(lightSvg.includes(".bg { fill: #F8F5FA; }"), "Light theme must have #F8F5FA bg");
-  assert.ok(lightSvg.includes(".title { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Inter\", sans-serif; font-size: 44px; font-weight: 800; fill: #17121C;"), "Light theme title must be #17121C");
+  assert.ok(lightSvg.includes(".title { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Inter\", sans-serif; font-size: 45px; font-weight: 600; fill: #17121C;"), "Light theme title must be #17121C");
   assert.ok(lightSvg.includes(COLOR_INDIGO_VIOLET), "Must have YV Indigo Violet border");
 });
 
@@ -362,21 +361,21 @@ test("Light theme preserves light surface background, YV Indigo Violet border, a
 // -----------------------------------------------------------------------------
 test("getCardDimensions dynamically produces matching dimensions for export", () => {
   const landscapeDims = getCardDimensions(false);
-  assert.strictEqual(landscapeDims.width, 1200);
-  assert.strictEqual(landscapeDims.height, 800);
+  assert.strictEqual(landscapeDims.width, 969);
+  assert.strictEqual(landscapeDims.height, 646);
   assert.strictEqual(landscapeDims.width / landscapeDims.height, 3 / 2);
 
   const portraitDims = getCardDimensions(true);
-  assert.strictEqual(portraitDims.width, 1200);
-  assert.strictEqual(portraitDims.height, 1600);
+  assert.strictEqual(portraitDims.width, 969);
+  assert.strictEqual(portraitDims.height, 1292);
 
   const shortDims = getCardDimensions(true, { title: "Short", excerpt: "Short note" });
-  assert.strictEqual(shortDims.width, 1200);
-  assert.strictEqual(shortDims.height, 1600);
+  assert.strictEqual(shortDims.width, 969);
+  assert.strictEqual(shortDims.height, 1292);
 
   const longDims = getCardDimensions(true, { title: title147, excerpt: "A".repeat(597) });
-  assert.strictEqual(longDims.width, 1200);
-  assert.strictEqual(longDims.height, 1600);
+  assert.strictEqual(longDims.width, 969);
+  assert.strictEqual(longDims.height, 1292);
 });
 
 // -----------------------------------------------------------------------------
@@ -472,9 +471,9 @@ test("Footer preserves existing yellow color, JetBrains Mono typography, and fon
     darkTheme: true,
   });
 
-  // Verify CSS styles: JetBrains Mono font family, 28px font size, yellow color, 500/700 font weights
-  assert.ok(darkSvg.includes(".url-intro { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 28px; font-weight: 500; fill: #FFFF11;"), "Dark theme url-intro must be yellow (#FFFF11) with 500 weight");
-  assert.ok(darkSvg.includes(".url-label { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 28px; font-weight: 700; fill: #FFFF11;"), "Dark theme url-label must be yellow (#FFFF11) with 700 weight");
+  // Verify CSS styles: JetBrains Mono font family, 37px font size, yellow color, 400 font weights
+  assert.ok(darkSvg.includes(".url-intro { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 37px; font-weight: 400; fill: #FFFF11;"), "Dark theme url-intro must be yellow (#FFFF11) with 400 weight");
+  assert.ok(darkSvg.includes(".url-label { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 37px; font-weight: 400; fill: #FFFF11;"), "Dark theme url-label must be yellow (#FFFF11) with 400 weight");
 
   const lightSvg = generateCardSvg({
     title: "Light Theme Typography",
@@ -484,8 +483,8 @@ test("Footer preserves existing yellow color, JetBrains Mono typography, and fon
     darkTheme: false,
   });
 
-  assert.ok(lightSvg.includes(".url-intro { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 28px; font-weight: 500; fill: #4B0084;"), "Light theme url-intro must be indigo violet (#4B0084)");
-  assert.ok(lightSvg.includes(".url-label { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 28px; font-weight: 700; fill: #4B0084;"), "Light theme url-label must be indigo violet (#4B0084)");
+  assert.ok(lightSvg.includes(".url-intro { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 37px; font-weight: 400; fill: #4B0084;"), "Light theme url-intro must be indigo violet (#4B0084)");
+  assert.ok(lightSvg.includes(".url-label { font-family: \"JetBrains Mono\", Consolas, Monaco, monospace; font-size: 37px; font-weight: 400; fill: #4B0084;"), "Light theme url-label must be indigo violet (#4B0084)");
 });
 
 console.log("\n------------------------------------------------------------------");
