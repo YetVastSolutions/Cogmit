@@ -2,7 +2,7 @@
  * Deterministic Cogmit Card Renderer
  * Follows YVS Visual Language and Cogmit specifications:
  * - Deterministic SVG generation with exact text rendering.
- * - Two independent layouts: withDescription (portrait, 2:3) / landscape (3:2), darkTheme.
+ * - Two independent layouts: withDescription (portrait, 3:4) / landscape (3:2), darkTheme.
  * - Dark theme: black background, YV Indigo Violet border/dividers, YV Yellow text.
  * - Light theme: neutral surface background, YV Indigo Violet border, dark foreground text.
  * - Title limit: 197 characters. Description limit: 597 characters.
@@ -14,8 +14,8 @@
 export const TEMPLATE_VERSION = "1.4.0";
 
 // Exact intrinsic canvas dimensions
-export const CARD_WIDTH_PORTRAIT = 969;  // 2:3 portrait
-export const CARD_HEIGHT_PORTRAIT = 1454;
+export const CARD_WIDTH_PORTRAIT = 969;  // 3:4 portrait
+export const CARD_HEIGHT_PORTRAIT = 1292;
 export const CARD_WIDTH_LANDSCAPE = 969; // 3:2 landscape
 export const CARD_HEIGHT_LANDSCAPE = 646;
 
@@ -25,7 +25,7 @@ const FONT_HEADER_WEIGHT = 800;
 const FONT_TITLE_SIZE = 41;
 const FONT_TITLE_WEIGHT = 600;
 const FONT_BODY_SIZE = 35;
-const FONT_BODY_WEIGHT = 500;
+const FONT_BODY_WEIGHT = 400;
 
 // Legacy exports kept for API compatibility
 export const CARD_WIDTH = CARD_WIDTH_PORTRAIT;
@@ -233,8 +233,8 @@ export function wrapText(text: string, maxCharsPerLine: number): string[] {
 }
 
 /**
- * Returns the fixed target height of a portrait Cogmit card (1454px).
- * Target dimensions: 969 × 1454px (2:3 width:height ratio).
+ * Returns the fixed target height of a portrait Cogmit card (1292px).
+ * Target dimensions: 969 × 1292px (3:4 width:height ratio).
  */
 export function calculatePortraitHeight(_opts?: Partial<CardTemplateOptions>): number {
   return CARD_HEIGHT_PORTRAIT;
@@ -350,7 +350,7 @@ function buildStyles(c: ThemeColors): string {
 function buildHeader(paddingX: number, headerY: number, safeUsername: string): string {
   // Each side of " | " gets the same dx (12px), giving equal optical distance
   return `<text x="${paddingX}" y="${headerY}">
-    <tspan class="brand">COGMIT</tspan><tspan dx="12" class="sep">|</tspan><tspan dx="12" class="author-name">${safeUsername}</tspan>
+    <tspan class="brand">COGMIT</tspan><tspan dx="12" class="sep">.</tspan><tspan dx="12" class="author-name">${safeUsername}</tspan>
   </text>`;
 }
 
@@ -435,7 +435,7 @@ function buildFooter(
   <text x="${paddingX}" y="${footerY}" class="url-intro">Full at COGMIT: <tspan class="url-label">${safeDomain}</tspan></text>`;
 }
 
-// ─── Portrait card (2:3, with description) ────────────────────────────────────
+// ─── Portrait card (3:4, with description) ────────────────────────────────────
 
 function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string {
   const { title, excerpt, url, authorId } = opts;
@@ -446,7 +446,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const safeUsername = escapeXml(authorId ? authorId.toLowerCase() : "");
   const displayDomain = getCanonicalDomain(url);
 
-  // Geometry is scaled for the exact 969 × 1454 portrait canvas.
+  // Geometry is scaled for the exact 969 × 1292 portrait canvas.
   const paddingX = 65;
   const borderInset = 26;
   const borderRadius = 20;
@@ -471,7 +471,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const excerptStartY = divider1Y + 44;
   const excerptLineHeight = 47;
 
-  // Footer is anchored to the bottom safe area of the 1454px canvas.
+  // Footer is anchored to the bottom safe area of the 1292px canvas.
   const divider2Y = height - 124;
   const footerY = divider2Y + 55;
 
@@ -585,7 +585,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
  * Generates deterministic SVG XML for the Cogmit Card.
  *
  * - withDescription=false (default) → 969 × 646 (3:2 landscape), no description
- * - withDescription=true            → 969 × 1454 (2:3 portrait), with description
+ * - withDescription=true            → 969 × 1292 (3:4 portrait), with description
  * - darkTheme=true (default)        → black bg, YV Yellow text, YV Indigo borders
  * - darkTheme=false                 → light neutral bg, dark foreground text
  */
