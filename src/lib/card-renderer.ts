@@ -11,7 +11,7 @@
  * - Deterministic PNG/JPEG rasterization via HTML5 Canvas.
  */
 
-export const TEMPLATE_VERSION = "1.4.0";
+export const TEMPLATE_VERSION = "1.6.0";
 
 // Exact intrinsic canvas dimensions
 export const CARD_WIDTH_PORTRAIT = 969;  // 3:4 portrait
@@ -24,7 +24,7 @@ const FONT_HEADER_SIZE = 45;
 const FONT_HEADER_WEIGHT = 800;
 const FONT_TITLE_SIZE = 43;
 const FONT_TITLE_WEIGHT = 600;
-const FONT_BODY_SIZE = 35;
+const FONT_BODY_SIZE = 37;
 const FONT_BODY_WEIGHT = 400;
 
 // Legacy exports kept for API compatibility
@@ -455,21 +455,21 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const maxTextWidth = usableWidth - 16;
 
   // Title and description use the shared typography tokens.
-  const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, FONT_TITLE_SIZE, true);
+  const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, FONT_TITLE_SIZE, false);
   const excerptLines = excerpt
-    ? wrapTextByWidth(excerpt, maxTextWidth, FONT_BODY_SIZE, true)
+    ? wrapTextByWidth(excerpt, maxTextWidth, FONT_BODY_SIZE, false)
     : [];
 
   const headerY = 91;
   const headerDividerY = 114;
 
   const titleStartY = 190;
-  const titleLineHeight = 50;
+  const titleLineHeight = 54;
   const titleEndY = titleStartY + Math.max(0, titleLines.length - 1) * titleLineHeight;
 
   const divider1Y = titleEndY + 36;
   const excerptStartY = divider1Y + 44;
-  const excerptLineHeight = 47;
+  const excerptLineHeight = 48;
 
   // Footer is anchored to the bottom safe area of the 1292px canvas.
   const divider2Y = height - 124;
@@ -533,7 +533,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
     title || "Untitled Cogmit",
     maxTextWidth,
     FONT_TITLE_SIZE,
-    true
+    false
   );
 
   const headerY = 91;
@@ -543,7 +543,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const divider2Y = height - 124;
   const footerY = divider2Y + 55;
 
-  const titleLineHeight = 50;
+  const titleLineHeight = 54;
   const titleBlockHeight = (titleLines.length - 1) * titleLineHeight + FONT_TITLE_SIZE;
   const availableTitleHeight = divider2Y - headerDividerY;
 
