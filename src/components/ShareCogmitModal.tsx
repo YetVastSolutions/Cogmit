@@ -71,7 +71,7 @@ export function ShareCogmitModal({
     return extractExcerpt(content || description || "", CARD_DESCRIPTION_MAX, title);
   }, [content, description, title]);
 
-  // Truncate title to MAX_ROOTCOG_TITLE_LENGTH (147 chars) without appending ChildCog or body content
+  // Truncate title to MAX_ROOTCOG_TITLE_LENGTH (197 chars) without appending ChildCog or body content
   const truncatedTitle = useMemo(() => {
     return (title || "").slice(0, MAX_ROOTCOG_TITLE_LENGTH);
   }, [title]);

@@ -5,7 +5,7 @@
  * - Two independent options: withDescription (portrait content-driven) / landscape (4:3), darkTheme.
  * - Dark theme: black background, YV Indigo Violet border/dividers, YV Yellow text.
  * - Light theme: neutral surface background, YV Indigo Violet border, dark foreground text.
- * - Title limit: 147 characters. Description limit: 597 characters.
+ * - Title limit: 197 characters. Description limit: 597 characters.
  * - Safe XML escaping, text wrapping, and overflow prevention.
  * - In-memory client caching ensuring cards are reused and not regenerated unnecessarily.
  * - Deterministic PNG/JPEG rasterization via HTML5 Canvas.
@@ -29,7 +29,7 @@ export const COLOR_YELLOW = "#FFFF11";
 
 // Content limits
 /** Shared single source of truth for the RootCog title maximum length across Cogmit. */
-export const MAX_ROOTCOG_TITLE_LENGTH = 147;
+export const MAX_ROOTCOG_TITLE_LENGTH = 197;
 export const CARD_TITLE_MAX = MAX_ROOTCOG_TITLE_LENGTH;
 export const CARD_DESCRIPTION_MAX = 597;
 
@@ -520,7 +520,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const usableWidth = width - paddingX * 2; // 1040px
   const maxTextWidth = usableWidth - 20; // 1020px
 
-  // Title: natural multi-line wrapping within usable width, accommodates full 147 chars, never sliced
+  // Title: natural multi-line wrapping within usable width, accommodates full 197 chars, never sliced
   const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, 56, true);
 
   const headerY = 110;
@@ -564,7 +564,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   <!-- Divider below header -->
   <line x1="${paddingX}" y1="${headerDividerY}" x2="${width - paddingX}" y2="${headerDividerY}" class="divider" />
 
-  <!-- Title (full usable inner width, 147 chars accommodated, no border crossing) -->
+  <!-- Title (full usable inner width, 197 chars accommodated, no border crossing) -->
   <text x="${paddingX}" y="${titleStartY}" class="title">
     ${titleTspans}
   </text>

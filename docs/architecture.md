@@ -117,6 +117,13 @@ Cogmit utilizes **GitHub as its primary data store**.
 - Content is stored directly in a designated repository.
 - The repository structure expects a `cogsIndex.json` file, along with `projects/` and `NPPCogs/` directories.
 
+### RootCog Invariants & Specifications
+
+- **RootCog Title Maximum**: **197 characters** (authoritatively defined by constant `MAX_ROOTCOG_TITLE_LENGTH`).
+  - **Intentional Supersession**: This supersedes the previous 147-character limit (which historically superseded the earlier 77-character limit).
+  - **Uniform Enforcement**: Enforced identically across frontend inputs (`maxLength`, live character counters), Server Actions (`saveRootCog`, `createNewRootCog`), publication services (`publishCogmit`, `updateCogmitsIndex`), Card rendering, and Open Graph metadata generation.
+  - **Data Integrity**: Titles of exactly 197 characters are accepted. Titles exceeding 197 characters are rejected. Titles are never silently truncated on save or update. Existing titles, Cog IDs, and deleted Cog records retain their original data.
+
 Do not introduce a database migration or replacement without a documented reason and explicit architectural decision.
 
 ---

@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { ViewCog } from "@/components/ViewCog";
 import { headers } from "next/headers";
 import { Metadata } from "next";
-import { getCanonicalCogmitUrl } from "@/lib/utils";
+import { getCanonicalCogmitUrl, MAX_ROOTCOG_TITLE_LENGTH } from "@/lib/utils";
 
 interface PublicCogmitPageProps {
   params: Promise<{ authorId: string; cogmitId: string }>;
@@ -176,7 +176,7 @@ export async function generateMetadata({ params }: PublicCogmitPageProps): Promi
     || "https://cogmit.com";
   const url = getCanonicalCogmitUrl(origin, cogmit.authorId, cogmit.cogmitId);
   
-  const truncatedTitle = (cogmit.title || "").slice(0, 147);
+  const truncatedTitle = (cogmit.title || "").slice(0, MAX_ROOTCOG_TITLE_LENGTH);
   const sharingText = `Cogmit | ${cogmit.authorId}: ${truncatedTitle}`;
 
   return {

@@ -44,10 +44,13 @@ function test(name, fn) {
 }
 
 // -----------------------------------------------------------------------------
-// 1. Title overflow and 147-character title in 3:2 landscape
+// 1. Title overflow and 147-char / 197-character title in 3:2 landscape
 // -----------------------------------------------------------------------------
 const title147 = "Designing Scalable Distributed Graph Data Structures for Persistent Cognitive Context and Continuous Agent Verification in Real-World Enterprise Systems".slice(0, 147);
 assert.strictEqual(title147.length, 147, "Test title must be exactly 147 characters");
+
+const title197 = "Designing Scalable Distributed Graph Data Structures for Persistent Cognitive Context and Continuous Agent Verification in Real-World Enterprise Systems with Fault Tolerance and Resilient Edge Node";
+assert.strictEqual(title197.length, 197, "Test title must be exactly 197 characters");
 
 test("Landscape card uses strictly 3:2 aspect ratio (1200x800) when description is disabled", () => {
   const svg = generateCardSvg({
@@ -83,6 +86,39 @@ test("147-character title in 3:2 landscape wraps without overflowing horizontal 
 
   // Reassembled words must match original title completely (no missing words)
   assert.strictEqual(lines.join(" "), title147, "All words of 147-character title must be preserved");
+
+  // Every line must measure <= 1040px width at 56px bold font
+  for (const line of lines) {
+    const lineWidth = estimateStringWidth(line, 56, true);
+    assert.ok(
+      lineWidth <= 1040,
+      `Line "${line}" estimated width (${lineWidth}px) exceeds usable width of 1040px`
+    );
+  }
+
+  // Ensure SVG contains all lines and proper CSS classes
+  assert.ok(svg.includes("box-sizing: border-box"), "Must enforce box-sizing: border-box");
+  assert.ok(svg.includes("max-width: 100%"), "Must enforce max-width: 100%");
+  for (const line of lines) {
+    assert.ok(svg.includes(line), `SVG must render title line: "${line}"`);
+  }
+});
+
+test("197-character title in 3:2 landscape wraps without overflowing horizontal card boundaries", () => {
+  const svg = generateCardSvg({
+    title: title197,
+    excerpt: "",
+    url: "https://cogmit.com/cogmits/yvs/graph-data",
+    authorId: "yvs",
+    withDescription: false,
+  });
+
+  // Check usable width is 1040px (1200 - 80*2) and text width is 1020px
+  const lines = wrapTextByWidth(title197, 1020, 56, true);
+  assert.ok(lines.length >= 4, "197-char title should wrap across 4 or more lines in 3:2 ratio");
+
+  // Reassembled words must match original title completely (no missing words)
+  assert.strictEqual(lines.join(" "), title197, "All words of 197-character title must be preserved");
 
   // Every line must measure <= 1040px width at 56px bold font
   for (const line of lines) {
@@ -199,6 +235,30 @@ test("Full 597-character description with 147-character title renders within 120
   assert.ok(!svg.includes("cogmit.com/cogs/full"), "Must not include full URL or path in footer");
   assert.ok(svg.includes(fullDesc.slice(0, 40)));
   assert.ok(svg.includes(fullDesc.slice(-30)));
+});
+
+test("Full 597-character description with 197-character title renders within 1200x1600 Portrait canvas", () => {
+  const fullDesc = "Cognitive architectures represent the next foundational paradigm shift in AI system design. Rather than relying on fragile single-shot inference or unstructured conversation loops, a cognitive architecture provides deterministic state machines, durable semantic memory, and verifiable self-correction boundaries. Each Cogmit represents an immutable unit of cognition that can be composed into collaborative graphs of specialized autonomous agents. By grounding intelligence in structured cognitive artifacts, systems achieve unprecedented levels of reliability, explainability, and autonomy across workflows.".slice(0, 597);
+  assert.strictEqual(fullDesc.length, 597);
+
+  const height = calculatePortraitHeight({ title: title197, excerpt: fullDesc });
+  assert.strictEqual(height, 1600, "Full 597-char card height should be 1600px");
+
+  const svg = generateCardSvg({
+    title: title197,
+    excerpt: fullDesc,
+    url: "https://cogmit.com/cogs/full",
+    authorId: "yvs",
+    withDescription: true,
+  });
+
+  // Verify full content is present in SVG
+  assert.ok(svg.includes("Full at COGMIT:"), "Must have footer text 'Full at COGMIT:'");
+  assert.ok(svg.includes("cogmit.com"), "Must include domain 'cogmit.com'");
+  assert.ok(!svg.includes("cogmit.com/cogs/full"), "Must not include full URL or path in footer");
+  assert.ok(svg.includes(fullDesc.slice(0, 40)));
+  assert.ok(svg.includes(fullDesc.slice(-30)));
+  assert.ok(svg.includes("Resilient Edge Node"));
 });
 
 // -----------------------------------------------------------------------------
