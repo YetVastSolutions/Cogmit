@@ -20,9 +20,9 @@ export const CARD_WIDTH_LANDSCAPE = 969; // 3:2 landscape
 export const CARD_HEIGHT_LANDSCAPE = 646;
 
 // Shared typography tokens used by both card orientations
-const FONT_HEADER_SIZE = 47;
+const FONT_HEADER_SIZE = 45;
 const FONT_HEADER_WEIGHT = 800;
-const FONT_TITLE_SIZE = 41;
+const FONT_TITLE_SIZE = 43;
 const FONT_TITLE_WEIGHT = 600;
 const FONT_BODY_SIZE = 35;
 const FONT_BODY_WEIGHT = 400;
