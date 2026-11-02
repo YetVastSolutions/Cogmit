@@ -11,7 +11,7 @@
  * - Deterministic PNG/JPEG rasterization via HTML5 Canvas.
  */
 
-export const TEMPLATE_VERSION = "1.7.0";
+export const TEMPLATE_VERSION = "1.8.0";
 
 // Exact intrinsic canvas dimensions
 export const CARD_WIDTH_PORTRAIT = 969;  // 3:4 portrait
@@ -111,21 +111,40 @@ export function getCharWidthFactor(char: string, isBold = false): number {
 }
 
 /**
- * Estimates text width in pixels for a given font size and weight.
+ * Measures text using the same font stack as the SVG renderer.
+ * A small safety factor protects against SVG/Canvas metric differences.
+ * In non-browser environments, uses a conservative deterministic estimate.
  */
-export function estimateStringWidth(str: string, fontSize: number, isBold = false): number {
-  let total = 0;
-  const boldMultiplier = isBold ? 1.08 : 1.0;
-  for (let i = 0; i < str.length; i++) {
-    total += getCharWidthFactor(str[i], isBold) * fontSize * boldMultiplier;
+let cardMeasureContext: CanvasRenderingContext2D | null | undefined;
+
+export function estimateStringWidth(
+  str: string,
+  fontSize: number,
+  isBold = false
+): number {
+  if (!str) return 0;
+
+  if (typeof document !== "undefined") {
+    if (cardMeasureContext === undefined) {
+      cardMeasureContext = document.createElement("canvas").getContext("2d");
+    }
+
+    if (cardMeasureContext) {
+      cardMeasureContext.font = `${isBold ? FONT_TITLE_WEIGHT : FONT_BODY_WEIGHT} ${fontSize}px ${CARD_FONT_FAMILY}`;
+      return cardMeasureContext.measureText(str).width * 1.06;
+    }
   }
-  return total;
+
+  let total = 0;
+  for (const char of Array.from(str)) {
+    total += getCharWidthFactor(char, isBold) * fontSize;
+  }
+  return total * 1.18;
 }
 
 /**
- * Deterministic word-wrapping algorithm based on pixel width.
- * Splits text into lines that do not exceed maxWidth pixels.
- * Breaks words cleanly if an individual word exceeds maxWidth.
+ * Wraps text to measured pixel width. Long unbroken tokens are split by
+ * character so no generated line intentionally exceeds the safe width.
  */
 export function wrapTextByWidth(
   text: string,
@@ -133,61 +152,43 @@ export function wrapTextByWidth(
   fontSize: number,
   isBold = false
 ): string[] {
-  if (!text) return [];
+  if (!text || maxWidth <= 0) return [];
 
-  // Support multi-line input by splitting paragraphs
-  const paragraphs = text.split(/\r?\n/);
   const resultLines: string[] = [];
+  const paragraphs = text.split(/\r?\n/);
 
-  for (const para of paragraphs) {
-    const trimmedPara = para.trim();
-    if (!trimmedPara) continue;
-
-    const words = trimmedPara.split(/\s+/);
+  for (const paragraph of paragraphs) {
+    const words = paragraph.trim().split(/\s+/).filter(Boolean);
     let currentLine = "";
 
     for (const word of words) {
-      if (!word) continue;
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
 
-      const wordWidth = estimateStringWidth(word, fontSize, isBold);
-
-      // If a single word is wider than maxWidth, break it by character
-      if (wordWidth > maxWidth) {
-        if (currentLine) {
-          resultLines.push(currentLine);
-          currentLine = "";
-        }
-        let chunk = "";
-        for (const char of word) {
-          if (estimateStringWidth(chunk + char, fontSize, isBold) > maxWidth && chunk) {
-            resultLines.push(chunk);
-            chunk = char;
-          } else {
-            chunk += char;
-          }
-        }
-        if (chunk) {
-          currentLine = chunk;
-        }
+      if (estimateStringWidth(candidate, fontSize, isBold) <= maxWidth) {
+        currentLine = candidate;
         continue;
       }
 
-      const candidate = currentLine ? `${currentLine} ${word}` : word;
-      const candidateWidth = estimateStringWidth(candidate, fontSize, isBold);
-
-      if (candidateWidth <= maxWidth) {
-        currentLine = candidate;
-      } else {
-        if (currentLine) {
-          resultLines.push(currentLine);
-        }
-        currentLine = word;
+      if (currentLine) {
+        resultLines.push(currentLine);
+        currentLine = "";
       }
+
+      // Split an individual word only when it cannot fit on one line.
+      let chunk = "";
+      for (const char of Array.from(word)) {
+        const nextChunk = chunk + char;
+        if (chunk && estimateStringWidth(nextChunk, fontSize, isBold) > maxWidth) {
+          resultLines.push(chunk);
+          chunk = char;
+        } else {
+          chunk = nextChunk;
+        }
+      }
+      currentLine = chunk;
     }
 
-    if (currentLine) {
-      resultLines.push(currentLine);
-    }
+    if (currentLine) resultLines.push(currentLine);
   }
 
   return resultLines;
@@ -456,10 +457,16 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const borderRadius = 20;
 
   const usableWidth = width - paddingX * 2;
-  const maxTextWidth = usableWidth - 16;
+  // Keep a larger safety inset so glyphs never touch the purple border.
+  const maxTextWidth = usableWidth - 48;
 
-  // Title and description use the shared typography tokens.
-  const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, FONT_TITLE_SIZE, false);
+  // Measure title at its actual semibold weight and body at regular weight.
+  const titleLines = wrapTextByWidth(
+    title || "Untitled Cogmit",
+    maxTextWidth,
+    FONT_TITLE_SIZE,
+    true
+  );
   const excerptLines = excerpt
     ? wrapTextByWidth(excerpt, maxTextWidth, FONT_BODY_SIZE, false)
     : [];
@@ -479,12 +486,31 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const divider2Y = height - 124;
   const footerY = divider2Y + 55;
 
+  // The description must stop above the footer divider, never overflow it.
+  const availableExcerptHeight = Math.max(0, divider2Y - excerptStartY - 28);
+  const maxExcerptLines = Math.floor(availableExcerptHeight / excerptLineHeight);
+  if (excerptLines.length > maxExcerptLines) {
+    excerptLines.length = maxExcerptLines;
+    if (excerptLines.length > 0) {
+      const lastIndex = excerptLines.length - 1;
+      let lastLine = excerptLines[lastIndex].replace(/[\s.]+$/, "");
+      while (lastLine && estimateStringWidth(`${lastLine}...`, FONT_BODY_SIZE, false) > maxTextWidth) {
+        lastLine = lastLine.slice(0, -1);
+      }
+      excerptLines[lastIndex] = `${lastLine}...`;
+    }
+  }
+
   const titleTspans = buildTspans(titleLines, paddingX, titleLineHeight);
   const excerptTspans = buildTspans(excerptLines, paddingX, excerptLineHeight);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family="${CARD_FONT_FAMILY}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box; font-family: ${CARD_FONT_FAMILY};">
-  <defs><style>${buildStyles(c)}</style></defs>
+  <defs>
+    <style>${buildStyles(c)}</style>
+    <clipPath id="portrait-title-clip"><rect x="${paddingX}" y="${titleStartY - FONT_TITLE_SIZE}" width="${maxTextWidth}" height="${Math.max(1, divider1Y - titleStartY + FONT_TITLE_SIZE - 8)}" /></clipPath>
+    <clipPath id="portrait-excerpt-clip"><rect x="${paddingX}" y="${excerptStartY - FONT_BODY_SIZE}" width="${maxTextWidth}" height="${Math.max(1, divider2Y - excerptStartY - 20)}" /></clipPath>
+  </defs>
 
   <!-- Card surface -->
   <rect width="${width}" height="${height}" class="bg" />
@@ -499,7 +525,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   <line x1="${paddingX}" y1="${headerDividerY}" x2="${width - paddingX}" y2="${headerDividerY}" class="divider" />
 
   <!-- Cog title/content -->
-  <text x="${paddingX}" y="${titleStartY}" class="title" font-family="${CARD_FONT_FAMILY}">
+  <text x="${paddingX}" y="${titleStartY}" class="title" clip-path="url(#portrait-title-clip)" font-family="${CARD_FONT_FAMILY}">
     ${titleTspans}
   </text>
 
@@ -507,7 +533,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   <line x1="${paddingX}" y1="${divider1Y}" x2="${width - paddingX}" y2="${divider1Y}" class="divider" />
 
   <!-- Cog description -->
-  <text x="${paddingX}" y="${excerptStartY}" class="excerpt" font-family="${CARD_FONT_FAMILY}">
+  <text x="${paddingX}" y="${excerptStartY}" class="excerpt" clip-path="url(#portrait-excerpt-clip)" font-family="${CARD_FONT_FAMILY}">
     ${excerptTspans}
   </text>
   ${buildFooter(paddingX, divider2Y, footerY, width, displayDomain)}
@@ -531,13 +557,13 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const borderRadius = 20;
 
   const usableWidth = width - paddingX * 2;
-  const maxTextWidth = usableWidth - 16;
+  const maxTextWidth = usableWidth - 48;
 
   const titleLines = wrapTextByWidth(
     title || "Untitled Cogmit",
     maxTextWidth,
     FONT_TITLE_SIZE,
-    false
+    true
   );
 
   const headerY = 91;
@@ -560,7 +586,10 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family="${CARD_FONT_FAMILY}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box; font-family: ${CARD_FONT_FAMILY};">
-  <defs><style>${buildStyles(c)}</style></defs>
+  <defs>
+    <style>${buildStyles(c)}</style>
+    <clipPath id="landscape-title-clip"><rect x="${paddingX}" y="${headerDividerY + 12}" width="${maxTextWidth}" height="${Math.max(1, divider2Y - headerDividerY - 28)}" /></clipPath>
+  </defs>
 
   <!-- Card surface -->
   <rect width="${width}" height="${height}" class="bg" />
@@ -575,7 +604,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   <line x1="${paddingX}" y1="${headerDividerY}" x2="${width - paddingX}" y2="${headerDividerY}" class="divider" />
 
   <!-- Cog title/content; no divider below title in Landscape -->
-  <text x="${paddingX}" y="${titleStartY}" class="title" font-family="${CARD_FONT_FAMILY}">
+  <text x="${paddingX}" y="${titleStartY}" class="title" clip-path="url(#landscape-title-clip)" font-family="${CARD_FONT_FAMILY}">
     ${titleTspans}
   </text>
 
