@@ -505,43 +505,54 @@ export function ShareCogmitModal({
                 id="cogmit-card-options-container"
                 className="w-full rounded-lg border-2 border-[#4B0084] bg-[#1E0038] p-3 shadow-sm flex flex-col gap-2.5 transition-all animate-in fade-in slide-in-from-top-1 duration-200"
               >
-                {/* Option 1: Description */}
-                <button
-                  id="toggle-with-description"
-                  type="button"
-                  role="switch"
-                  aria-checked={withDescription}
-                  aria-label="Description"
-                  onClick={() => handleWithDescriptionChange(!withDescription)}
-                  className="flex items-center gap-2.5 text-sm text-white hover:text-white/90 cursor-pointer select-none py-1 text-left w-fit transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#FFFF11] rounded"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`h-2.5 w-2.5 rounded-full shrink-0 transition-colors ${
-                      withDescription ? "bg-[#FFFF11]" : "bg-white"
-                    }`}
-                  />
-                  <span className="font-medium leading-none">Description</span>
-                </button>
+                {/* Options Row: Description and Dark side by side */}
+                <div className="flex items-center gap-3">
+                  {/* Option 1: Description */}
+                  <button
+                    id="toggle-with-description"
+                    type="button"
+                    role="switch"
+                    aria-checked={withDescription}
+                    aria-label="Description"
+                    onClick={() => handleWithDescriptionChange(!withDescription)}
+                    className={`flex items-center gap-2.5 text-sm text-white hover:text-white/90 cursor-pointer select-none px-2.5 py-1 text-left w-fit transition-colors rounded ${
+                      withDescription
+                        ? "border border-[#FFFF11] outline outline-1 outline-[#FFFF11]"
+                        : "border border-transparent outline-none"
+                    } focus-visible:ring-2 focus-visible:ring-[#FFFF11]`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`h-2.5 w-2.5 rounded-full shrink-0 transition-colors ${
+                        withDescription ? "bg-[#FFFF11]" : "bg-white"
+                      }`}
+                    />
+                    <span className="font-medium leading-none">Description</span>
+                  </button>
 
-                {/* Option 2: Dark */}
-                <button
-                  id="toggle-dark-theme"
-                  type="button"
-                  role="switch"
-                  aria-checked={darkTheme}
-                  aria-label="Dark"
-                  onClick={() => handleDarkThemeChange(!darkTheme)}
-                  className="flex items-center gap-2.5 text-sm text-white hover:text-white/90 cursor-pointer select-none py-1 text-left w-fit transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#FFFF11] rounded"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`h-2.5 w-2.5 rounded-full shrink-0 transition-colors ${
-                      darkTheme ? "bg-[#FFFF11]" : "bg-white"
-                    }`}
-                  />
-                  <span className="font-medium leading-none">Dark</span>
-                </button>
+                  {/* Option 2: Dark */}
+                  <button
+                    id="toggle-dark-theme"
+                    type="button"
+                    role="switch"
+                    aria-checked={darkTheme}
+                    aria-label="Dark"
+                    onClick={() => handleDarkThemeChange(!darkTheme)}
+                    className={`flex items-center gap-2.5 text-sm text-white hover:text-white/90 cursor-pointer select-none px-2.5 py-1 text-left w-fit transition-colors rounded ${
+                      darkTheme
+                        ? "border border-[#FFFF11] outline outline-1 outline-[#FFFF11]"
+                        : "border border-transparent outline-none"
+                    } focus-visible:ring-2 focus-visible:ring-[#FFFF11]`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`h-2.5 w-2.5 rounded-full shrink-0 transition-colors ${
+                        darkTheme ? "bg-[#FFFF11]" : "bg-white"
+                      }`}
+                    />
+                    <span className="font-medium leading-none">Dark</span>
+                  </button>
+                </div>
 
                 {/* Option 3: Font */}
                 <div className="flex items-center justify-between gap-3 pt-1 border-t border-[#4B0084]/40">
