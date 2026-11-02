@@ -330,6 +330,7 @@ function buildStyles(c: ThemeColors): string {
   return `
       svg { width: 100%; height: auto; max-width: 100%; box-sizing: border-box; display: block; }
       .bg { fill: ${c.bg}; }
+      .outer-border { fill: none; stroke: ${c.borderColor}; stroke-width: 3; }
       .brand { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.brand}; letter-spacing: 3px; }
       .sep   { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.separator}; letter-spacing: 0; }
       .author-name { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.authorName}; letter-spacing: 0; }
@@ -447,6 +448,8 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
 
   // Geometry is scaled for the exact 969 × 1292 portrait canvas.
   const paddingX = 65;
+  const borderInset = 26;
+  const borderRadius = 20;
 
   const usableWidth = width - paddingX * 2;
   const maxTextWidth = usableWidth - 16;
@@ -481,6 +484,9 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
 
   <!-- Card surface -->
   <rect width="${width}" height="${height}" class="bg" />
+
+  <!-- YV Indigo Violet outer border -->
+  <rect x="${borderInset}" y="${borderInset}" width="${width - borderInset * 2}" height="${height - borderInset * 2}" rx="${borderRadius}" class="outer-border" />
 
   <!-- Header: COGMIT | username -->
   ${buildHeader(paddingX, headerY, safeUsername)}
@@ -517,6 +523,8 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
 
   // Geometry is scaled for the exact 969 × 646 landscape canvas.
   const paddingX = 65;
+  const borderInset = 26;
+  const borderRadius = 20;
 
   const usableWidth = width - paddingX * 2;
   const maxTextWidth = usableWidth - 16;
@@ -552,6 +560,9 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
 
   <!-- Card surface -->
   <rect width="${width}" height="${height}" class="bg" />
+
+  <!-- YV Indigo Violet outer border -->
+  <rect x="${borderInset}" y="${borderInset}" width="${width - borderInset * 2}" height="${height - borderInset * 2}" rx="${borderRadius}" class="outer-border" />
 
   <!-- Header: COGMIT | username -->
   ${buildHeader(paddingX, headerY, safeUsername)}
