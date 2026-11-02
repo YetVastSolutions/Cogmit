@@ -8,13 +8,14 @@ import {
   Link as LinkIcon,
   Pencil,
   Share2,
-  Sparkles,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatTimestamp } from "@/lib/utils";
 import {
   CARD_DESCRIPTION_MAX,
+  CARD_FONTS,
+  DEFAULT_CARD_FONT,
   MAX_ROOTCOG_TITLE_LENGTH,
   TEMPLATE_VERSION,
   computeCardSourceHash,
@@ -48,9 +49,11 @@ export function ShareCogmitModal({
   shareUrl,
   content,
 }: ShareCogmitModalProps) {
-  // Card generation options — defaults: withDescription=OFF, darkTheme=ON
+  // Card generation options — defaults: withDescription=OFF, darkTheme=ON, font=Arial
   const [withDescription, setWithDescription] = useState(false);
   const [darkTheme, setDarkTheme] = useState(true);
+  const [selectedFont, setSelectedFont] = useState<string>(DEFAULT_CARD_FONT);
+  const [isOptionsExpanded, setIsOptionsExpanded] = useState(false);
 
   // Whether the user has clicked "Generate Cogmit Card" in this session
   const [cardGenerated, setCardGenerated] = useState(false);
@@ -82,13 +85,22 @@ export function ShareCogmitModal({
     return `Cogmit | ${username}: ${truncatedTitle}`;
   }, [authorId, truncatedTitle]);
 
-  // Deterministic source hash — includes both option flags
+  // Deterministic source hash — includes option flags
   const sourceHash = useMemo(() => {
-    return computeCardSourceHash(title, excerpt, shareUrl, authorId, TEMPLATE_VERSION, withDescription, darkTheme);
-  }, [title, excerpt, shareUrl, authorId, withDescription, darkTheme]);
+    return computeCardSourceHash(
+      title,
+      excerpt,
+      shareUrl,
+      authorId,
+      TEMPLATE_VERSION,
+      withDescription,
+      darkTheme,
+      selectedFont
+    );
+  }, [title, excerpt, shareUrl, authorId, withDescription, darkTheme, selectedFont]);
 
   // Cache key includes options so each combination is independently cached
-  const cacheKey = `${shareUrl || `${authorId || "anon"}_${title}`}|desc:${withDescription}|dark:${darkTheme}`;
+  const cacheKey = `${shareUrl || `${authorId || "anon"}_${title}`}|desc:${withDescription}|dark:${darkTheme}|font:${selectedFont}`;
 
   // Only generate the SVG once the user clicks "Generate Cogmit Card"
   const cardSvg = useMemo(() => {
@@ -106,6 +118,7 @@ export function ShareCogmitModal({
         published,
         withDescription,
         darkTheme,
+        font: selectedFont,
       });
 
       setCachedCard(cacheKey, {
@@ -122,7 +135,7 @@ export function ShareCogmitModal({
       console.error("Failed to generate card SVG:", err);
       return "";
     }
-  }, [open, cardGenerated, cacheKey, sourceHash, title, excerpt, shareUrl, authorId, published, withDescription, darkTheme]);
+  }, [open, cardGenerated, cacheKey, sourceHash, title, excerpt, shareUrl, authorId, published, withDescription, darkTheme, selectedFont]);
 
   // Convert generated SVG to previewable image data URL
   const previewUrl = useMemo(() => {
@@ -148,6 +161,8 @@ export function ShareCogmitModal({
       const timer = setTimeout(() => {
         setWithDescription(false);
         setDarkTheme(true);
+        setSelectedFont(DEFAULT_CARD_FONT);
+        setIsOptionsExpanded(false);
         setCardGenerated(false);
         setIsGenerating(false);
         setGenerationError(null);
@@ -182,6 +197,7 @@ export function ShareCogmitModal({
         published,
         withDescription,
         darkTheme,
+        font: selectedFont,
       });
 
       if (!generatedSvg || typeof generatedSvg !== "string") {
@@ -208,16 +224,19 @@ export function ShareCogmitModal({
     }
   };
 
-  // Re-generate (reset) whenever options change after a card has been generated
+  // Update option selections
   const handleWithDescriptionChange = (v: boolean) => {
     setWithDescription(v);
-    setCardGenerated(false);
     setGenerationError(null);
   };
 
   const handleDarkThemeChange = (v: boolean) => {
     setDarkTheme(v);
-    setCardGenerated(false);
+    setGenerationError(null);
+  };
+
+  const handleFontChange = (f: string) => {
+    setSelectedFont(f);
     setGenerationError(null);
   };
 
@@ -441,85 +460,109 @@ export function ShareCogmitModal({
             </div>
           )}
 
-          {/* Unified Primary Card Action & Configuration Bar */}
-          <div className="w-full sm:w-[75%] mx-auto rounded-lg border-2 border-[#4B0084] bg-[#1E0038] p-1.5 flex items-center justify-between gap-2 shadow-sm">
-            {/* Left Section: Primary Action (Generate / Download) */}
-            <button
-              type="button"
-              onClick={!cardGenerated ? handleGenerate : handleDownloadCard}
-              disabled={!cardGenerated ? isGenerating : isExporting || !cardSvg}
-              className="inline-flex items-center gap-2 text-sm font-semibold hover:bg-[#4B0084] text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
-            >
-              {!cardGenerated ? (
-                <>
-                  {/* <Sparkles className="h-4 w-4 shrink-0 text-[#FFFF11]" /> */}
+          {/* Unified Primary Card Action Bar & Expandable Options Container */}
+          <div className="w-full sm:w-[75%] mx-auto flex flex-col gap-2">
+            <div className="w-full rounded-lg border-2 border-[#4B0084] bg-[#1E0038] p-1.5 flex items-center justify-between gap-2 shadow-sm">
+              {/* Left Section: Primary Action (Generate / Download) */}
+              <button
+                type="button"
+                onClick={!cardGenerated ? handleGenerate : handleDownloadCard}
+                disabled={!cardGenerated ? isGenerating : isExporting || !cardSvg}
+                className="inline-flex items-center gap-2 text-sm font-semibold hover:bg-[#4B0084] text-[#FFFF11] hover:brightness-110 active:opacity-90 transition-all px-2.5 py-1.5 rounded text-left select-none outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {!cardGenerated ? (
                   <span>{isGenerating ? "Generating…" : "Generate Cogmit Card"}</span>
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 shrink-0 text-[#FFFF11]" />
-                  <span>{isExporting ? "Exporting…" : "Download Cogmit Card"}</span>
-                </>
-              )}
-            </button>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 shrink-0 text-[#FFFF11]" />
+                    <span>{isExporting ? "Exporting…" : "Download Cogmit Card"}</span>
+                  </>
+                )}
+              </button>
 
-            {/* Right Section: Embedded Options (Description, Dark) or Edit Icon (Pencil) */}
-            {!cardGenerated ? (
-              <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+              {/* Right Section: Pencil Icon to Toggle Options */}
+              <button
+                id="btn-change-options"
+                type="button"
+                aria-label={isOptionsExpanded ? "Collapse card options" : "Expand card options"}
+                aria-expanded={isOptionsExpanded}
+                title={isOptionsExpanded ? "Collapse options" : "Edit card options"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsOptionsExpanded((prev) => !prev);
+                }}
+                className={`inline-flex items-center justify-center p-1.5 mr-1 rounded text-[#FFFF11] hover:bg-[#4B0084] transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer ${
+                  isOptionsExpanded ? "bg-[#4B0084]" : ""
+                }`}
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Expandable Options Container directly below the button */}
+            {isOptionsExpanded && (
+              <div
+                id="cogmit-card-options-container"
+                className="w-full rounded-lg border-2 border-[#4B0084] bg-[#1E0038] p-3 shadow-sm flex flex-col gap-2.5 transition-all animate-in fade-in slide-in-from-top-1 duration-200"
+              >
+                {/* Option 1: Description */}
                 <button
                   id="toggle-with-description"
                   type="button"
                   role="switch"
                   aria-checked={withDescription}
-                  aria-pressed={withDescription}
-                  aria-label="With description"
-                  title="With description"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleWithDescriptionChange(!withDescription);
-                  }}
-                  className={`inline-flex items-center justify-center rounded px-2.5 py-1 text-xs font-medium border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring ${withDescription
-                    ? "bg-[#4B0084] border-[#4B0084] text-[#FFFF11] shadow-sm font-semibold"
-                    : "bg-transparent border-[#4B0084] text-white/80 hover:bg-[#4B0084]/20 hover:text-white"
-                    }`}
+                  aria-label="Description"
+                  onClick={() => handleWithDescriptionChange(!withDescription)}
+                  className="flex items-center gap-2.5 text-sm text-white hover:text-white/90 cursor-pointer select-none py-1 text-left w-fit transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#FFFF11] rounded"
                 >
-                  Description
+                  <span
+                    aria-hidden="true"
+                    className={`h-2.5 w-2.5 rounded-full shrink-0 transition-colors ${
+                      withDescription ? "bg-[#FFFF11]" : "bg-white"
+                    }`}
+                  />
+                  <span className="font-medium leading-none">Description</span>
                 </button>
 
+                {/* Option 2: Dark */}
                 <button
                   id="toggle-dark-theme"
                   type="button"
                   role="switch"
                   aria-checked={darkTheme}
-                  aria-pressed={darkTheme}
-                  aria-label="Dark Cogmit Card"
-                  title="Dark Cogmit Card"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDarkThemeChange(!darkTheme);
-                  }}
-                  className={`inline-flex items-center justify-center rounded px-2.5 py-1 text-xs font-medium border transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring ${darkTheme
-                    ? "bg-[#4B0084] border-[#4B0084] text-[#FFFF11] shadow-sm font-semibold"
-                    : "bg-transparent border-[#4B0084] text-white/80 hover:bg-[#4B0084]/20 hover:text-white"
-                    }`}
+                  aria-label="Dark"
+                  onClick={() => handleDarkThemeChange(!darkTheme)}
+                  className="flex items-center gap-2.5 text-sm text-white hover:text-white/90 cursor-pointer select-none py-1 text-left w-fit transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#FFFF11] rounded"
                 >
-                  Dark
+                  <span
+                    aria-hidden="true"
+                    className={`h-2.5 w-2.5 rounded-full shrink-0 transition-colors ${
+                      darkTheme ? "bg-[#FFFF11]" : "bg-white"
+                    }`}
+                  />
+                  <span className="font-medium leading-none">Dark</span>
                 </button>
+
+                {/* Option 3: Font */}
+                <div className="flex items-center justify-between gap-3 pt-1 border-t border-[#4B0084]/40">
+                  <label htmlFor="card-font-select" className="text-sm font-medium text-white select-none">
+                    Font
+                  </label>
+                  <select
+                    id="card-font-select"
+                    aria-label="Font"
+                    value={selectedFont}
+                    onChange={(e) => handleFontChange(e.target.value)}
+                    className="bg-[#2D0052] text-white border border-[#4B0084] rounded px-2.5 py-1 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-[#FFFF11] cursor-pointer"
+                  >
+                    {CARD_FONTS.map((font) => (
+                      <option key={font.id} value={font.id} className="bg-[#1E0038] text-white">
+                        {font.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            ) : (
-              <button
-                id="btn-change-options"
-                type="button"
-                aria-label="Change options"
-                title="Change options"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCardGenerated(false);
-                }}
-                className="inline-flex items-center justify-center p-1.5 mr-1 rounded text-[#FFFF11] hover:bg-[#4B0084] transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
             )}
           </div>
 

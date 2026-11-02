@@ -23,6 +23,29 @@ export const CARD_HEIGHT_LANDSCAPE = 646;
 export const CARD_FONT_STACK = "Verdana, Geneva, sans-serif";
 export const CARD_FONT_FAMILY = CARD_FONT_STACK;
 
+export interface CardFontOption {
+  id: string;
+  label: string;
+  fontFamily: string;
+}
+
+export const CARD_FONTS: CardFontOption[] = [
+  { id: "Arial", label: "Arial", fontFamily: "Arial, Helvetica, sans-serif" },
+  { id: "Verdana", label: "Verdana", fontFamily: "Verdana, Geneva, sans-serif" },
+  { id: "Times New Roman", label: "Times New Roman", fontFamily: '"Times New Roman", Times, serif' },
+];
+
+export const DEFAULT_CARD_FONT = "Arial";
+
+export function resolveCardFontStack(font?: string): string {
+  if (!font) return CARD_FONT_FAMILY;
+  const match = CARD_FONTS.find(
+    (f) => f.id.toLowerCase() === font.toLowerCase() || f.label.toLowerCase() === font.toLowerCase()
+  );
+  if (match) return match.fontFamily;
+  return font;
+}
+
 // Shared typography tokens used by both card orientations
 const FONT_HEADER_SIZE = 47;
 const FONT_HEADER_WEIGHT = 800;
@@ -56,6 +79,9 @@ export interface CardTemplateOptions {
   withDescription?: boolean;
   /** Use dark theme (black bg, YV Yellow text). Default true. */
   darkTheme?: boolean;
+  /** Font family or font id to use when rendering the card. Default Arial in UI, fallback to CARD_FONT_FAMILY. */
+  font?: string;
+  fontFamily?: string;
   // width/height are derived from withDescription and content; kept for back-compat but ignored.
   width?: number;
   height?: number;
@@ -247,7 +273,7 @@ export function calculatePortraitHeight(_opts?: Partial<CardTemplateOptions>): n
 
 /**
  * Generates a deterministic hash string representing the card's source data.
- * Includes withDescription and darkTheme flags so option changes invalidate the cache.
+ * Includes withDescription, darkTheme, and font flags so option changes invalidate the cache.
  */
 export function computeCardSourceHash(
   title: string,
@@ -256,9 +282,10 @@ export function computeCardSourceHash(
   authorId?: string,
   templateVersion: string = TEMPLATE_VERSION,
   withDescription = false,
-  darkTheme = true
+  darkTheme = true,
+  font = DEFAULT_CARD_FONT
 ): string {
-  const payload = `${templateVersion}|${title}|${excerpt}|${url}|${authorId || ""}|desc:${withDescription}|dark:${darkTheme}`;
+  const payload = `${templateVersion}|${title}|${excerpt}|${url}|${authorId || ""}|desc:${withDescription}|dark:${darkTheme}|font:${font}`;
   let hash = 0;
   for (let i = 0; i < payload.length; i++) {
     hash = (hash << 5) - hash + payload.charCodeAt(i);
@@ -329,8 +356,7 @@ function getLightTheme(): ThemeColors {
 
 // ─── CSS style block ──────────────────────────────────────────────────────────
 
-function buildStyles(c: ThemeColors): string {
-  const font = CARD_FONT_FAMILY;
+function buildStyles(c: ThemeColors, font: string = CARD_FONT_FAMILY): string {
   return `
       svg { width: 100%; height: auto; max-width: 100%; box-sizing: border-box; display: block; font-family: ${font}; }
       text, tspan { font-family: ${font}; text-rendering: geometricPrecision; -webkit-font-smoothing: antialiased; }
@@ -352,9 +378,9 @@ function buildStyles(c: ThemeColors): string {
  * Author header: COGMIT | username
  * Symmetrical spacing: equal dx on both sides of " | "
  */
-function buildHeader(paddingX: number, headerY: number, safeUsername: string): string {
+function buildHeader(paddingX: number, headerY: number, safeUsername: string, font: string = CARD_FONT_FAMILY): string {
   // Each side of " | " gets the same dx (12px), giving equal optical distance
-  return `<text x="${paddingX}" y="${headerY}" font-family="${CARD_FONT_FAMILY}">
+  return `<text x="${paddingX}" y="${headerY}" font-family="${font}">
     <tspan class="brand">COGMIT</tspan><tspan dx="12" class="sep">.</tspan><tspan dx="12" class="author-name">${safeUsername}</tspan>
   </text>`;
 }
@@ -429,7 +455,8 @@ function buildFooter(
   divider2Y: number,
   footerY: number,
   width: number,
-  displayDomain: string
+  displayDomain: string,
+  font: string = CARD_FONT_FAMILY
 ): string {
   const safeDomain = escapeXml(displayDomain);
   return `
@@ -437,13 +464,14 @@ function buildFooter(
   <line x1="${paddingX}" y1="${divider2Y}" x2="${width - paddingX}" y2="${divider2Y}" class="divider" />
 
   <!-- Footer: Full: domain (same line) -->
-  <text x="${paddingX}" y="${footerY}" class="url-intro" font-family="${CARD_FONT_FAMILY}">Full: <tspan class="url-label">${safeDomain}</tspan></text>`;
+  <text x="${paddingX}" y="${footerY}" class="url-intro" font-family="${font}">Full: <tspan class="url-label">${safeDomain}</tspan></text>`;
 }
 
 // ─── Portrait card (3:4, with description) ────────────────────────────────────
 
 function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string {
   const { title, excerpt, url, authorId } = opts;
+  const font = resolveCardFontStack(opts.font || opts.fontFamily);
 
   const width = CARD_WIDTH_PORTRAIT;
   const height = CARD_HEIGHT_PORTRAIT;
@@ -505,9 +533,9 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const excerptTspans = buildTspans(excerptLines, paddingX, excerptLineHeight);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family="${CARD_FONT_FAMILY}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box; font-family: ${CARD_FONT_FAMILY};">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family="${font}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box; font-family: ${font};">
   <defs>
-    <style>${buildStyles(c)}</style>
+    <style>${buildStyles(c, font)}</style>
     <clipPath id="portrait-title-clip"><rect x="${paddingX}" y="${titleStartY - FONT_TITLE_SIZE}" width="${maxTextWidth}" height="${Math.max(1, divider1Y - titleStartY + FONT_TITLE_SIZE - 8)}" /></clipPath>
     <clipPath id="portrait-excerpt-clip"><rect x="${paddingX}" y="${excerptStartY - FONT_BODY_SIZE}" width="${maxTextWidth}" height="${Math.max(1, divider2Y - excerptStartY - 20)}" /></clipPath>
   </defs>
@@ -519,13 +547,13 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   <rect x="${borderInset}" y="${borderInset}" width="${width - borderInset * 2}" height="${height - borderInset * 2}" rx="${borderRadius}" class="outer-border" />
 
   <!-- Header: COGMIT | username -->
-  ${buildHeader(paddingX, headerY, safeUsername)}
+  ${buildHeader(paddingX, headerY, safeUsername, font)}
 
   <!-- Divider below header -->
   <line x1="${paddingX}" y1="${headerDividerY}" x2="${width - paddingX}" y2="${headerDividerY}" class="divider" />
 
   <!-- Cog title/content -->
-  <text x="${paddingX}" y="${titleStartY}" class="title" clip-path="url(#portrait-title-clip)" font-family="${CARD_FONT_FAMILY}">
+  <text x="${paddingX}" y="${titleStartY}" class="title" clip-path="url(#portrait-title-clip)" font-family="${font}">
     ${titleTspans}
   </text>
 
@@ -533,10 +561,10 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   <line x1="${paddingX}" y1="${divider1Y}" x2="${width - paddingX}" y2="${divider1Y}" class="divider" />
 
   <!-- Cog description -->
-  <text x="${paddingX}" y="${excerptStartY}" class="excerpt" clip-path="url(#portrait-excerpt-clip)" font-family="${CARD_FONT_FAMILY}">
+  <text x="${paddingX}" y="${excerptStartY}" class="excerpt" clip-path="url(#portrait-excerpt-clip)" font-family="${font}">
     ${excerptTspans}
   </text>
-  ${buildFooter(paddingX, divider2Y, footerY, width, displayDomain)}
+  ${buildFooter(paddingX, divider2Y, footerY, width, displayDomain, font)}
 </svg>`;
 }
 
@@ -544,6 +572,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
 
 function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string {
   const { title, url, authorId } = opts;
+  const font = resolveCardFontStack(opts.font || opts.fontFamily);
 
   const width = CARD_WIDTH_LANDSCAPE;
   const height = CARD_HEIGHT_LANDSCAPE;
@@ -585,9 +614,9 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const titleTspans = buildTspans(titleLines, paddingX, titleLineHeight);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family="${CARD_FONT_FAMILY}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box; font-family: ${CARD_FONT_FAMILY};">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family="${font}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box; font-family: ${font};">
   <defs>
-    <style>${buildStyles(c)}</style>
+    <style>${buildStyles(c, font)}</style>
     <clipPath id="landscape-title-clip"><rect x="${paddingX}" y="${headerDividerY + 12}" width="${maxTextWidth}" height="${Math.max(1, divider2Y - headerDividerY - 28)}" /></clipPath>
   </defs>
 
@@ -598,17 +627,17 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   <rect x="${borderInset}" y="${borderInset}" width="${width - borderInset * 2}" height="${height - borderInset * 2}" rx="${borderRadius}" class="outer-border" />
 
   <!-- Header: COGMIT | username -->
-  ${buildHeader(paddingX, headerY, safeUsername)}
+  ${buildHeader(paddingX, headerY, safeUsername, font)}
 
   <!-- Divider below header -->
   <line x1="${paddingX}" y1="${headerDividerY}" x2="${width - paddingX}" y2="${headerDividerY}" class="divider" />
 
   <!-- Cog title/content; no divider below title in Landscape -->
-  <text x="${paddingX}" y="${titleStartY}" class="title" clip-path="url(#landscape-title-clip)" font-family="${CARD_FONT_FAMILY}">
+  <text x="${paddingX}" y="${titleStartY}" class="title" clip-path="url(#landscape-title-clip)" font-family="${font}">
     ${titleTspans}
   </text>
 
-  ${buildFooter(paddingX, divider2Y, footerY, width, displayDomain)}
+  ${buildFooter(paddingX, divider2Y, footerY, width, displayDomain, font)}
 </svg>`;
 }
 
@@ -713,7 +742,9 @@ export async function exportSvgToBlob(
         }
 
         // Explicitly set the font family in the actual rendering context
-        ctx.font = `400 ${FONT_BODY_SIZE}px ${CARD_FONT_FAMILY}`;
+        const fontMatch = svgString.match(/font-family:\s*([^;]+);/);
+        const activeFont = fontMatch ? fontMatch[1].trim() : CARD_FONT_FAMILY;
+        ctx.font = `400 ${FONT_BODY_SIZE}px ${activeFont}`;
 
         // Draw the rasterized SVG image at exact intrinsic dimensions
         ctx.drawImage(img, 0, 0, exportW, exportH);
