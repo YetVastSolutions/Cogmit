@@ -229,7 +229,7 @@ test("Full 597-character description with 147-character title renders within 969
   });
 
   // Verify full content is present in SVG
-  assert.ok(svg.includes("Full:"), "Must have footer text 'Full:'");
+  assert.ok(svg.includes("View & Listen full @ "), "Must have footer text 'View & Listen full @ '");
   assert.ok(svg.includes("cogmit.com"), "Must include domain 'cogmit.com'");
   assert.ok(!svg.includes("cogmit.com/cogs/full"), "Must not include full URL or path in footer");
   assert.ok(svg.includes(fullDesc.slice(0, 40)));
@@ -252,7 +252,7 @@ test("Full 597-character description with 197-character title renders within 969
   });
 
   // Verify full content is present in SVG
-  assert.ok(svg.includes("Full:"), "Must have footer text 'Full:'");
+  assert.ok(svg.includes("View & Listen full @ "), "Must have footer text 'View & Listen full @ '");
   assert.ok(svg.includes("cogmit.com"), "Must include domain 'cogmit.com'");
   assert.ok(!svg.includes("cogmit.com/cogs/full"), "Must not include full URL or path in footer");
   assert.ok(svg.includes(fullDesc.slice(0, 40)));
@@ -303,7 +303,7 @@ test("Footer text elements match description font size exactly (37px) in both or
       withDescription,
     });
 
-    assert.ok(svg.includes("Full:"), "Must have introductory text 'Full:'");
+    assert.ok(svg.includes("View & Listen full @ "), "Must have introductory text 'View & Listen full @ '");
     assert.ok(svg.includes("cogmit.com"), "Must include domain 'cogmit.com'");
     assert.ok(!svg.includes("cogs/test"), "Must not include URL path");
 
@@ -391,9 +391,9 @@ test("wrapText function remains fully backward compatible", () => {
 });
 
 // -----------------------------------------------------------------------------
-// 9. Updated Footer: "Full: <domain>" on Same Line
+// 9. Updated Footer: "View & Listen full @  <domain>" on Same Line
 // -----------------------------------------------------------------------------
-test("Footer renders 'Full:' and domain on the exact same line in both orientations", () => {
+test("Footer renders 'View & Listen full @ ' and domain on the exact same line in both orientations", () => {
   for (const withDescription of [false, true]) {
     const svg = generateCardSvg({
       title: "Footer Line Test",
@@ -403,12 +403,12 @@ test("Footer renders 'Full:' and domain on the exact same line in both orientati
       withDescription,
     });
 
-    // Both "Full:" and "cogmit.vercel.app" must be within the same <text> element
+    // Both "View & Listen full @ " and "cogmit.vercel.app" must be within the same <text> element
     const footerTextMatch = svg.match(/<text[^>]*class="url-intro"[^>]*>([\s\S]*?)<\/text>/);
     assert.ok(footerTextMatch, "Single footer <text> element with url-intro must exist");
 
     const inner = footerTextMatch[1];
-    assert.ok(inner.includes("Full:"), "Intro text 'Full:' must be present");
+    assert.ok(inner.includes("View & Listen full @ "), "Intro text 'View & Listen full @ ' must be present");
     assert.ok(inner.includes("cogmit.vercel.app"), "Domain 'cogmit.vercel.app' must be present");
     assert.ok(inner.includes('<tspan class="url-label">cogmit.vercel.app</tspan>'), "Domain must be wrapped in url-label tspan for 700 font weight");
 
@@ -426,7 +426,7 @@ test("Footer shows only the domain and strips full Cogmit URL, path, and Cog ID"
     withDescription: true,
   });
 
-  assert.ok(svg.includes("Full:"), "Footer must have 'Full:'");
+  assert.ok(svg.includes("View & Listen full @ "), "Footer must have 'View & Listen full @ '");
   assert.ok(svg.includes("cogmit.vercel.app"), "Footer must have domain 'cogmit.vercel.app'");
   assert.ok(!svg.includes("/cogmits/special-user/cog-123456789"), "Must not include path or Cog ID");
   assert.ok(!svg.includes("cog-123456789"), "Must not include Cog ID");

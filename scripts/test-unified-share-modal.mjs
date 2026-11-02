@@ -579,7 +579,7 @@ await test("20. Footer does NOT contain 'at COGMIT' and preserves canonical URL 
   });
 
   assert.ok(!svg.includes("at COGMIT"), "Footer must NOT contain 'at COGMIT'");
-  assert.ok(svg.includes("Full:"), "Footer must contain 'Full:'");
+  assert.ok(svg.includes("View & Listen full @ "), "Footer must contain 'View & Listen full @ '");
   assert.ok(svg.includes("cogmit.com"), "Footer must contain domain");
 });
 

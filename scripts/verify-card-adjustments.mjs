@@ -326,7 +326,7 @@ await check(11, "Confirm footer does NOT contain 'at COGMIT'", async () => {
     });
 
     assert.ok(!svg.includes("at COGMIT"), "Must NOT contain 'at COGMIT'");
-    assert.ok(svg.includes("Full:"), "Must contain 'Full:'");
+    assert.ok(svg.includes("View & Listen full @ "), "Must contain 'View & Listen full @ '");
     assert.ok(svg.includes("cogmit.vercel.app"), "Must contain domain");
   }
 });
