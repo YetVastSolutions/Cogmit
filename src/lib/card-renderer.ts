@@ -2,7 +2,7 @@
  * Deterministic Cogmit Card Renderer
  * Follows YVS Visual Language and Cogmit specifications:
  * - Deterministic SVG generation with exact text rendering.
- * - Two independent options: withDescription (portrait content-driven) / landscape (4:3), darkTheme.
+ * - Two independent layouts: withDescription (portrait, 2:3) / landscape (3:2), darkTheme.
  * - Dark theme: black background, YV Indigo Violet border/dividers, YV Yellow text.
  * - Light theme: neutral surface background, YV Indigo Violet border, dark foreground text.
  * - Title limit: 197 characters. Description limit: 597 characters.
@@ -11,13 +11,21 @@
  * - Deterministic PNG/JPEG rasterization via HTML5 Canvas.
  */
 
-export const TEMPLATE_VERSION = "1.3.0";
+export const TEMPLATE_VERSION = "1.4.0";
 
-// Canvas dimensions
-export const CARD_WIDTH_PORTRAIT = 1200;  // 2:3 portrait (with description, target dimensions: 1200x1600)
-export const CARD_HEIGHT_PORTRAIT = 1600; // Target portrait height
-export const CARD_WIDTH_LANDSCAPE = 1200; // 3:2 landscape (without description, width:height = 3:2)
-export const CARD_HEIGHT_LANDSCAPE = 800;
+// Exact intrinsic canvas dimensions
+export const CARD_WIDTH_PORTRAIT = 969;  // 2:3 portrait
+export const CARD_HEIGHT_PORTRAIT = 1454;
+export const CARD_WIDTH_LANDSCAPE = 969; // 3:2 landscape
+export const CARD_HEIGHT_LANDSCAPE = 646;
+
+// Shared typography tokens used by both card orientations
+const FONT_HEADER_SIZE = 45;
+const FONT_HEADER_WEIGHT = 900;
+const FONT_TITLE_SIZE = 41;
+const FONT_TITLE_WEIGHT = 800;
+const FONT_BODY_SIZE = 37;
+const FONT_BODY_WEIGHT = 700;
 
 // Legacy exports kept for API compatibility
 export const CARD_WIDTH = CARD_WIDTH_PORTRAIT;
@@ -225,8 +233,8 @@ export function wrapText(text: string, maxCharsPerLine: number): string[] {
 }
 
 /**
- * Returns the target height of a portrait Cogmit card (1600px).
- * Target dimensions: 1200 × 1600px (2:3 width:height ratio).
+ * Returns the fixed target height of a portrait Cogmit card (1454px).
+ * Target dimensions: 969 × 1454px (2:3 width:height ratio).
  */
 export function calculatePortraitHeight(_opts?: Partial<CardTemplateOptions>): number {
   return CARD_HEIGHT_PORTRAIT;
@@ -323,13 +331,13 @@ function buildStyles(c: ThemeColors): string {
       svg { width: 100%; height: auto; max-width: 100%; box-sizing: border-box; display: block; }
       .bg { fill: ${c.bg}; }
       .outer-border { fill: none; stroke: ${c.borderColor}; stroke-width: 3; }
-      .brand { font-family: ${font}; font-size: 36px; font-weight: 700; fill: ${c.brand}; letter-spacing: 3px; }
-      .sep   { font-family: ${font}; font-size: 36px; font-weight: 400; fill: ${c.separator}; letter-spacing: 0; }
-      .author-name { font-family: ${font}; font-size: 36px; font-weight: 700; fill: ${c.authorName}; letter-spacing: 0; }
-      .title-container, .title { font-family: ${font}; font-size: 44px; font-weight: 800; fill: ${c.title}; width: 100%; max-width: 100%; box-sizing: border-box; }
-      .description-container, .excerpt, p { font-family: ${font}; font-size: 28px; font-weight: 400; fill: ${c.excerpt}; width: 100%; max-width: 100%; box-sizing: border-box; }
-      .url-intro { font-family: ${mono}; font-size: 28px; font-weight: 500; fill: ${c.urlIntro}; width: 100%; max-width: 100%; box-sizing: border-box; }
-      .url-label { font-family: ${mono}; font-size: 28px; font-weight: 700; fill: ${c.urlLabel}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .brand { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.brand}; letter-spacing: 3px; }
+      .sep   { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.separator}; letter-spacing: 0; }
+      .author-name { font-family: ${font}; font-size: ${FONT_HEADER_SIZE}px; font-weight: ${FONT_HEADER_WEIGHT}; fill: ${c.authorName}; letter-spacing: 0; }
+      .title-container, .title { font-family: ${font}; font-size: ${FONT_TITLE_SIZE}px; font-weight: ${FONT_TITLE_WEIGHT}; fill: ${c.title}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .description-container, .excerpt, p { font-family: ${font}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.excerpt}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .url-intro { font-family: ${mono}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.urlIntro}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .url-label { font-family: ${mono}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.urlLabel}; width: 100%; max-width: 100%; box-sizing: border-box; }
       .divider { stroke: ${c.divider}; stroke-width: 1.5; stroke-opacity: ${c.dividerOpacity}; }`.trimStart();
 }
 
@@ -391,8 +399,8 @@ export function getCanonicalDomain(url?: string): string {
   // Derive from application canonical deployment URL / origin configuration
   const envUrl = typeof process !== "undefined" && process?.env
     ? (process.env.NEXT_PUBLIC_APP_URL ||
-       (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined) ||
-       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined))
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined) ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined))
     : undefined;
 
   if (envUrl) {
@@ -438,34 +446,34 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   const safeUsername = escapeXml(authorId ? authorId.toLowerCase() : "");
   const displayDomain = getCanonicalDomain(url);
 
-  const paddingX = 80;
-  const borderInset = 32;
-  const borderRadius = 24;
+  // Geometry is scaled for the exact 969 × 1454 portrait canvas.
+  const paddingX = 65;
+  const borderInset = 26;
+  const borderRadius = 20;
 
-  const usableWidth = width - paddingX * 2; // 1040px
-  const maxTextWidth = usableWidth - 20; // 1020px
+  const usableWidth = width - paddingX * 2;
+  const maxTextWidth = usableWidth - 16;
 
-  // Title: natural multi-line wrapping, never sliced
-  const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, 44, true);
+  // Title and description use the shared typography tokens.
+  const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, FONT_TITLE_SIZE, true);
+  const excerptLines = excerpt
+    ? wrapTextByWidth(excerpt, maxTextWidth, FONT_BODY_SIZE, true)
+    : [];
 
-  // Description: occupies full available inner width (~1020px), wraps naturally only when width exhausted
-  const excerptLines = excerpt ? wrapTextByWidth(excerpt, maxTextWidth, 28, false) : [];
+  const headerY = 91;
+  const headerDividerY = 114;
 
-  const headerY = 110;
-  const headerDividerY = headerY + 28; // 138
-
-  const titleStartY = 230;
-  const titleLineHeight = 58;
+  const titleStartY = 190;
+  const titleLineHeight = 50;
   const titleEndY = titleStartY + Math.max(0, titleLines.length - 1) * titleLineHeight;
 
-  const divider1Y = titleEndY + 46;
+  const divider1Y = titleEndY + 36;
+  const excerptStartY = divider1Y + 44;
+  const excerptLineHeight = 47;
 
-  const excerptStartY = divider1Y + 54;
-  const excerptLineHeight = 44;
-
-  // Footer: strictly 2:3 positions within 1600px canvas
-  const divider2Y = height - 154; // 1446
-  const footerY = divider2Y + 68; // 1514
+  // Footer is anchored to the bottom safe area of the 1454px canvas.
+  const divider2Y = height - 124;
+  const footerY = divider2Y + 55;
 
   const titleTspans = buildTspans(titleLines, paddingX, titleLineHeight);
   const excerptTspans = buildTspans(excerptLines, paddingX, excerptLineHeight);
@@ -486,7 +494,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   <!-- Divider below header -->
   <line x1="${paddingX}" y1="${headerDividerY}" x2="${width - paddingX}" y2="${headerDividerY}" class="divider" />
 
-  <!-- Title -->
+  <!-- Cog title/content -->
   <text x="${paddingX}" y="${titleStartY}" class="title">
     ${titleTspans}
   </text>
@@ -494,7 +502,7 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   <!-- Divider below title -->
   <line x1="${paddingX}" y1="${divider1Y}" x2="${width - paddingX}" y2="${divider1Y}" class="divider" />
 
-  <!-- Description (up to 597 chars, full usable width) -->
+  <!-- Cog description -->
   <text x="${paddingX}" y="${excerptStartY}" class="excerpt">
     ${excerptTspans}
   </text>
@@ -513,44 +521,42 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   const safeUsername = escapeXml(authorId ? authorId.toLowerCase() : "");
   const displayDomain = getCanonicalDomain(url);
 
-  const paddingX = 80;
-  const borderInset = 32;
-  const borderRadius = 24;
+  // Geometry is scaled for the exact 969 × 646 landscape canvas.
+  const paddingX = 65;
+  const borderInset = 26;
+  const borderRadius = 20;
 
-  const usableWidth = width - paddingX * 2; // 1040px
-  const maxTextWidth = usableWidth - 20; // 1020px
+  const usableWidth = width - paddingX * 2;
+  const maxTextWidth = usableWidth - 16;
 
-  // Title: natural multi-line wrapping within usable width, accommodates full 197 chars, never sliced
-  const titleLines = wrapTextByWidth(title || "Untitled Cogmit", maxTextWidth, 56, true);
-
-  const headerY = 110;
-  const headerDividerY = headerY + 28; // 138
-
-  // Footer: strictly 3:2 positions
-  const divider2Y = height - 154; // 646
-  const footerY = divider2Y + 68; // 714
-
-  const titleLineHeight = 64;
-  const titleBlockHeight = (titleLines.length - 1) * titleLineHeight + 56;
-  const availableTitleHeight = divider2Y - headerDividerY; // 508px
-
-  // Vertically centre the title block nicely within available title area
-  const titleStartY = Math.max(
-    180,
-    Math.round(headerDividerY + (availableTitleHeight - titleBlockHeight) / 2)
+  const titleLines = wrapTextByWidth(
+    title || "Untitled Cogmit",
+    maxTextWidth,
+    FONT_TITLE_SIZE,
+    true
   );
-  const titleEndY = titleStartY + (titleLines.length - 1) * titleLineHeight;
-  const divider1Y = Math.min(divider2Y - 30, titleEndY + 46);
+
+  const headerY = 91;
+  const headerDividerY = 114;
+
+  // Keep the footer divider and footer anchored to the bottom safe area.
+  const divider2Y = height - 124;
+  const footerY = divider2Y + 55;
+
+  const titleLineHeight = 50;
+  const titleBlockHeight = (titleLines.length - 1) * titleLineHeight + FONT_TITLE_SIZE;
+  const availableTitleHeight = divider2Y - headerDividerY;
+
+  // Vertically centre the title block between the header and footer.
+  const titleStartY = Math.round(
+    headerDividerY + (availableTitleHeight - titleBlockHeight) / 2 + FONT_TITLE_SIZE
+  );
 
   const titleTspans = buildTspans(titleLines, paddingX, titleLineHeight);
 
-  // Landscape title styles (56px bold, full width, border-box)
-  const landscapeStyle = `
-      .title-container, .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif; font-size: 56px; font-weight: 800; fill: ${c.title}; width: 100%; max-width: 100%; box-sizing: border-box; }`;
-
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="width: 100%; height: auto; display: block; max-width: 100%; box-sizing: border-box;">
-  <defs><style>${buildStyles(c)}${landscapeStyle}</style></defs>
+  <defs><style>${buildStyles(c)}</style></defs>
 
   <!-- Card surface -->
   <rect width="${width}" height="${height}" class="bg" />
@@ -564,13 +570,11 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
   <!-- Divider below header -->
   <line x1="${paddingX}" y1="${headerDividerY}" x2="${width - paddingX}" y2="${headerDividerY}" class="divider" />
 
-  <!-- Title (full usable inner width, 197 chars accommodated, no border crossing) -->
+  <!-- Cog title/content; no divider below title in Landscape -->
   <text x="${paddingX}" y="${titleStartY}" class="title">
     ${titleTspans}
   </text>
 
-  <!-- Divider below title -->
-  <line x1="${paddingX}" y1="${divider1Y}" x2="${width - paddingX}" y2="${divider1Y}" class="divider" />
   ${buildFooter(paddingX, divider2Y, footerY, width, displayDomain)}
 </svg>`;
 }
@@ -580,8 +584,8 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
 /**
  * Generates deterministic SVG XML for the Cogmit Card.
  *
- * - withDescription=false (default) → 4:3 landscape, no description
- * - withDescription=true            → portrait with content-driven height, with description
+ * - withDescription=false (default) → 969 × 646 (3:2 landscape), no description
+ * - withDescription=true            → 969 × 1454 (2:3 portrait), with description
  * - darkTheme=true (default)        → black bg, YV Yellow text, YV Indigo borders
  * - darkTheme=false                 → light neutral bg, dark foreground text
  */
