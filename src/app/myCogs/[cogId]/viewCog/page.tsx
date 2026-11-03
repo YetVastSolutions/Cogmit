@@ -2,6 +2,13 @@ import { auth } from "@/auth";
 import { getRepositoryContent, getOctokit, getCogmitDataStatus, getRootCogIndexEntry, getProjects, CogIndexEntry } from "@/lib/github";
 import { moveCogToDestination } from "@/app/myCogs/[cogId]/editCog/actions";
 import { redirect } from "next/navigation";
+import {
+  ROUTE_LOGIN,
+  ROUTE_MY_COGS,
+  FILE_ROOT_COG_MD,
+  DEFAULT_COMMITS_PER_PAGE,
+  NO_PARENT_PROJECT,
+} from "@/constants";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { ViewCog } from "@/components/ViewCog";
@@ -11,7 +18,7 @@ import { extractDescription } from "@/lib/utils";
 export default async function ViewCogPage({ params }: { params: Promise<{ cogId: string }> }) {
   const session = await auth();
   if (!session) {
-    redirect("/login");
+    redirect(ROUTE_LOGIN);
   }
 
   const { cogId } = await params;
@@ -19,7 +26,7 @@ export default async function ViewCogPage({ params }: { params: Promise<{ cogId:
 
   const status = await getCogmitDataStatus();
   if (status.state !== "ready") {
-    redirect("/myCogs");
+    redirect(ROUTE_MY_COGS);
   }
 
   const { owner, repo } = status;
@@ -39,7 +46,7 @@ export default async function ViewCogPage({ params }: { params: Promise<{ cogId:
       <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-8 bg-background">
         <h1 className="text-3xl font-bold text-destructive mb-4">RootCog Not Found</h1>
         <p className="text-muted-foreground mb-8">The Cog &quot;{decodedCogId}&quot; could not be found in your index.</p>
-        <Link href="/myCogs" className={buttonVariants()}>
+        <Link href={ROUTE_MY_COGS} className={buttonVariants()}>
           Back to My Cogs
         </Link>
       </div>
@@ -49,13 +56,13 @@ export default async function ViewCogPage({ params }: { params: Promise<{ cogId:
   let content = "";
 
   try {
-    const fileData = await getRepositoryContent(owner, repo, `${cogPath}/rootCog.md`);
+    const fileData = await getRepositoryContent(owner, repo, `${cogPath}/${FILE_ROOT_COG_MD}`);
     if (fileData && !Array.isArray(fileData) && typeof fileData === "object" && "content" in fileData && typeof fileData.content === "string") {
       content = Buffer.from(fileData.content, "base64").toString("utf8");
     }
   } catch (error) {
     if (error && typeof error === "object" && "name" in error && "AuthenticationRequiredError" === error.name) {
-      redirect("/login");
+      redirect(ROUTE_LOGIN);
     }
     console.error("Failed to load cog content", error);
   }
@@ -69,7 +76,7 @@ export default async function ViewCogPage({ params }: { params: Promise<{ cogId:
       owner,
       repo,
       path: cogPath,
-      per_page: 100,
+      per_page: DEFAULT_COMMITS_PER_PAGE,
     });
     if (commits && commits.length > 0) {
       if (!lastModified) {
@@ -83,7 +90,7 @@ export default async function ViewCogPage({ params }: { params: Promise<{ cogId:
     console.error("Failed to fetch commit history for timestamps", error);
   }
 
-  const projectValue = cogIndexEntry?.project || "No Parent Project";
+  const projectValue = cogIndexEntry?.project || NO_PARENT_PROJECT;
   const title = cogIndexEntry?.title || decodedCogId;
 
   const projects = await getProjects();

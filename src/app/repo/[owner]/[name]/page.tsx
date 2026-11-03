@@ -5,11 +5,12 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { RepoStatusView } from "./RepoStatusView";
+import { ROUTE_HOME, ROUTE_LOGIN, ROUTE_CONNECT } from "@/constants";
 
 export default async function RepoPage({ params }: { params: Promise<{ owner: string, name: string }> }) {
   const session = await auth();
   if (!session) {
-    redirect("/");
+    redirect(ROUTE_HOME);
   }
 
   const { owner, name } = await params;
@@ -30,7 +31,7 @@ export default async function RepoPage({ params }: { params: Promise<{ owner: st
     }
   } catch (error) {
     if (error && typeof error === "object" && "name" in error && error.name === "AuthenticationRequiredError") {
-      redirect("/login");
+      redirect(ROUTE_LOGIN);
     }
     console.error("Failed to validate repo", error);
   }
@@ -43,7 +44,7 @@ export default async function RepoPage({ params }: { params: Promise<{ owner: st
           <p className="text-muted-foreground">Cogmit Repository Status</p>
         </div>
         <Link 
-          href="/connect"
+          href={ROUTE_CONNECT}
           className={cn(buttonVariants({ variant: "outline" }))}
         >
           Back to Connect

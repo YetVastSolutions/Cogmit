@@ -1,7 +1,11 @@
 import { MetadataRoute } from 'next'
 import { getCanonicalCogmitUrl } from '@/lib/utils';
-
-const COGMIT_REPO_PUBLIC = "YVSApps_Data_Cogmit_Public";
+import {
+  COGMIT_REPO_PUBLIC,
+  DEFAULT_PRODUCTION_DOMAIN,
+  PATH_COGMITS_INDEX,
+  REVALIDATE_INTERVAL_SITEMAP,
+} from '@/constants';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const allowedUsersStr = process.env.ALLOWED_GITHUB_USERS;
@@ -10,12 +14,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const users = allowedUsersStr.split(',').map(u => u.trim()).filter(Boolean);
   
   const sitemapEntries: MetadataRoute.Sitemap = [];
-  const baseUrl = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || 'cogmit.com'}`;
+  const baseUrl = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || DEFAULT_PRODUCTION_DOMAIN}`;
   
   for (const ownerId of users) {
     try {
-      const res = await fetch(`https://api.github.com/repos/${ownerId}/${COGMIT_REPO_PUBLIC}/contents/cogmits/cogmitsIndex.json`, {
-        next: { revalidate: 3600 }
+      const res = await fetch(`https://api.github.com/repos/${ownerId}/${COGMIT_REPO_PUBLIC}/contents/${PATH_COGMITS_INDEX}`, {
+        next: { revalidate: REVALIDATE_INTERVAL_SITEMAP }
       });
       
       if (!res.ok) continue;

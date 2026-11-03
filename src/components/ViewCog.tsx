@@ -26,6 +26,7 @@ import showdown from "showdown";
 import { Parser as CommonmarkParser, HtmlRenderer as CommonmarkRenderer } from "commonmark";
 import Link from "next/link";
 import { cn, formatTimestamp, getCanonicalCogmitUrl } from "@/lib/utils";
+import { NO_PARENT_PROJECT, ROUTE_HOME, ROUTE_COGMITS_PREFIX } from "@/constants";
 import { CogActionRow } from "@/components/CogActionRow";
 import { MarqueeContent } from "@/components/MarqueeContent";
 import { ShareCogmitModal } from "@/components/ShareCogmitModal";
@@ -125,7 +126,7 @@ export interface ViewCogProps {
 export function ViewCog({
   title,
   description,
-  project = "No Parent Project",
+  project = NO_PARENT_PROJECT,
   content,
   createdAt,
   lastModified,
@@ -329,7 +330,7 @@ export function ViewCog({
                 id: "author",
                 node: (
                   <Link
-                    href={isAuthor ? "/" : `/cogmits/${authorId}`}
+                    href={isAuthor ? ROUTE_HOME : `${ROUTE_COGMITS_PREFIX}/${authorId}`}
                     className={cn(
                       buttonVariants({ variant: "outline" }),
                       "bg-[#FFFF11] dark:bg-background hover:bg-[#e6e60f] dark:hover:bg-muted text-[#4B0084] dark:text-[#FFFF11] border-transparent dark:border-input font-medium flex items-center justify-center h-10 px-4 whitespace-nowrap w-full md:w-auto min-w-[140px]"
@@ -339,14 +340,14 @@ export function ViewCog({
                     <span>
                       {authorId}
                       <span className="hidden sm:inline">
-                        {project && project !== "No Parent Project" ? ` : ${project}` : ""}
+                        {project && project !== NO_PARENT_PROJECT ? ` : ${project}` : ""}
                       </span>
                     </span>
                   </Link>
                 ),
                 compactNode: (
                   <Link
-                    href={isAuthor ? "/" : `/cogmits/${authorId}`}
+                    href={isAuthor ? ROUTE_HOME : `${ROUTE_COGMITS_PREFIX}/${authorId}`}
                     className={cn(
                       buttonVariants({ variant: "outline" }),
                       "bg-[#FFFF11] dark:bg-background hover:bg-[#e6e60f] dark:hover:bg-muted text-[#4B0084] dark:text-[#FFFF11] border-transparent dark:border-input font-medium flex items-center justify-center h-10 px-4 whitespace-nowrap w-auto min-w-[140px]"
@@ -356,7 +357,7 @@ export function ViewCog({
                     <span>
                       {authorId}
                       <span className="hidden sm:inline">
-                        {project && project !== "No Parent Project" ? ` : ${project}` : ""}
+                        {project && project !== NO_PARENT_PROJECT ? ` : ${project}` : ""}
                       </span>
                     </span>
                   </Link>

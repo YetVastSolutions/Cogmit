@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { CogmitDataStatus, InitCogmitResult } from "@/lib/github";
+import { COGMIT_REPO_PUBLIC, COGMIT_REPO_PRIVATE } from "@/constants";
 
 /**
  * CogmitDataProvisioning handles the home-page decision tree UI for
@@ -193,7 +194,7 @@ export function CogmitDataProvisioning({
 
               <div className="mb-6 flex flex-col gap-2 items-center">
                 <span className="font-mono text-xs bg-muted px-2 py-1 rounded w-fit border border-border">
-                  YVSApps_Data_Cogmit_Public
+                  {COGMIT_REPO_PUBLIC}
                 </span>
               </div>
 
@@ -228,10 +229,10 @@ export function CogmitDataProvisioning({
 
               <div className="mb-6 flex flex-col gap-2 items-center">
                 <span className="font-mono text-xs bg-muted px-2 py-1 rounded w-fit border border-border">
-                  YVSApps_Data_Cogmit_Private
+                  {COGMIT_REPO_PRIVATE}
                 </span>
                 <span className="font-mono text-xs bg-muted px-2 py-1 rounded w-fit border border-border">
-                  YVSApps_Data_Cogmit_Public
+                  {COGMIT_REPO_PUBLIC}
                 </span>
               </div>
 

@@ -1,5 +1,24 @@
 "use server";
-import { MAX_ROOTCOG_TITLE_LENGTH } from "@/lib/card-renderer";
+import {
+  MAX_ROOTCOG_TITLE_LENGTH,
+  MAX_PROJECT_NAME_LENGTH,
+  ERROR_TITLE_REQUIRED,
+  ERROR_TITLE_TOO_LONG,
+  ERROR_PROJECT_NAME_REQUIRED,
+  ERROR_PROJECT_NAME_TOO_LONG,
+  ERROR_PROJECT_ALREADY_EXISTS,
+  ERROR_REPO_NOT_READY,
+  ERROR_UNAUTHORIZED,
+  ERROR_COGS_INDEX_NOT_FOUND,
+  ERROR_COGS_INDEX_MISSING_INVALID,
+  NO_PARENT_PROJECT,
+  DIR_PROJECTS,
+  DIR_NPP_COGS,
+  FILE_PROJECT_DATA,
+  FILE_ROOT_COG_MD,
+  FILE_COGS_INDEX,
+  ROUTE_LOGIN,
+} from "@/constants";
 
 import { auth } from "@/auth";
 import { getCogmitDataStatus, getOctokit, resolveRootCogPath, getDefaultBranch } from "@/lib/github";
@@ -15,19 +34,19 @@ export async function saveRootCog(
 ) {
   const session = await auth();
   if (!session) {
-    redirect("/login");
+    redirect(ROUTE_LOGIN);
   }
 
   if (!title || title.trim().length === 0) {
-    return { success: false, error: "Title is required" };
+    return { success: false, error: ERROR_TITLE_REQUIRED };
   }
   if (title.length > MAX_ROOTCOG_TITLE_LENGTH) {
-    return { success: false, error: `Title must be ${MAX_ROOTCOG_TITLE_LENGTH} characters or fewer` };
+    return { success: false, error: ERROR_TITLE_TOO_LONG };
   }
 
   const status = await getCogmitDataStatus();
   if (status.state !== "ready") {
-    return { success: false, error: "Cogmit repository is not ready" };
+    return { success: false, error: ERROR_REPO_NOT_READY };
   }
 
   const octokit = await getOctokit();
@@ -48,7 +67,7 @@ export async function saveRootCog(
       const { data: mdData } = await octokit.rest.repos.getContent({
         owner,
         repo,
-        path: `${cogPath}/rootCog.md`,
+        path: `${cogPath}/${FILE_ROOT_COG_MD}`,
       });
       if (mdData && !Array.isArray(mdData) && "sha" in mdData) {
         mdSha = mdData.sha;
@@ -58,7 +77,7 @@ export async function saveRootCog(
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
-      path: `${cogPath}/rootCog.md`,
+      path: `${cogPath}/${FILE_ROOT_COG_MD}`,
       message: `Update ${cogId} rootCog.md`,
       content: Buffer.from(content).toString("base64"),
       ...(mdSha ? { sha: mdSha } : {}),
@@ -71,7 +90,7 @@ export async function saveRootCog(
       const { data: indexData } = await octokit.rest.repos.getContent({
         owner,
         repo,
-        path: "cogsIndex.json",
+        path: FILE_COGS_INDEX,
       });
       if (indexData && !Array.isArray(indexData) && "content" in indexData) {
         indexSha = indexData.sha;
@@ -89,7 +108,7 @@ export async function saveRootCog(
         indexCog.title = title;
         indexUpdated = true;
       }
-      const actualProject = project !== "No Parent Project" ? project : undefined;
+      const actualProject = project !== NO_PARENT_PROJECT ? project : undefined;
       if (indexCog.project !== actualProject) {
         indexCog.project = actualProject;
         indexUpdated = true;
@@ -114,7 +133,7 @@ export async function saveRootCog(
       await octokit.rest.repos.createOrUpdateFileContents({
         owner,
         repo,
-        path: "cogsIndex.json",
+        path: FILE_COGS_INDEX,
         message: `Update cogsIndex.json for ${cogId}`,
         content: Buffer.from(JSON.stringify(indexObj, null, 2)).toString("base64"),
         ...(indexSha ? { sha: indexSha } : {}),
@@ -145,20 +164,20 @@ export async function createProjectAndMoveCog(
 ) {
   const session = await auth();
   if (!session) {
-    return { success: false, error: "Unauthorized" };
+    return { success: false, error: ERROR_UNAUTHORIZED };
   }
 
   if (!projectName || projectName.trim().length === 0) {
-    return { success: false, error: "Project name is required" };
+    return { success: false, error: ERROR_PROJECT_NAME_REQUIRED };
   }
 
-  if (projectName.length > 57) {
-    return { success: false, error: "Project name must be 57 characters or less" };
+  if (projectName.length > MAX_PROJECT_NAME_LENGTH) {
+    return { success: false, error: ERROR_PROJECT_NAME_TOO_LONG };
   }
 
   const status = await getCogmitDataStatus();
   if (status.state !== "ready") {
-    return { success: false, error: "Cogmit repository is not ready" };
+    return { success: false, error: ERROR_REPO_NOT_READY };
   }
 
   const octokit = await getOctokit();
@@ -175,18 +194,18 @@ export async function createProjectAndMoveCog(
       const res = await octokit.rest.repos.getContent({
         owner,
         repo,
-        path: "cogsIndex.json",
+        path: FILE_COGS_INDEX,
       });
       indexData = res.data;
     } catch {
-      return { success: false, error: "cogsIndex.json could not be read." };
+      return { success: false, error: ERROR_COGS_INDEX_NOT_FOUND };
     }
     
     if (indexData && !Array.isArray(indexData) && "content" in indexData) {
       const contentStr = Buffer.from(indexData.content, "base64").toString("utf-8");
       indexObj = JSON.parse(contentStr);
     } else {
-      return { success: false, error: "cogsIndex.json missing or invalid" };
+      return { success: false, error: ERROR_COGS_INDEX_MISSING_INVALID };
     }
 
     const indexCog = indexObj.cogs?.find((c) => c.id === cogId);
@@ -323,7 +342,7 @@ export async function createProjectAndMoveCog(
       encoding: "utf-8",
     });
     treeUpdates.push({
-      path: "cogsIndex.json",
+      path: FILE_COGS_INDEX,
       mode: "100644",
       sha: newIndexBlob.sha,
     });
@@ -384,7 +403,7 @@ export async function getCogHistory(cogId: string) {
     const { data: commits } = await octokit.rest.repos.listCommits({
       owner,
       repo,
-      path: `${cogPath}/rootCog.md`,
+      path: `${cogPath}/${FILE_ROOT_COG_MD}`,
       per_page: 30,
     });
     
@@ -413,23 +432,23 @@ export async function moveCogToDestination(
 ) {
   const session = await auth();
   if (!session) {
-    return { success: false, error: "Unauthorized" };
+    return { success: false, error: ERROR_UNAUTHORIZED };
   }
 
-  if (isNew && destProjectName !== "No Parent Project") {
+  if (isNew && destProjectName !== NO_PARENT_PROJECT) {
     const parts = destProjectName.split("/");
     const newName = parts[parts.length - 1];
     if (!newName || newName.trim().length === 0) {
-      return { success: false, error: "Project name is required" };
+      return { success: false, error: ERROR_PROJECT_NAME_REQUIRED };
     }
-    if (newName.length > 57) {
-      return { success: false, error: "Project name must be 57 characters or less" };
+    if (newName.length > MAX_PROJECT_NAME_LENGTH) {
+      return { success: false, error: ERROR_PROJECT_NAME_TOO_LONG };
     }
   }
 
   const status = await getCogmitDataStatus();
   if (status.state !== "ready") {
-    return { success: false, error: "Cogmit repository is not ready" };
+    return { success: false, error: ERROR_REPO_NOT_READY };
   }
 
   const octokit = await getOctokit();
@@ -446,18 +465,18 @@ export async function moveCogToDestination(
       const res = await octokit.rest.repos.getContent({
         owner,
         repo,
-        path: "cogsIndex.json",
+        path: FILE_COGS_INDEX,
       });
       indexData = res.data;
     } catch {
-      return { success: false, error: "cogsIndex.json could not be read." };
+      return { success: false, error: ERROR_COGS_INDEX_NOT_FOUND };
     }
     
     if (indexData && !Array.isArray(indexData) && "content" in indexData) {
       const contentStr = Buffer.from(indexData.content, "base64").toString("utf-8");
       indexObj = JSON.parse(contentStr);
     } else {
-      return { success: false, error: "cogsIndex.json missing or invalid" };
+      return { success: false, error: ERROR_COGS_INDEX_MISSING_INVALID };
     }
 
     const indexCog = indexObj.cogs?.find((c) => c.id === cogId);
@@ -472,7 +491,7 @@ export async function moveCogToDestination(
       return { success: false, error: "Unable to move because the current Cog could not be located in GitHub." };
     }
 
-    const newPath = destProjectName === "No Parent Project" ? `NPPCogs/${cogId}` : `projects/${destProjectName}/${cogId}`;
+    const newPath = destProjectName === NO_PARENT_PROJECT ? `${DIR_NPP_COGS}/${cogId}` : `${DIR_PROJECTS}/${destProjectName}/${cogId}`;
 
     if (oldPath === newPath) {
       return { success: true }; // Already there
@@ -511,14 +530,14 @@ export async function moveCogToDestination(
     }
 
     // 4. If isNew, ensure project doesn't exist
-    if (isNew && destProjectName !== "No Parent Project") {
+    if (isNew && destProjectName !== NO_PARENT_PROJECT) {
       try {
         await octokit.rest.repos.getContent({
           owner,
           repo,
-          path: `projects/${destProjectName}/projectData.json`,
+          path: `${DIR_PROJECTS}/${destProjectName}/${FILE_PROJECT_DATA}`,
         });
-        return { success: false, error: "Project already exists" };
+        return { success: false, error: ERROR_PROJECT_ALREADY_EXISTS };
       } catch (e) {
         if (e && typeof e === "object" && "status" in e && e.status !== 404) throw e;
       }
@@ -568,7 +587,7 @@ export async function moveCogToDestination(
     }
 
     // If isNew, Create projectData.json
-    if (isNew && destProjectName !== "No Parent Project") {
+    if (isNew && destProjectName !== NO_PARENT_PROJECT) {
       const projectDataObj = {
         name: destProjectName,
         createdAt: new Date().toISOString()
@@ -580,7 +599,7 @@ export async function moveCogToDestination(
         encoding: "utf-8",
       });
       treeUpdates.push({
-        path: `projects/${destProjectName}/projectData.json`,
+        path: `${DIR_PROJECTS}/${destProjectName}/${FILE_PROJECT_DATA}`,
         mode: "100644",
         sha: projectDataBlob.sha,
       });
@@ -596,7 +615,7 @@ export async function moveCogToDestination(
       encoding: "utf-8",
     });
     treeUpdates.push({
-      path: "cogsIndex.json",
+      path: FILE_COGS_INDEX,
       mode: "100644",
       sha: newIndexBlob.sha,
     });

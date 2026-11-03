@@ -3,13 +3,26 @@
 import { auth } from "@/auth";
 import { getCogmitDataStatus, getOctokit, getDefaultBranch } from "@/lib/github";
 import { revalidatePath } from "next/cache";
+import {
+  ERROR_UNAUTHORIZED,
+  ERROR_REPO_NOT_READY,
+  ERROR_COGS_INDEX_MISSING_INVALID,
+  ERROR_ROOTCOG_NOT_FOUND,
+  ERROR_COG_ALREADY_DELETED,
+  ERROR_TARGET_DELETED_PATH_EXISTS,
+  ERROR_CURRENT_PATH_NOT_DIR,
+  FILE_COGS_INDEX,
+  DIR_DELETED_COGS,
+  ROUTE_MY_COGS,
+  ROUTE_DELETED_COGS,
+} from "@/constants";
 
 export async function deleteRootCog(cogId: string) {
   const session = await auth();
-  if (!session) return { success: false, error: "Unauthorized" };
+  if (!session) return { success: false, error: ERROR_UNAUTHORIZED };
 
   const status = await getCogmitDataStatus();
-  if (status.state !== "ready") return { success: false, error: "Cogmit repository is not ready" };
+  if (status.state !== "ready") return { success: false, error: ERROR_REPO_NOT_READY };
 
   const octokit = await getOctokit();
   const owner = status.owner;
@@ -18,30 +31,30 @@ export async function deleteRootCog(cogId: string) {
   try {
     const defaultBranch = await getDefaultBranch(owner, repo);
     
-    const res = await octokit.rest.repos.getContent({ owner, repo, path: "cogsIndex.json" });
+    const res = await octokit.rest.repos.getContent({ owner, repo, path: FILE_COGS_INDEX });
     const indexData = res.data;
     if (!indexData || Array.isArray(indexData) || !("content" in indexData)) {
-      return { success: false, error: "cogsIndex.json missing or invalid" };
+      return { success: false, error: ERROR_COGS_INDEX_MISSING_INVALID };
     }
 
     const indexObj = JSON.parse(Buffer.from(indexData.content, "base64").toString("utf-8"));
     const indexCog = indexObj.cogs?.find((c: { id: string, path: string, deletedAt?: string }) => c.id === cogId);
 
-    if (!indexCog) return { success: false, error: "Cog not found in index" };
-    if (indexCog.deletedAt) return { success: false, error: "Cog is already deleted" };
+    if (!indexCog) return { success: false, error: ERROR_ROOTCOG_NOT_FOUND };
+    if (indexCog.deletedAt) return { success: false, error: ERROR_COG_ALREADY_DELETED };
 
     const oldPath = indexCog.path;
-    const newPath = `deletedCogs/${cogId}`;
+    const newPath = `${DIR_DELETED_COGS}/${cogId}`;
 
     try {
       await octokit.rest.repos.getContent({ owner, repo, path: newPath });
-      return { success: false, error: "Target deleted path already exists" };
+      return { success: false, error: ERROR_TARGET_DELETED_PATH_EXISTS };
     } catch (e) {
       if (e && typeof e === "object" && "status" in e && e.status !== 404) throw e;
     }
 
     const { data: dirData } = await octokit.rest.repos.getContent({ owner, repo, path: oldPath });
-    if (!Array.isArray(dirData)) return { success: false, error: "Current RootCog path is not a directory" };
+    if (!Array.isArray(dirData)) return { success: false, error: ERROR_CURRENT_PATH_NOT_DIR };
 
     const { data: refData } = await octokit.rest.git.getRef({ owner, repo, ref: `heads/${defaultBranch}` });
     const baseCommitSha = refData.object.sha;
@@ -61,7 +74,7 @@ export async function deleteRootCog(cogId: string) {
     const { data: newIndexBlob } = await octokit.rest.git.createBlob({
       owner, repo, content: JSON.stringify(indexObj, null, 2), encoding: "utf-8",
     });
-    treeUpdates.push({ path: "cogsIndex.json", mode: "100644", sha: newIndexBlob.sha });
+    treeUpdates.push({ path: FILE_COGS_INDEX, mode: "100644", sha: newIndexBlob.sha });
 
 
 
@@ -75,8 +88,8 @@ export async function deleteRootCog(cogId: string) {
       owner, repo, ref: `heads/${defaultBranch}`, sha: newCommit.sha,
     });
 
-    revalidatePath("/myCogs");
-    revalidatePath("/myCogs/deletedCogs");
+    revalidatePath(ROUTE_MY_COGS);
+    revalidatePath(ROUTE_DELETED_COGS);
     return { success: true };
   } catch (error) {
     console.error("Delete failed", error);
@@ -86,10 +99,10 @@ export async function deleteRootCog(cogId: string) {
 
 export async function restoreRootCog(cogId: string) {
   const session = await auth();
-  if (!session) return { success: false, error: "Unauthorized" };
+  if (!session) return { success: false, error: ERROR_UNAUTHORIZED };
 
   const status = await getCogmitDataStatus();
-  if (status.state !== "ready") return { success: false, error: "Cogmit repository is not ready" };
+  if (status.state !== "ready") return { success: false, error: ERROR_REPO_NOT_READY };
 
   const octokit = await getOctokit();
   const owner = status.owner;
@@ -98,20 +111,20 @@ export async function restoreRootCog(cogId: string) {
   try {
     const defaultBranch = await getDefaultBranch(owner, repo);
     
-    const res = await octokit.rest.repos.getContent({ owner, repo, path: "cogsIndex.json" });
+    const res = await octokit.rest.repos.getContent({ owner, repo, path: FILE_COGS_INDEX });
     const indexData = res.data;
     if (!indexData || Array.isArray(indexData) || !("content" in indexData)) {
-      return { success: false, error: "cogsIndex.json missing or invalid" };
+      return { success: false, error: ERROR_COGS_INDEX_MISSING_INVALID };
     }
 
     const indexObj = JSON.parse(Buffer.from(indexData.content, "base64").toString("utf-8"));
     const indexCog = indexObj.cogs?.find((c: { id: string, path: string, deletedAt?: string }) => c.id === cogId);
 
-    if (!indexCog) return { success: false, error: "Cog not found in index" };
+    if (!indexCog) return { success: false, error: ERROR_ROOTCOG_NOT_FOUND };
     if (!indexCog.deletedAt) return { success: false, error: "Cog is not deleted" };
 
     const originalPath = indexCog.path;
-    const oldPath = `deletedCogs/${cogId}`;
+    const oldPath = `${DIR_DELETED_COGS}/${cogId}`;
 
     try {
       await octokit.rest.repos.getContent({ owner, repo, path: originalPath });
@@ -141,7 +154,7 @@ export async function restoreRootCog(cogId: string) {
     const { data: newIndexBlob } = await octokit.rest.git.createBlob({
       owner, repo, content: JSON.stringify(indexObj, null, 2), encoding: "utf-8",
     });
-    treeUpdates.push({ path: "cogsIndex.json", mode: "100644", sha: newIndexBlob.sha });
+    treeUpdates.push({ path: FILE_COGS_INDEX, mode: "100644", sha: newIndexBlob.sha });
 
     const { data: newTree } = await octokit.rest.git.createTree({
       owner, repo, base_tree: baseTreeSha, tree: treeUpdates,
@@ -153,8 +166,8 @@ export async function restoreRootCog(cogId: string) {
       owner, repo, ref: `heads/${defaultBranch}`, sha: newCommit.sha,
     });
 
-    revalidatePath("/myCogs");
-    revalidatePath("/myCogs/deletedCogs");
+    revalidatePath(ROUTE_MY_COGS);
+    revalidatePath(ROUTE_DELETED_COGS);
     return { success: true };
   } catch (error) {
     console.error("Restore failed", error);

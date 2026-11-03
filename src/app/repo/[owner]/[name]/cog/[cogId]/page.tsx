@@ -6,29 +6,30 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { revalidatePath } from "next/cache";
 import { CogEditor } from "@/components/CogEditor";
+import { ROUTE_HOME, ROUTE_LOGIN, DIR_NPP_COGS, FILE_ROOT_COG_MD } from "@/constants";
 
 export default async function NPPCogPage({ params }: { params: Promise<{ owner: string, name: string, cogId: string }> }) {
   const session = await auth();
   if (!session) {
-    redirect("/");
+    redirect(ROUTE_HOME);
   }
 
   const { owner, name, cogId } = await params;
   const decodedCogId = decodeURIComponent(cogId);
-  const cogPath = `NPPCogs/${decodedCogId}`;
+  const cogPath = `${DIR_NPP_COGS}/${decodedCogId}`;
 
   let content = "";
   let sha = "";
   
   try {
-    const fileData = await getRepositoryContent(owner, name, `${cogPath}/rootCog.md`);
+    const fileData = await getRepositoryContent(owner, name, `${cogPath}/${FILE_ROOT_COG_MD}`);
     if (fileData && !Array.isArray(fileData) && typeof fileData === "object" && "content" in fileData && typeof fileData.content === "string") {
       content = Buffer.from(fileData.content, "base64").toString("utf8");
       sha = "sha" in fileData && typeof fileData.sha === "string" ? fileData.sha : "";
     }
   } catch (error) {
     if (error && typeof error === "object" && "name" in error && error.name === "AuthenticationRequiredError") {
-      redirect("/login");
+      redirect(ROUTE_LOGIN);
     }
     console.error("Failed to load cog content", error);
   }
@@ -40,7 +41,7 @@ export default async function NPPCogPage({ params }: { params: Promise<{ owner: 
       await octokit.rest.repos.createOrUpdateFileContents({
         owner,
         repo: name,
-        path: `${cogPath}/rootCog.md`,
+        path: `${cogPath}/${FILE_ROOT_COG_MD}`,
         message: `Update ${decodedCogId} rootCog.md`,
         content: Buffer.from(newContent).toString("base64"),
         ...(sha ? { sha } : {}),
@@ -49,7 +50,7 @@ export default async function NPPCogPage({ params }: { params: Promise<{ owner: 
       return { success: true };
     } catch (error) {
       if (error && typeof error === "object" && "name" in error && error.name === "AuthenticationRequiredError") {
-        redirect("/login");
+        redirect(ROUTE_LOGIN);
       }
       console.error("Failed to save cog", error);
       return { success: false, error: error instanceof Error ? error.message : "Unknown error" };

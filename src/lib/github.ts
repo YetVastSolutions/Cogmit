@@ -1,6 +1,31 @@
 import { Octokit } from "@octokit/rest";
 import { decode } from "next-auth/jwt";
 import { cookies } from "next/headers";
+import {
+  COGMIT_REPO_PUBLIC,
+  COGMIT_REPO_PRIVATE,
+  COGMIT_REPO_PUBLISHED,
+  COOKIE_SESSION_TOKEN_SECURE,
+  COOKIE_SESSION_TOKEN_STANDARD,
+  DEFAULT_RETRY_COUNT,
+  DEFAULT_RETRY_DELAY_MS,
+  RETRYABLE_HTTP_STATUSES,
+  FILE_COGS_INDEX,
+  DIR_PROJECTS,
+  DIR_NPP_COGS,
+  DIR_DELETED_COGS,
+  DIR_COGMITS,
+  FILE_GITKEEP,
+  FILE_PROJECT_DATA,
+  PATH_COGMITS_INDEX,
+  ERROR_ROOTCOG_NOT_FOUND,
+} from "@/constants";
+
+export {
+  COGMIT_REPO_PUBLIC,
+  COGMIT_REPO_PRIVATE,
+  COGMIT_REPO_PUBLISHED,
+};
 
 /** Type guard for errors with a numeric `status` property (e.g., Octokit errors). */
 function isHttpError(error: unknown): error is { status: number } {
@@ -48,9 +73,9 @@ export function isGitHubAuthError(error: unknown): boolean {
 // ---------------------------------------------------------------------------
 
 /** Canonical Cogmit data repository names inside the user's account. */
-export const COGMIT_REPO_PUBLIC = "YVSApps_Data_Cogmit_Public";
-export const COGMIT_REPO_PRIVATE = "YVSApps_Data_Cogmit_Private";
-export const COGMIT_REPO_PUBLISHED = "YVSApps_Data_Cogmit_Public";
+
+
+
 
 // ---------------------------------------------------------------------------
 // Authenticated User Info
@@ -74,15 +99,15 @@ export async function getAuthenticatedUser() {
  */
 export async function getOctokit() {
   const cookieStore = await cookies();
-  const secureCookie = cookieStore.get("__Secure-authjs.session-token")?.value;
-  const standardCookie = cookieStore.get("authjs.session-token")?.value;
+  const secureCookie = cookieStore.get(COOKIE_SESSION_TOKEN_SECURE)?.value;
+  const standardCookie = cookieStore.get(COOKIE_SESSION_TOKEN_STANDARD)?.value;
   const token = secureCookie || standardCookie;
 
   if (!token) {
     throw new AuthenticationRequiredError("Unauthorized: No session token found.");
   }
 
-  const salt = secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token";
+  const salt = secureCookie ? COOKIE_SESSION_TOKEN_SECURE : COOKIE_SESSION_TOKEN_STANDARD;
 
   const decoded = await decode({
     token,
@@ -130,7 +155,7 @@ export async function getOctokit() {
 export async function getRepositoryContent(owner: string, repo: string, path: string = "", ref?: string) {
   const octokit = await getOctokit();
 
-  const attemptRequest = async (retries = 2, delay = 500): Promise<unknown> => {
+  const attemptRequest = async (retries = DEFAULT_RETRY_COUNT, delay = DEFAULT_RETRY_DELAY_MS): Promise<unknown> => {
     try {
       const { data } = await octokit.rest.repos.getContent({
         owner,
@@ -143,7 +168,7 @@ export async function getRepositoryContent(owner: string, repo: string, path: st
       if (isHttpError(error) && error.status === 404) {
         return null;
       }
-      if (isHttpError(error) && [502, 503, 504].includes(error.status) && retries > 0) {
+      if (isHttpError(error) && (RETRYABLE_HTTP_STATUSES as readonly number[]).includes(error.status) && retries > 0) {
         await new Promise(resolve => setTimeout(resolve, delay));
         return attemptRequest(retries - 1, delay * 2);
       }
@@ -168,7 +193,7 @@ export async function getDefaultBranch(owner: string, repo: string): Promise<str
 }
 
 export class RootCogNotFoundError extends Error {
-  constructor(message = "RootCog not found in index") {
+  constructor(message = ERROR_ROOTCOG_NOT_FOUND) {
     super(message);
     this.name = "RootCogNotFoundError";
   }
@@ -191,7 +216,7 @@ export async function getRootCogIndexEntry(owner: string, repo: string, cogId: s
     const { data } = await octokit.rest.repos.getContent({
       owner,
       repo,
-      path: "cogsIndex.json",
+      path: FILE_COGS_INDEX,
     });
     if (data && !Array.isArray(data) && "content" in data) {
       const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
@@ -232,7 +257,7 @@ export async function validateCogmitRepository(owner: string, repo: string): Pro
     await octokit.rest.repos.getContent({
       owner,
       repo,
-      path: "cogsIndex.json",
+      path: FILE_COGS_INDEX,
     });
     return true;
   } catch (error: unknown) {
@@ -367,21 +392,21 @@ async function reconcileRepoStructure(owner: string, repo: string, isSource: boo
   if (isSource) {
     await ensureFile("README.md", README_CONTENT, "Initial commit: Create README.md");
     const initialIndex = { cogs: [] };
-    await ensureFile("cogsIndex.json", JSON.stringify(initialIndex, null, 2), "Initial commit: Create cogsIndex.json");
-    await ensureFile("projects/.gitkeep", "", "Initial commit: Create projects directory");
-    await ensureFile("NPPCogs/.gitkeep", "", "Initial commit: Create NPPCogs directory");
-    await ensureFile("deletedCogs/.gitkeep", "", "Initial commit: Create deletedCogs directory");
+    await ensureFile(FILE_COGS_INDEX, JSON.stringify(initialIndex, null, 2), "Initial commit: Create cogsIndex.json");
+    await ensureFile(`${DIR_PROJECTS}/${FILE_GITKEEP}`, "", "Initial commit: Create projects directory");
+    await ensureFile(`${DIR_NPP_COGS}/${FILE_GITKEEP}`, "", "Initial commit: Create NPPCogs directory");
+    await ensureFile(`${DIR_DELETED_COGS}/${FILE_GITKEEP}`, "", "Initial commit: Create deletedCogs directory");
 
     if (repo === COGMIT_REPO_PUBLIC) {
-      await ensureFile("cogmits/.gitkeep", "", "Initial commit: Create cogmits directory");
+      await ensureFile(`${DIR_COGMITS}/${FILE_GITKEEP}`, "", "Initial commit: Create cogmits directory");
       const initialPubIndex = { cogmits: [] };
-      await ensureFile("cogmits/cogmitsIndex.json", JSON.stringify(initialPubIndex, null, 2), "Initial commit: Create cogmitsIndex.json");
+      await ensureFile(PATH_COGMITS_INDEX, JSON.stringify(initialPubIndex, null, 2), "Initial commit: Create cogmitsIndex.json");
     }
   } else {
     await ensureFile("README.md", "# Published Cogmits\n\nThis repository contains published Cogmits.", "Initial commit: Create README.md");
     const initialPubIndex = { cogmits: [] };
-    await ensureFile("cogmits/.gitkeep", "", "Initial commit: Create cogmits directory");
-    await ensureFile("cogmits/cogmitsIndex.json", JSON.stringify(initialPubIndex, null, 2), "Initial commit: Create cogmitsIndex.json");
+    await ensureFile(`${DIR_COGMITS}/${FILE_GITKEEP}`, "", "Initial commit: Create cogmits directory");
+    await ensureFile(PATH_COGMITS_INDEX, JSON.stringify(initialPubIndex, null, 2), "Initial commit: Create cogmitsIndex.json");
   }
 }
 
@@ -442,7 +467,7 @@ export async function getCogmitDataStatus(): Promise<CogmitDataStatus> {
     const { data } = await octokit.rest.repos.getContent({
       owner,
       repo: sourceRepoName,
-      path: "cogsIndex.json",
+      path: FILE_COGS_INDEX,
     });
 
     if (data && !Array.isArray(data) && "content" in data) {
@@ -748,38 +773,38 @@ export async function initializeCogmitRepository(owner: string, repo: string) {
   );
 
   await createCommit(
-    "cogsIndex.json",
+    FILE_COGS_INDEX,
     JSON.stringify(initialIndex, null, 2),
     "Initial commit: Create cogsIndex.json"
   );
 
   await createCommit(
-    "projects/.gitkeep",
+    `${DIR_PROJECTS}/${FILE_GITKEEP}`,
     "",
     "Initial commit: Create projects directory"
   );
 
   await createCommit(
-    "NPPCogs/.gitkeep",
+    `${DIR_NPP_COGS}/${FILE_GITKEEP}`,
     "",
     "Initial commit: Create NPPCogs directory"
   );
 
   await createCommit(
-    "deletedCogs/.gitkeep",
+    `${DIR_DELETED_COGS}/${FILE_GITKEEP}`,
     "",
     "Initial commit: Create deletedCogs directory"
   );
 
   if (repo === COGMIT_REPO_PUBLIC) {
     await createCommit(
-      "cogmits/.gitkeep",
+      `${DIR_COGMITS}/${FILE_GITKEEP}`,
       "",
       "Initial commit: Create cogmits directory"
     );
     const initialPubIndex = { cogmits: [] };
     await createCommit(
-      "cogmits/cogmitsIndex.json",
+      PATH_COGMITS_INDEX,
       JSON.stringify(initialPubIndex, null, 2),
       "Initial commit: Create cogmitsIndex.json"
     );
@@ -867,12 +892,12 @@ export async function getProjects(): Promise<string[]> {
     const projects = treeData.tree
       .filter(
         (node) =>
-          node.path?.startsWith("projects/") &&
-          node.path?.endsWith("/projectData.json")
+          node.path?.startsWith(`${DIR_PROJECTS}/`) &&
+          node.path?.endsWith(`/${FILE_PROJECT_DATA}`)
       )
       .map((node) => {
         const path = node.path!;
-        return path.substring("projects/".length, path.length - "/projectData.json".length);
+        return path.substring(`${DIR_PROJECTS}/`.length, path.length - `/${FILE_PROJECT_DATA}`.length);
       });
 
     // Ensure we also grab projects that might not have projectData.json but exist as a dir directly under projects (if any)? 

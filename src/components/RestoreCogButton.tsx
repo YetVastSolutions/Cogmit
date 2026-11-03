@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { restoreRootCog } from "@/app/myCogs/actions";
 import { useRouter } from "next/navigation";
+import { ROUTE_MY_COGS } from "@/constants";
 
 export function RestoreCogButton({ cogId }: { cogId: string }) {
   const [isRestoring, setIsRestoring] = useState(false);
@@ -14,7 +15,7 @@ export function RestoreCogButton({ cogId }: { cogId: string }) {
     setIsRestoring(true);
     const res = await restoreRootCog(cogId);
     if (res.success) {
-      router.push("/myCogs");
+      router.push(ROUTE_MY_COGS);
     } else {
       alert(res.error || "Failed to restore cog");
       setIsRestoring(false);

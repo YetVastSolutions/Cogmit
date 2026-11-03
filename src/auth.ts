@@ -1,5 +1,6 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import GitHub from "next-auth/providers/github";
+import { AUTH_GITHUB_SCOPE } from "@/constants";
 
 declare module "next-auth" {
   interface Session {
@@ -22,7 +23,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorization: {
         params: {
           // We need repo scope to interact with the user's Github repository
-          scope: "read:user user:email repo",
+          scope: AUTH_GITHUB_SCOPE,
         },
       },
     }),

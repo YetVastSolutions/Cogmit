@@ -2,6 +2,7 @@ import { Octokit } from "@octokit/rest";
 
 import Link from "next/link";
 import { formatTimestamp } from "@/lib/utils";
+import { COGMIT_REPO_PUBLIC, PATH_COGMITS_INDEX } from "@/constants";
 
 export default async function AuthorCogmitsPage({ params }: { params: Promise<{ authorId: string }> }) {
   const { authorId } = await params;
@@ -27,30 +28,30 @@ export default async function AuthorCogmitsPage({ params }: { params: Promise<{ 
   try {
     const repoInfo = await octokit.rest.repos.get({
       owner: decodedAuthorId,
-      repo: "YVSApps_Data_Cogmit_Public",
+      repo: COGMIT_REPO_PUBLIC,
     });
     defaultBranch = repoInfo.data.default_branch;
-    targetRepo = "YVSApps_Data_Cogmit_Public";
+    targetRepo = COGMIT_REPO_PUBLIC;
   } catch (error) {
     if ((error as { status?: number })?.status === 404) {
       try {
         const repoInfo = await octokit.rest.repos.get({
           owner: decodedAuthorId,
-          repo: "YVSApps_Data_Cogmit_Public",
+          repo: COGMIT_REPO_PUBLIC,
         });
         defaultBranch = repoInfo.data.default_branch;
-        targetRepo = "YVSApps_Data_Cogmit_Public";
+        targetRepo = COGMIT_REPO_PUBLIC;
       } catch (innerError) {
         console.error("GitHub repository access diagnostic (Public Fallback)", {
           owner: decodedAuthorId,
-          repo: "YVSApps_Data_Cogmit_Public",
+          repo: COGMIT_REPO_PUBLIC,
           errorStatus: (innerError as { status?: number })?.status,
         });
       }
     } else {
       console.error("GitHub repository access diagnostic (Published)", {
         owner: decodedAuthorId,
-        repo: "YVSApps_Data_Cogmit_Public",
+        repo: COGMIT_REPO_PUBLIC,
         errorStatus: (error as { status?: number })?.status,
       });
     }
@@ -71,13 +72,13 @@ export default async function AuthorCogmitsPage({ params }: { params: Promise<{ 
       authorId: decodedAuthorId,
       repoName: targetRepo,
       branchRef: defaultBranch,
-      indexPath: "cogmits/cogmitsIndex.json"
+      indexPath: PATH_COGMITS_INDEX
     });
 
     const { data } = await octokit.rest.repos.getContent({
       owner: decodedAuthorId,
       repo: targetRepo,
-      path: "cogmits/cogmitsIndex.json",
+      path: PATH_COGMITS_INDEX,
       ref: defaultBranch,
     });
 

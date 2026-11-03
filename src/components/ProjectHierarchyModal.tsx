@@ -4,6 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Check, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  NO_PARENT_PROJECT,
+  PROJECT_ROOT_PARENT,
+  ERROR_SELECT_DESTINATION_PROJECT,
+  ERROR_SUBPROJECT_NAME_EMPTY,
+  ERROR_FAILED_MOVE_PROJECT,
+} from "@/constants";
 
 interface ProjectHierarchyModalProps {
   currentProject: string;
@@ -48,7 +55,7 @@ export function ProjectHierarchyModal({ currentProject, projects, onSave, classN
 
   const handleSave = async () => {
     if (!selectedProject && !newProjectParent) {
-      setError("Please select a destination project.");
+      setError(ERROR_SELECT_DESTINATION_PROJECT);
       return;
     }
 
@@ -61,11 +68,11 @@ export function ProjectHierarchyModal({ currentProject, projects, onSave, classN
       
       if (newProjectParent !== null) {
         if (!newProjectName.trim()) {
-          setError("Subproject name cannot be empty.");
+          setError(ERROR_SUBPROJECT_NAME_EMPTY);
           setIsSaving(false);
           return;
         }
-        if (newProjectParent === "ROOT") {
+        if (newProjectParent === PROJECT_ROOT_PARENT) {
           destName = newProjectName.trim();
         } else {
           destName = `${newProjectParent}/${newProjectName.trim()}`;
@@ -86,7 +93,7 @@ export function ProjectHierarchyModal({ currentProject, projects, onSave, classN
       if (res.success) {
         handleClose();
       } else {
-        setError(res.error || "Failed to move project.");
+        setError(res.error || ERROR_FAILED_MOVE_PROJECT);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
@@ -100,7 +107,7 @@ export function ProjectHierarchyModal({ currentProject, projects, onSave, classN
   };
 
   // Build tree
-  const root: Node = { name: "ROOT", fullPath: "ROOT", children: {} };
+  const root: Node = { name: PROJECT_ROOT_PARENT, fullPath: PROJECT_ROOT_PARENT, children: {} };
   projects.forEach(p => {
     const parts = p.split("/");
     let current = root;
@@ -251,23 +258,23 @@ export function ProjectHierarchyModal({ currentProject, projects, onSave, classN
                 <div 
                   className={cn(
                     "flex items-center group h-8 px-2 rounded-md border border-transparent hover:border-yellow-500 transition-colors cursor-pointer",
-                    selectedProject === "No Parent Project" ? "border-yellow-500" : ""
+                    selectedProject === NO_PARENT_PROJECT ? "border-yellow-500" : ""
                   )}
                   onClick={() => {
-                    setSelectedProject("No Parent Project");
+                    setSelectedProject(NO_PARENT_PROJECT);
                     setNewProjectParent(null);
                   }}
                 >
-                  <span className="text-sm font-medium flex-1 italic text-muted-foreground">No Parent Project</span>
-                  {selectedProject === "No Parent Project" && <Check className="w-4 h-4 text-primary ml-2 shrink-0" />}
+                  <span className="text-sm font-medium flex-1 italic text-muted-foreground">{NO_PARENT_PROJECT}</span>
+                  {selectedProject === NO_PARENT_PROJECT && <Check className="w-4 h-4 text-primary ml-2 shrink-0" />}
                 </div>
 
                 {/* Root level + New project */}
-                {newProjectParent !== "ROOT" ? (
+                {newProjectParent !== PROJECT_ROOT_PARENT ? (
                   <div 
                     className="flex items-center h-8 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer rounded-md border border-transparent hover:border-yellow-500 transition-colors"
                     onClick={() => {
-                      setNewProjectParent("ROOT");
+                      setNewProjectParent(PROJECT_ROOT_PARENT);
                       setSelectedProject(null);
                       setNewProjectName("");
                     }}

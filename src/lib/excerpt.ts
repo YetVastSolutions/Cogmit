@@ -8,7 +8,9 @@
  * - Does not rewrite or synthesize text.
  */
 
-export const MAX_EXCERPT_LENGTH = 597;
+import { CARD_DESCRIPTION_MAX, MAX_EXCERPT_LENGTH } from "@/constants";
+
+export { CARD_DESCRIPTION_MAX, MAX_EXCERPT_LENGTH };
 
 /**
  * Strips Markdown formatting while preserving the author's original words.

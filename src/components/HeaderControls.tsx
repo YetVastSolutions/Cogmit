@@ -6,6 +6,12 @@ import { handleSignIn } from "./actions";
 import { Moon, Sun, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
+import {
+  ROUTE_NEW_COG,
+  ROUTE_MY_COGS,
+  ROUTE_DELETED_COGS,
+  ROUTE_COGMITS_PREFIX,
+} from "@/constants";
 
 export function HeaderControls({
   isAuthenticated,
@@ -91,7 +97,7 @@ export function HeaderControls({
             <div className="absolute right-0 mt-2 w-48 origin-top-right rounded-md border border-border bg-popover shadow-md ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
               <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                 <Link
-                  href="/myCogs/new/editCog"
+                  href={ROUTE_NEW_COG}
                   className="block w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted hover:text-foreground transition-colors"
                   role="menuitem"
                   onClick={() => setIsOpen(false)}
@@ -99,7 +105,7 @@ export function HeaderControls({
                   + New Cog
                 </Link>
                 <Link
-                  href="/myCogs"
+                  href={ROUTE_MY_COGS}
                   className="block w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted hover:text-foreground transition-colors"
                   role="menuitem"
                   onClick={() => setIsOpen(false)}
@@ -108,7 +114,7 @@ export function HeaderControls({
                 </Link>
                 {currentUserId && (
                   <Link
-                    href={`/cogmits/${currentUserId}`}
+                    href={`${ROUTE_COGMITS_PREFIX}/${currentUserId}`}
                     className="block w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted hover:text-foreground transition-colors"
                     role="menuitem"
                     onClick={() => setIsOpen(false)}
@@ -117,7 +123,7 @@ export function HeaderControls({
                   </Link>
                 )}
                 <Link
-                  href="/myCogs/deletedCogs"
+                  href={ROUTE_DELETED_COGS}
                   className="block w-full text-left px-4 py-2 text-sm text-popover-foreground hover:bg-muted hover:text-foreground transition-colors"
                   role="menuitem"
                   onClick={() => setIsOpen(false)}

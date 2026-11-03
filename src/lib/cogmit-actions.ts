@@ -10,6 +10,7 @@ import {
   type InitCogmitResult,
 } from "@/lib/github";
 import { redirect } from "next/navigation";
+import { ROUTE_LOGIN } from "@/constants";
 
 // ---------------------------------------------------------------------------
 // Check Cogmit data status (used by home page)
@@ -52,7 +53,7 @@ export async function handleInitiateCogmitData(isPrivate: boolean = true): Promi
     return await initiateCogmitData(isPrivate);
   } catch (error: unknown) {
     if (error && typeof error === "object" && "name" in error && error.name === "AuthenticationRequiredError") {
-      redirect("/login");
+      redirect(ROUTE_LOGIN);
     }
     console.error("Failed to initiate Cogmit data:", error);
     return { success: false, reason: "error", message: error instanceof Error ? error.message : "Unknown error" };
@@ -89,7 +90,7 @@ export async function handleConnectRepository(
     return { success: true, owner, repo };
   } catch (error: unknown) {
     if (error && typeof error === "object" && "name" in error && error.name === "AuthenticationRequiredError") {
-      redirect("/login");
+      redirect(ROUTE_LOGIN);
     }
     console.error("Failed to connect repository:", error);
     return { success: false, reason: error instanceof Error ? error.message : "Unknown error" };
@@ -130,7 +131,7 @@ export async function fetchUserRepositories(): Promise<RepoListItem[]> {
     }));
   } catch (error) {
     if (error && typeof error === "object" && "name" in error && error.name === "AuthenticationRequiredError") {
-      redirect("/login");
+      redirect(ROUTE_LOGIN);
     }
     console.error("Failed to fetch repositories:", error);
     return [];

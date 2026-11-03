@@ -4,9 +4,6 @@ import { auth } from "@/auth";
 import {
   getCogmitDataStatus,
   getOctokit,
-  COGMIT_REPO_PRIVATE,
-  COGMIT_REPO_PUBLIC,
-  COGMIT_REPO_PUBLISHED,
   getDefaultBranch,
 } from "@/lib/github";
 import { revalidatePath } from "next/cache";
@@ -30,7 +27,18 @@ function getErrorMessage(error: unknown): string {
 }
 
 import { generateCogmitId } from "./id-generator";
-import { MAX_ROOTCOG_TITLE_LENGTH } from "@/lib/card-renderer";
+import {
+  COGMIT_REPO_PRIVATE,
+  COGMIT_REPO_PUBLIC,
+  COGMIT_REPO_PUBLISHED,
+  FILE_COGS_INDEX,
+  PATH_COGMITS_INDEX,
+  DIR_COGMITS,
+  MAX_ROOTCOG_TITLE_LENGTH,
+  ERROR_TITLE_REQUIRED,
+  ERROR_REPO_NOT_READY,
+  ERROR_UNAUTHORIZED,
+} from "@/constants";
 
 async function getAuthenticatedOwner() {
   const octokit = await getOctokit();
@@ -54,11 +62,11 @@ export async function writePublishedCogmitMarkdown(
   const session = await auth();
 
   if (!session) {
-    throw new Error("Unauthorized");
+    throw new Error(ERROR_UNAUTHORIZED);
   }
 
   if (!title || title.trim().length === 0) {
-    throw new Error("Title is required");
+    throw new Error(ERROR_TITLE_REQUIRED);
   }
   if (title.length > MAX_ROOTCOG_TITLE_LENGTH) {
     throw new Error(`Title must be ${MAX_ROOTCOG_TITLE_LENGTH} characters or fewer`);
@@ -67,7 +75,7 @@ export async function writePublishedCogmitMarkdown(
   const status = await getCogmitDataStatus();
 
   if (status.state !== "ready") {
-    throw new Error("Cogmit repository is not ready");
+    throw new Error(ERROR_REPO_NOT_READY);
   }
 
   const { octokit, owner } = await getAuthenticatedOwner();
@@ -85,7 +93,7 @@ export async function writePublishedCogmitMarkdown(
     const { data: sourceIndexData } = await octokit.rest.repos.getContent({
       owner,
       repo: sourceRepo,
-      path: "cogsIndex.json",
+      path: FILE_COGS_INDEX,
       ref: sourceBranch,
     });
     if (!Array.isArray(sourceIndexData) && sourceIndexData.type === "file") {
@@ -108,7 +116,7 @@ export async function writePublishedCogmitMarkdown(
       const { data: indexData } = await octokit.rest.repos.getContent({
         owner,
         repo: targetRepo,
-        path: "cogmits/cogmitsIndex.json",
+        path: PATH_COGMITS_INDEX,
         ref: branch,
       });
       if (!Array.isArray(indexData) && indexData.type === "file") {
@@ -127,7 +135,7 @@ export async function writePublishedCogmitMarkdown(
     cogmitId = candidateId;
   }
 
-  const targetPath = `cogmits/${cogmitId}.md`;
+  const targetPath = `${DIR_COGMITS}/${cogmitId}.md`;
   let mdSha = "";
 
   try {
@@ -187,11 +195,11 @@ export async function updateCogmitsIndex(
   const session = await auth();
 
   if (!session) {
-    throw new Error("Unauthorized");
+    throw new Error(ERROR_UNAUTHORIZED);
   }
 
   if (!title || title.trim().length === 0) {
-    throw new Error("Title is required");
+    throw new Error(ERROR_TITLE_REQUIRED);
   }
   if (title.length > MAX_ROOTCOG_TITLE_LENGTH) {
     throw new Error(`Title must be ${MAX_ROOTCOG_TITLE_LENGTH} characters or fewer`);
@@ -200,7 +208,7 @@ export async function updateCogmitsIndex(
   const status = await getCogmitDataStatus();
 
   if (status.state !== "ready") {
-    throw new Error("Cogmit repository is not ready");
+    throw new Error(ERROR_REPO_NOT_READY);
   }
 
   const { octokit, owner } = await getAuthenticatedOwner();
@@ -216,7 +224,7 @@ export async function updateCogmitsIndex(
     const { data } = await octokit.rest.repos.getContent({
       owner,
       repo: targetRepo,
-      path: "cogmits/cogmitsIndex.json",
+      path: PATH_COGMITS_INDEX,
       ref: branch,
     });
 
@@ -265,7 +273,7 @@ export async function updateCogmitsIndex(
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo: targetRepo,
-      path: "cogmits/cogmitsIndex.json",
+      path: PATH_COGMITS_INDEX,
       message: `Update cogmitsIndex.json with ${cogmitId}`,
       content: Buffer.from(
         JSON.stringify(indexObj, null, 2)
@@ -298,7 +306,7 @@ export async function updateSourceCogsIndexStatus(
   const session = await auth();
 
   if (!session) {
-    throw new Error("Unauthorized");
+    throw new Error(ERROR_UNAUTHORIZED);
   }
 
   const octokit = await getOctokit();
@@ -333,7 +341,7 @@ export async function updateSourceCogsIndexStatus(
       await octokit.rest.repos.getContent({
         owner,
         repo,
-        path: "cogsIndex.json",
+        path: FILE_COGS_INDEX,
         ref: branch,
       });
 
@@ -382,7 +390,7 @@ export async function updateSourceCogsIndexStatus(
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
-      path: "cogsIndex.json",
+      path: FILE_COGS_INDEX,
       message: `Update publication state for ${cogId}`,
       content: Buffer.from(
         JSON.stringify(indexObj, null, 2)

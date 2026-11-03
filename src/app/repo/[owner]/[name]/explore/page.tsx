@@ -4,11 +4,12 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
+import { ROUTE_HOME, DIR_PROJECTS, DIR_NPP_COGS } from "@/constants";
 
 export default async function ExplorePage({ params }: { params: Promise<{ owner: string, name: string }> }) {
   const session = await auth();
   if (!session) {
-    redirect("/");
+    redirect(ROUTE_HOME);
   }
 
   const { owner, name } = await params;
@@ -16,12 +17,12 @@ export default async function ExplorePage({ params }: { params: Promise<{ owner:
   let projects: { name: string; path: string; type: string }[] = [];
   let nppCogs: { name: string; path: string; type: string }[] = [];
   try {
-    const projectsData = await getRepositoryContent(owner, name, "projects");
+    const projectsData = await getRepositoryContent(owner, name, DIR_PROJECTS);
     if (Array.isArray(projectsData)) {
       projects = projectsData.filter(item => item.type === "dir");
     }
 
-    const nppCogsData = await getRepositoryContent(owner, name, "NPPCogs");
+    const nppCogsData = await getRepositoryContent(owner, name, DIR_NPP_COGS);
     if (Array.isArray(nppCogsData)) {
       nppCogs = nppCogsData.filter(item => item.type === "dir");
     }

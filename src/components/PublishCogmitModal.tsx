@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { FEEDBACK_TIMEOUT_COPIED_FAST_MS } from "@/constants";
 
 export type PublishState = "idle" | "publishing" | "success" | "error";
 
@@ -77,7 +78,7 @@ export function PublishCogmitModal({
 
       window.setTimeout(() => {
         setCopied(false);
-      }, 1500);
+      }, FEEDBACK_TIMEOUT_COPIED_FAST_MS);
     } catch {
       setCopied(false);
     }

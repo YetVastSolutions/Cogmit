@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { Menu } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { TOOLBAR_COLLAPSE_TIMEOUT_MS } from "@/constants";
 
 export interface ToolbarItem {
   id: string;
@@ -27,7 +28,7 @@ function OptionsDropdown({
 
   const resetTimeout = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(collapse, 3000);
+    timeoutRef.current = setTimeout(collapse, TOOLBAR_COLLAPSE_TIMEOUT_MS);
   };
 
   const handleInteract = (e: React.SyntheticEvent) => {

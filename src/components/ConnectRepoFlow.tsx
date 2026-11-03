@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { InitCogmitResult } from "@/lib/github";
 import type { RepoListItem, ConnectResult } from "@/lib/cogmit-actions";
+import { FILE_COGS_INDEX, DIR_PROJECTS, DIR_NPP_COGS } from "@/constants";
 
 /**
  * ConnectRepoFlow handles the "Connect to an existing cogmit repo" UI.
@@ -129,9 +130,9 @@ export function ConnectRepoFlow({
           </p>
           <p className="text-sm text-muted-foreground mb-4">
             This repository does not contain the expected Cogmit structure (
-            <code className="text-xs">cogsIndex.json</code>,{" "}
-            <code className="text-xs">projects/</code>,{" "}
-            <code className="text-xs">NPPCogs/</code>).
+            <code className="text-xs">{FILE_COGS_INDEX}</code>,{" "}
+            <code className="text-xs">{DIR_PROJECTS}/</code>,{" "}
+            <code className="text-xs">{DIR_NPP_COGS}/</code>).
           </p>
           <div className="flex flex-col gap-3">
             <Button onClick={handleInitiate} disabled={isPending}>

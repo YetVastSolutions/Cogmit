@@ -18,6 +18,10 @@ import {
   DEFAULT_CARD_FONT,
   MAX_ROOTCOG_TITLE_LENGTH,
   TEMPLATE_VERSION,
+  FEEDBACK_TIMEOUT_COPIED_MS,
+  FEEDBACK_TIMEOUT_ERROR_MS,
+} from "@/constants";
+import {
   computeCardSourceHash,
   exportSvgToBlob,
   generateCardSvg,
@@ -247,11 +251,11 @@ export function ShareCogmitModal({
       await navigator.clipboard.writeText(shareUrl);
       setCopiedLink(true);
       setCopyError(false);
-      window.setTimeout(() => setCopiedLink(false), 2000);
+      window.setTimeout(() => setCopiedLink(false), FEEDBACK_TIMEOUT_COPIED_MS);
     } catch {
       setCopiedLink(false);
       setCopyError(true);
-      window.setTimeout(() => setCopyError(false), 3000);
+      window.setTimeout(() => setCopyError(false), FEEDBACK_TIMEOUT_ERROR_MS);
     }
   };
 
@@ -297,7 +301,7 @@ export function ShareCogmitModal({
         }),
       ]);
       setCopiedImage(true);
-      window.setTimeout(() => setCopiedImage(false), 2000);
+      window.setTimeout(() => setCopiedImage(false), FEEDBACK_TIMEOUT_COPIED_MS);
     } catch {
       // Fallback to copying URL if image clipboard write is not supported
       await handleCopyLink();

@@ -5,6 +5,11 @@ import { HeaderControls } from "./HeaderControls";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "cn";
 import { getAuthenticatedUser } from "@/lib/github";
+import {
+  MAX_NAV_DISPLAY_NAME_LENGTH,
+  ROUTE_HOME,
+  ROUTE_ABOUT,
+} from "@/constants";
 
 export async function GlobalNav() {
   const session = await auth();
@@ -13,8 +18,8 @@ export async function GlobalNav() {
   const isAuthenticated = !!user;
 
   let displayName = user?.name || user?.email || "";
-  if (displayName.length > 11) {
-    displayName = displayName.substring(0, 10) + "…";
+  if (displayName.length > MAX_NAV_DISPLAY_NAME_LENGTH) {
+    displayName = displayName.substring(0, MAX_NAV_DISPLAY_NAME_LENGTH - 1) + "…";
   }
 
   let currentUserId = "";
@@ -32,7 +37,7 @@ export async function GlobalNav() {
       <div className="w-full max-w-[var(--header-content-max-width)] mx-auto flex h-16 items-center justify-between px-4 sm:px-8">
         <div className="flex items-center gap-2">
           <Link 
-            href="/" 
+            href={ROUTE_HOME} 
             className={cn(
               buttonVariants({ variant: "default" }),
               "h-11 px-5 sm:px-6 font-bold text-[1.35rem]"
@@ -41,7 +46,7 @@ export async function GlobalNav() {
             Cogmit
           </Link>
           <Link
-            href="/aboutCogmit"
+            href={ROUTE_ABOUT}
             className={cn(
               buttonVariants({ variant: "ghost", size: "icon" }),
               "h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"

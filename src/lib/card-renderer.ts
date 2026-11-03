@@ -11,31 +11,64 @@
  * - Deterministic PNG/JPEG rasterization via HTML5 Canvas.
  */
 
-export const TEMPLATE_VERSION = "1.8.0";
+import {
+  TEMPLATE_VERSION,
+  CARD_WIDTH_PORTRAIT,
+  CARD_HEIGHT_PORTRAIT,
+  CARD_WIDTH_LANDSCAPE,
+  CARD_HEIGHT_LANDSCAPE,
+  CARD_WIDTH,
+  CARD_HEIGHT,
+  CARD_FONT_STACK,
+  CARD_FONT_FAMILY,
+  DEFAULT_CARD_FONT,
+  CARD_FONTS,
+  COLOR_INDIGO_VIOLET,
+  COLOR_YELLOW,
+  COLOR_BLACK,
+  COLOR_LIGHT_SURFACE,
+  COLOR_TEXT_MUTED,
+  COLOR_TEXT_PRIMARY_LIGHT,
+  MAX_ROOTCOG_TITLE_LENGTH,
+  CARD_TITLE_MAX,
+  CARD_DESCRIPTION_MAX,
+  FONT_HEADER_SIZE,
+  FONT_HEADER_WEIGHT,
+  FONT_TITLE_SIZE,
+  FONT_TITLE_WEIGHT,
+  FONT_BODY_SIZE,
+  FONT_BODY_WEIGHT,
+  CARD_PADDING_X,
+  CARD_BORDER_INSET,
+  CARD_BORDER_RADIUS,
+  CARD_HEADER_Y,
+  CARD_HEADER_DIVIDER_Y,
+  CARD_TITLE_START_Y,
+  CARD_TITLE_LINE_HEIGHT,
+  CARD_EXCERPT_LINE_HEIGHT,
+  BLOB_REVOKE_DELAY_MS,
+  type CardFontOption,
+} from "@/constants";
 
-// Exact intrinsic canvas dimensions
-export const CARD_WIDTH_PORTRAIT = 969;  // 3:4 portrait
-export const CARD_HEIGHT_PORTRAIT = 1292;
-export const CARD_WIDTH_LANDSCAPE = 969; // 3:2 landscape
-export const CARD_HEIGHT_LANDSCAPE = 646;
-
-// Centralized typography rule for the Generate Cogmit Card image
-export const CARD_FONT_STACK = "Verdana, Geneva, sans-serif";
-export const CARD_FONT_FAMILY = CARD_FONT_STACK;
-
-export interface CardFontOption {
-  id: string;
-  label: string;
-  fontFamily: string;
-}
-
-export const CARD_FONTS: CardFontOption[] = [
-  { id: "Arial", label: "Arial", fontFamily: "Arial, Helvetica, sans-serif" },
-  { id: "Verdana", label: "Verdana", fontFamily: "Verdana, Geneva, sans-serif" },
-  { id: "Times New Roman", label: "Times New Roman", fontFamily: "'Times New Roman', Times, serif" },
-];
-
-export const DEFAULT_CARD_FONT = "Arial";
+export {
+  TEMPLATE_VERSION,
+  CARD_WIDTH_PORTRAIT,
+  CARD_HEIGHT_PORTRAIT,
+  CARD_WIDTH_LANDSCAPE,
+  CARD_HEIGHT_LANDSCAPE,
+  CARD_WIDTH,
+  CARD_HEIGHT,
+  CARD_FONT_STACK,
+  CARD_FONT_FAMILY,
+  DEFAULT_CARD_FONT,
+  CARD_FONTS,
+  COLOR_INDIGO_VIOLET,
+  COLOR_YELLOW,
+  MAX_ROOTCOG_TITLE_LENGTH,
+  CARD_TITLE_MAX,
+  CARD_DESCRIPTION_MAX,
+  type CardFontOption,
+};
 
 export function resolveCardFontStack(font?: string): string {
   if (!font) return CARD_FONT_FAMILY;
@@ -45,28 +78,6 @@ export function resolveCardFontStack(font?: string): string {
   if (match) return match.fontFamily;
   return font;
 }
-
-// Shared typography tokens used by both card orientations
-const FONT_HEADER_SIZE = 47;
-const FONT_HEADER_WEIGHT = 800;
-const FONT_TITLE_SIZE = 41;
-const FONT_TITLE_WEIGHT = 600;
-const FONT_BODY_SIZE = 37;
-const FONT_BODY_WEIGHT = 400;
-
-// Legacy exports kept for API compatibility
-export const CARD_WIDTH = CARD_WIDTH_PORTRAIT;
-export const CARD_HEIGHT = CARD_HEIGHT_PORTRAIT;
-
-// YVS brand colour tokens
-export const COLOR_INDIGO_VIOLET = "#4B0084";
-export const COLOR_YELLOW = "#FFFF11";
-
-// Content limits
-/** Shared single source of truth for the RootCog title maximum length across Cogmit. */
-export const MAX_ROOTCOG_TITLE_LENGTH = 197;
-export const CARD_TITLE_MAX = MAX_ROOTCOG_TITLE_LENGTH;
-export const CARD_DESCRIPTION_MAX = 597;
 
 export interface CardTemplateOptions {
   title: string;
@@ -346,7 +357,7 @@ interface ThemeColors {
 
 function getDarkTheme(): ThemeColors {
   return {
-    bg: "#000000",
+    bg: COLOR_BLACK,
     borderColor: COLOR_INDIGO_VIOLET,
     brand: COLOR_YELLOW,
     separator: COLOR_YELLOW,
@@ -362,13 +373,13 @@ function getDarkTheme(): ThemeColors {
 
 function getLightTheme(): ThemeColors {
   return {
-    bg: "#F8F5FA",
+    bg: COLOR_LIGHT_SURFACE,
     borderColor: COLOR_INDIGO_VIOLET,
     brand: COLOR_INDIGO_VIOLET,
-    separator: "#64748B",
-    authorName: "#17121C",
-    title: "#17121C",
-    excerpt: "#17121C",
+    separator: COLOR_TEXT_MUTED,
+    authorName: COLOR_TEXT_PRIMARY_LIGHT,
+    title: COLOR_TEXT_PRIMARY_LIGHT,
+    excerpt: COLOR_TEXT_PRIMARY_LIGHT,
     urlIntro: COLOR_INDIGO_VIOLET,
     urlLabel: COLOR_INDIGO_VIOLET,
     divider: COLOR_INDIGO_VIOLET,
@@ -828,5 +839,5 @@ export function triggerImageDownload(blob: Blob, filename: string): void {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), BLOB_REVOKE_DELAY_MS);
 }

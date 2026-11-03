@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { decode } from 'next-auth/jwt';
+import { COOKIE_SESSION_TOKEN_SECURE, COOKIE_SESSION_TOKEN_STANDARD } from '@/constants';
 
 export async function proxy(request: NextRequest) {
   // Use the correct cookie name based on the environment
   const cookieName =
     process.env.NODE_ENV === 'production'
-      ? '__Secure-authjs.session-token'
-      : 'authjs.session-token';
+      ? COOKIE_SESSION_TOKEN_SECURE
+      : COOKIE_SESSION_TOKEN_STANDARD;
 
   const sessionCookie = request.cookies.get(cookieName);
 

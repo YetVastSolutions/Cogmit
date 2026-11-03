@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 
 import { handleSignOut } from "@/components/actions";
+import { AUTH_FAILURE_RESET_DELAY_MS } from "@/constants";
 
 export type SessionStatus =
   | {
@@ -83,7 +84,7 @@ export function AuthProvider({
     // Reset guard after short delay
     setTimeout(() => {
       authFailureHandled = false;
-    }, 2000);
+    }, AUTH_FAILURE_RESET_DELAY_MS);
   }, []);
 
   const logout = useCallback(async () => {

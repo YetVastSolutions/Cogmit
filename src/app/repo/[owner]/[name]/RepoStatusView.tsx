@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { handleInitiateCogmitData } from "@/lib/cogmit-actions";
 import type { InitCogmitResult } from "@/lib/github";
+import { ROUTE_CONNECT, FILE_COGS_INDEX, DIR_PROJECTS, DIR_NPP_COGS } from "@/constants";
 
 /**
  * Client component for the repo status page.
@@ -103,7 +104,7 @@ export function RepoStatusView({
           <Button onClick={handleInitiate} disabled={isPending}>
             {isPending ? "Creating…" : "Create my Cogmit repository"}
           </Button>
-          <Link href="/connect">
+          <Link href={ROUTE_CONNECT}>
             <Button variant="outline">Back to Connect</Button>
           </Link>
         </div>
@@ -119,9 +120,9 @@ export function RepoStatusView({
       </h2>
       <p className="text-muted-foreground mb-4">
         This repository does not contain the expected Cogmit structure (
-        <code className="text-xs bg-muted px-1 py-0.5 rounded">cogsIndex.json</code>,{" "}
-        <code className="text-xs bg-muted px-1 py-0.5 rounded">projects/</code>,{" "}
-        <code className="text-xs bg-muted px-1 py-0.5 rounded">NPPCogs/</code>).
+        <code className="text-xs bg-muted px-1 py-0.5 rounded">{FILE_COGS_INDEX}</code>,{" "}
+        <code className="text-xs bg-muted px-1 py-0.5 rounded">{DIR_PROJECTS}/</code>,{" "}
+        <code className="text-xs bg-muted px-1 py-0.5 rounded">{DIR_NPP_COGS}/</code>).
       </p>
       <p className="text-muted-foreground mb-4">
         You can initialize a new Cogmit data repository instead.

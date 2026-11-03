@@ -1,9 +1,19 @@
 import { extractExcerpt } from "./excerpt";
-import { CARD_DESCRIPTION_MAX } from "./card-renderer";
+import {
+  CARD_DESCRIPTION_MAX,
+  MAX_ROOTCOG_TITLE_LENGTH,
+  CARD_TITLE_MAX,
+  MAX_EXCERPT_LENGTH,
+} from "@/constants";
 
 export { cn } from "cn";
-export { extractExcerpt, MAX_EXCERPT_LENGTH, stripMarkdown } from "./excerpt";
-export { MAX_ROOTCOG_TITLE_LENGTH, CARD_TITLE_MAX, CARD_DESCRIPTION_MAX } from "./card-renderer";
+export { extractExcerpt, stripMarkdown } from "./excerpt";
+export {
+  MAX_ROOTCOG_TITLE_LENGTH,
+  CARD_TITLE_MAX,
+  CARD_DESCRIPTION_MAX,
+  MAX_EXCERPT_LENGTH,
+};
 
 export function formatTimestamp(dateInput: string | number | Date | null | undefined): string {
   if (!dateInput) return "Unknown date";

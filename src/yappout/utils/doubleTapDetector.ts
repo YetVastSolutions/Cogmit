@@ -1,6 +1,8 @@
 // src/yappout/utils/doubleTapDetector.ts
 // Cross-platform double-tap / dblclick detection helper
 
+import { YAPPOUT_DOUBLE_TAP_DELAY, YAPPOUT_TAP_SLOP } from '@/constants';
+
 /**
  * Calls onDoubleTap with the event when a double-tap (touch) or dblclick is detected.
  * Returns a cleanup function.
@@ -12,8 +14,8 @@ export function attachDoubleTapHandler(
   let lastTapTime = 0;
   let lastTapX = 0;
   let lastTapY = 0;
-  const DOUBLE_TAP_DELAY = 300; // ms
-  const TAP_SLOP = 20; // px
+  const DOUBLE_TAP_DELAY = YAPPOUT_DOUBLE_TAP_DELAY; // ms
+  const TAP_SLOP = YAPPOUT_TAP_SLOP; // px
 
   function handleTouchEnd(e: TouchEvent) {
     const touch = e.changedTouches[0];

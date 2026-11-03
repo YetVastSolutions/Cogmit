@@ -1,5 +1,22 @@
 "use server";
-import { MAX_ROOTCOG_TITLE_LENGTH } from "@/lib/card-renderer";
+import {
+  MAX_ROOTCOG_TITLE_LENGTH,
+  MAX_PROJECT_NAME_LENGTH,
+  ERROR_TITLE_REQUIRED,
+  ERROR_TITLE_TOO_LONG,
+  ERROR_PROJECT_NAME_REQUIRED,
+  ERROR_PROJECT_NAME_TOO_LONG,
+  ERROR_PROJECT_ALREADY_EXISTS,
+  ERROR_REPO_NOT_READY,
+  ERROR_UNAUTHORIZED,
+  NO_PARENT_PROJECT,
+  DIR_PROJECTS,
+  DIR_NPP_COGS,
+  FILE_PROJECT_DATA,
+  FILE_ROOT_COG_MD,
+  FILE_COGS_INDEX,
+  ROUTE_LOGIN,
+} from "@/constants";
 
 import { auth } from "@/auth";
 import { getCogmitDataStatus, getOctokit, getProjects } from "@/lib/github";
@@ -20,20 +37,20 @@ export async function fetchProjectsList() {
 
 export async function createProjectAction(projectName: string) {
   const session = await auth();
-  if (!session) return { success: false, error: "Unauthorized" };
-  if (!projectName || projectName.trim().length === 0) return { success: false, error: "Project name is required" };
-  if (projectName.length > 57) return { success: false, error: "Project name must be 57 characters or less" };
+  if (!session) return { success: false, error: ERROR_UNAUTHORIZED };
+  if (!projectName || projectName.trim().length === 0) return { success: false, error: ERROR_PROJECT_NAME_REQUIRED };
+  if (projectName.length > MAX_PROJECT_NAME_LENGTH) return { success: false, error: ERROR_PROJECT_NAME_TOO_LONG };
 
   const status = await getCogmitDataStatus();
-  if (status.state !== "ready") return { success: false, error: "Cogmit repository is not ready" };
+  if (status.state !== "ready") return { success: false, error: ERROR_REPO_NOT_READY };
 
   const octokit = await getOctokit();
   const { owner, repo } = status;
 
   try {
     try {
-      await octokit.rest.repos.getContent({ owner, repo, path: `projects/${projectName}/projectData.json` });
-      return { success: false, error: "Project already exists" };
+      await octokit.rest.repos.getContent({ owner, repo, path: `${DIR_PROJECTS}/${projectName}/${FILE_PROJECT_DATA}` });
+      return { success: false, error: ERROR_PROJECT_ALREADY_EXISTS };
     } catch (e) {
       if (e && typeof e === "object" && "status" in e && e.status !== 404) throw e;
     }
@@ -46,7 +63,7 @@ export async function createProjectAction(projectName: string) {
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
-      path: `projects/${projectName}/projectData.json`,
+      path: `${DIR_PROJECTS}/${projectName}/${FILE_PROJECT_DATA}`,
       message: `Create project '${projectName}'`,
       content: Buffer.from(JSON.stringify(projectDataObj, null, 2)).toString("base64"),
     });
@@ -61,19 +78,19 @@ export async function createProjectAction(projectName: string) {
 export async function createNewRootCog(title: string, project: string, content: string, isPublic: boolean) {
   const session = await auth();
   if (!session) {
-    redirect("/login");
+    redirect(ROUTE_LOGIN);
   }
 
   if (!title || title.trim().length === 0) {
-    return { success: false, error: "Title is required" };
+    return { success: false, error: ERROR_TITLE_REQUIRED };
   }
   if (title.length > MAX_ROOTCOG_TITLE_LENGTH) {
-    return { success: false, error: `Title must be ${MAX_ROOTCOG_TITLE_LENGTH} characters or fewer` };
+    return { success: false, error: ERROR_TITLE_TOO_LONG };
   }
 
   const status = await getCogmitDataStatus();
   if (status.state !== "ready") {
-    return { success: false, error: "Cogmit repository is not ready" };
+    return { success: false, error: ERROR_REPO_NOT_READY };
   }
 
   const octokit = await getOctokit();
@@ -83,14 +100,14 @@ export async function createNewRootCog(title: string, project: string, content: 
   const now = new Date();
   const timestamp = now.toISOString().replace(/[-:T]/g, "").slice(0, 14);
   const cogId = `${owner}_${timestamp}`;
-  const pathPrefix = `NPPCogs/${cogId}`;
+  const pathPrefix = `${DIR_NPP_COGS}/${cogId}`;
 
   try {
     // 1. Create rootCog.md
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
-      path: `${pathPrefix}/rootCog.md`,
+      path: `${pathPrefix}/${FILE_ROOT_COG_MD}`,
       message: `Create ${cogId} rootCog.md`,
       content: Buffer.from(content || `# ${title}\n\n`).toString("base64"),
     });
@@ -104,7 +121,7 @@ export async function createNewRootCog(title: string, project: string, content: 
       const { data } = await octokit.rest.repos.getContent({
         owner,
         repo,
-        path: "cogsIndex.json",
+        path: FILE_COGS_INDEX,
       });
       if (data && !Array.isArray(data) && "content" in data) {
         const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
@@ -122,7 +139,7 @@ export async function createNewRootCog(title: string, project: string, content: 
       id: cogId,
       title: title,
       path: pathPrefix,
-      project: project !== "No Parent Project" ? project : undefined,
+      project: project !== NO_PARENT_PROJECT ? project : undefined,
       ...(isPublic ? {
         cogmitPublished: now.toISOString(),
         cogmitId: cogmitId,
@@ -133,7 +150,7 @@ export async function createNewRootCog(title: string, project: string, content: 
     await octokit.rest.repos.createOrUpdateFileContents({
       owner,
       repo,
-      path: "cogsIndex.json",
+      path: FILE_COGS_INDEX,
       message: `Update cogsIndex.json with ${cogId}`,
       content: Buffer.from(JSON.stringify(indexObj, null, 2)).toString("base64"),
       ...(indexSha ? { sha: indexSha } : {}),

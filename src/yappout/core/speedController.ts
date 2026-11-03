@@ -1,10 +1,10 @@
 // src/yappout/core/speedController.ts
 // Speed cycle configuration for Yappout
 
-// Cycle: 1x → 1.5x → 2x → 0.5x → 0.75x → 1x
-export const SPEED_CYCLE = [1, 1.5, 2, 0.5, 0.75] as const;
-export const SPEED_LABELS = ['1×', '1.5×', '2×', '0.5×', '0.75×'] as const;
-export const DEFAULT_SPEED_IDX = 0; // index 0 = 1x
+import { SPEED_CYCLE, SPEED_LABELS, DEFAULT_SPEED_IDX } from '../../constants/index';
+
+// Re-export constants for backwards compatibility
+export { SPEED_CYCLE, SPEED_LABELS, DEFAULT_SPEED_IDX };
 
 export type SpeedValue = (typeof SPEED_CYCLE)[number];
 

@@ -3,7 +3,13 @@ import { auth } from "@/auth";
 import { ViewCog } from "@/components/ViewCog";
 import { headers } from "next/headers";
 import { Metadata } from "next";
-import { getCanonicalCogmitUrl, MAX_ROOTCOG_TITLE_LENGTH } from "@/lib/utils";
+import { getCanonicalCogmitUrl } from "@/lib/utils";
+import {
+  COGMIT_REPO_PUBLIC,
+  PATH_COGMITS_INDEX,
+  MAX_ROOTCOG_TITLE_LENGTH,
+  REVALIDATE_INTERVAL_RAW_CONTENT,
+} from "@/constants";
 
 interface PublicCogmitPageProps {
   params: Promise<{ authorId: string; cogmitId: string }>;
@@ -25,13 +31,13 @@ export async function getPublishedCogmit(
 ): Promise<PublishedCogmit | null> {
   const decodedAuthorId = decodeURIComponent(authorId);
   const decodedCogmitId = decodeURIComponent(cogmitId);
-  const targetRepo = "YVSApps_Data_Cogmit_Public";
+  const targetRepo = COGMIT_REPO_PUBLIC;
 
   // Fast path 1: Fetch directly from raw.githubusercontent.com (rate-limit free, edge-cached)
   try {
-    const indexUrl = `https://raw.githubusercontent.com/${decodedAuthorId}/${targetRepo}/HEAD/cogmits/cogmitsIndex.json`;
+    const indexUrl = `https://raw.githubusercontent.com/${decodedAuthorId}/${targetRepo}/HEAD/${PATH_COGMITS_INDEX}`;
     const res = await fetch(indexUrl, {
-      next: { revalidate: 60 },
+      next: { revalidate: REVALIDATE_INTERVAL_RAW_CONTENT },
     });
 
     if (res.ok) {
@@ -44,7 +50,7 @@ export async function getPublishedCogmit(
       if (cogInfo && cogInfo.path) {
         const contentUrl = `https://raw.githubusercontent.com/${decodedAuthorId}/${targetRepo}/HEAD/${cogInfo.path}`;
         const contentRes = await fetch(contentUrl, {
-          next: { revalidate: 60 },
+          next: { revalidate: REVALIDATE_INTERVAL_RAW_CONTENT },
         });
 
         const content = contentRes.ok ? await contentRes.text() : "";
@@ -102,7 +108,7 @@ export async function getPublishedCogmit(
     const { data } = await octokit.rest.repos.getContent({
       owner: decodedAuthorId,
       repo: targetRepo,
-      path: "cogmits/cogmitsIndex.json",
+      path: PATH_COGMITS_INDEX,
       ref: defaultBranch,
     });
 

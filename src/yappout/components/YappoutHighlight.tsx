@@ -3,6 +3,7 @@
 // Fixed-position highlight overlay that covers the active segment
 
 import { useEffect, useState, RefObject } from 'react';
+import { COLOR_YELLOW, COLOR_INDIGO_VIOLET } from '@/constants';
 
 interface YappoutHighlightProps {
   activeRange: Range | null;
@@ -93,9 +94,9 @@ export function YappoutHighlight({ activeRange, scrollContainerRef }: YappoutHig
             top: rect.top - 2,
             width: rect.width + 4,
             height: rect.height + 4,
-            outline: '2px solid #FFFF11',
+            outline: `2px solid ${COLOR_YELLOW}`,
             outlineOffset: '1px',
-            boxShadow: '0 0 0 4px #4B0084',
+            boxShadow: `0 0 0 4px ${COLOR_INDIGO_VIOLET}`,
             borderRadius: '2px',
             transition: 'left 0.05s, top 0.05s, width 0.05s, height 0.05s',
           }}

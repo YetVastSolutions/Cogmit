@@ -28,7 +28,11 @@ import { extractDescription, getCanonicalCogmitUrl } from "@/lib/utils";
 
 import { CogActionRow } from "@/components/CogActionRow";
 import { MarqueeContent } from "@/components/MarqueeContent";
-import { MAX_ROOTCOG_TITLE_LENGTH } from "@/lib/card-renderer";
+import {
+  MAX_ROOTCOG_TITLE_LENGTH,
+  NO_PARENT_PROJECT,
+  ERROR_TITLE_TOO_LONG,
+} from "@/constants";
 
 import {
   PublishCogmitModal,
@@ -162,7 +166,7 @@ export function EditCogClient({
     }
 
     if (title.length > MAX_ROOTCOG_TITLE_LENGTH) {
-      setError(`Title must be ${MAX_ROOTCOG_TITLE_LENGTH} characters or fewer`);
+      setError(ERROR_TITLE_TOO_LONG);
       return;
     }
 
@@ -247,7 +251,7 @@ export function EditCogClient({
             await createNewRootCog(
               title,
               project ||
-              "No Parent Project",
+              NO_PARENT_PROJECT,
               content,
               false
             );
@@ -279,7 +283,7 @@ export function EditCogClient({
               savedCogId,
               title,
               project ||
-              "No Parent Project",
+              NO_PARENT_PROJECT,
               content,
               false
             );
@@ -479,7 +483,7 @@ export function EditCogClient({
 
     if (title.length > MAX_ROOTCOG_TITLE_LENGTH) {
       setError(
-        `Title must be ${MAX_ROOTCOG_TITLE_LENGTH} characters or fewer`
+        ERROR_TITLE_TOO_LONG
       );
       return;
     }
@@ -495,7 +499,7 @@ export function EditCogClient({
           await createNewRootCog(
             title,
             project ||
-            "No Parent Project",
+            NO_PARENT_PROJECT,
             content,
             isPublic
           );
@@ -516,7 +520,7 @@ export function EditCogClient({
             cogId!,
             title,
             project ||
-            "No Parent Project",
+            NO_PARENT_PROJECT,
             content,
             isPublic
           );

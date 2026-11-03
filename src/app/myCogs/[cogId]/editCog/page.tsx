@@ -1,12 +1,19 @@
 import { auth } from "@/auth";
 import { getRepositoryContent, getOctokit, getCogmitDataStatus, getProjects, getRootCogIndexEntry, CogIndexEntry } from "@/lib/github";
 import { redirect } from "next/navigation";
+import {
+  ROUTE_LOGIN,
+  ROUTE_MY_COGS,
+  FILE_ROOT_COG_MD,
+  DEFAULT_COMMITS_PER_PAGE,
+  NO_PARENT_PROJECT,
+} from "@/constants";
 import { EditCogClient } from "./EditCogClient";
 
 export default async function EditCogPage({ params }: { params: Promise<{ cogId: string }> }) {
   const session = await auth();
   if (!session) {
-    redirect("/login");
+    redirect(ROUTE_LOGIN);
   }
 
   const { cogId } = await params;
@@ -14,7 +21,7 @@ export default async function EditCogPage({ params }: { params: Promise<{ cogId:
 
   const status = await getCogmitDataStatus();
   if (status.state !== "ready") {
-    redirect("/myCogs");
+    redirect(ROUTE_MY_COGS);
   }
 
   const { owner, repo } = status;
@@ -41,13 +48,13 @@ export default async function EditCogPage({ params }: { params: Promise<{ cogId:
   let content = "";
   
   try {
-    const fileData = await getRepositoryContent(owner, repo, `${cogPath}/rootCog.md`);
+    const fileData = await getRepositoryContent(owner, repo, `${cogPath}/${FILE_ROOT_COG_MD}`);
     if (fileData && !Array.isArray(fileData) && typeof fileData === "object" && "content" in fileData && typeof fileData.content === "string") {
       content = Buffer.from(fileData.content, "base64").toString("utf8");
     }
   } catch (error) {
     if (error && typeof error === "object" && "name" in error && "AuthenticationRequiredError" === error.name) {
-      redirect("/login");
+      redirect(ROUTE_LOGIN);
     }
     console.error("Failed to load cog content", error);
   }
@@ -61,7 +68,7 @@ export default async function EditCogPage({ params }: { params: Promise<{ cogId:
       owner,
       repo,
       path: cogPath,
-      per_page: 100,
+      per_page: DEFAULT_COMMITS_PER_PAGE,
     });
     if (commits && commits.length > 0) {
       if (!lastModified) {
@@ -82,7 +89,7 @@ export default async function EditCogPage({ params }: { params: Promise<{ cogId:
       mode="existing"
       cogId={decodedCogId}
       initialTitle={cogIndexEntry?.title || decodedCogId}
-      initialProject={cogIndexEntry?.project || "No Parent Project"}
+      initialProject={cogIndexEntry?.project || NO_PARENT_PROJECT}
       initialContent={content}
       projects={projects}
       createdAt={createdAt}

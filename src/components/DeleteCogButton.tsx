@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { deleteRootCog } from "@/app/myCogs/actions";
 import { useRouter } from "next/navigation";
+import { ROUTE_DELETED_COGS } from "@/constants";
 
 export function DeleteCogButton({ cogId, disabled, className, children }: { cogId: string, disabled?: boolean, className?: string, children?: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,7 +17,7 @@ export function DeleteCogButton({ cogId, disabled, className, children }: { cogI
     const res = await deleteRootCog(cogId);
     if (res.success) {
       setIsOpen(false);
-      router.push("/myCogs/deletedCogs");
+      router.push(ROUTE_DELETED_COGS);
     } else {
       alert(res.error || "Failed to delete cog");
       setIsDeleting(false);

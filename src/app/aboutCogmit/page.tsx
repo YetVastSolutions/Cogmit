@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { ViewCog } from "@/components/ViewCog";
 import { auth } from "@/auth";
+import { FILE_ROOT_COG_MD, NO_PARENT_PROJECT } from "@/constants";
 
 export default async function AboutCogmitPage() {
   const dataDir = path.join(process.cwd(), "public", "sample-cog", "cogmit-about");
@@ -10,7 +11,7 @@ export default async function AboutCogmitPage() {
   let content = "";
   
   try {
-    content = await fs.readFile(path.join(dataDir, "rootCog.md"), "utf-8");
+    content = await fs.readFile(path.join(dataDir, FILE_ROOT_COG_MD), "utf-8");
   } catch {
     return (
       <div className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center p-8 bg-background">
@@ -27,7 +28,7 @@ export default async function AboutCogmitPage() {
   const createdAt = "";
   const lastModified = "";
   const title = "About Cogmit";
-  const projectValue = "No Parent Project";
+  const projectValue = NO_PARENT_PROJECT;
 
   const session = await auth().catch(() => null);
   const currentUsername = session?.user?.name || (session?.user as { login?: string })?.login || "";

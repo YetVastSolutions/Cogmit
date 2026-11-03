@@ -1,6 +1,8 @@
 // src/yappout/core/scrollController.ts
 // Scrolls the active segment into view within the scroll container
 
+import { YAPPOUT_SCROLL_MARGIN } from '@/constants';
+
 /**
  * Scrolls the segment (identified by its Range) into view within the given scroll container.
  * Adds a margin buffer so the segment is not at the very edge.
@@ -15,7 +17,7 @@ export function scrollSegmentIntoView(segmentRange: Range, scrollContainer: HTML
   const visTop = scrollContainer.scrollTop;
   const visBottom = visTop + scrollContainer.clientHeight;
 
-  const margin = 80; // px buffer zone
+  const margin = YAPPOUT_SCROLL_MARGIN; // px buffer zone
 
   if (segmentTop - margin < visTop) {
     // Need to scroll up

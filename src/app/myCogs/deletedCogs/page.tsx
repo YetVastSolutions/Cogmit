@@ -1,6 +1,13 @@
 import { auth } from "@/auth";
 import { getOctokit, getCogmitDataStatus } from "@/lib/github";
 import { redirect } from "next/navigation";
+import {
+  ROUTE_LOGIN,
+  ROUTE_CONNECT,
+  ROUTE_MY_COGS,
+  FILE_COGS_INDEX,
+  DIR_DELETED_COGS,
+} from "@/constants";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CogMetadataRow } from "@/components/CogMetadataRow";
@@ -25,12 +32,12 @@ type CogWithDetails = CogIndexEntry & {
 export default async function DeletedCogsPage() {
   const session = await auth();
   if (!session) {
-    redirect("/login");
+    redirect(ROUTE_LOGIN);
   }
 
   const status = await getCogmitDataStatus();
   if (status.state === "repo_missing" || status.state === "repo_invalid") {
-    redirect("/connect");
+    redirect(ROUTE_CONNECT);
   }
 
   if (status.state !== "ready") {
@@ -51,7 +58,7 @@ export default async function DeletedCogsPage() {
     const { data } = await octokit.rest.repos.getContent({
       owner: status.owner,
       repo: status.repo,
-      path: "cogsIndex.json",
+      path: FILE_COGS_INDEX,
     });
     if (data && !Array.isArray(data) && "content" in data) {
       const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
@@ -68,7 +75,7 @@ export default async function DeletedCogsPage() {
             const commitsData = await octokit.rest.repos.listCommits({
               owner: status.owner,
               repo: status.repo,
-              path: `deletedCogs/${cog.id}`,
+              path: `${DIR_DELETED_COGS}/${cog.id}`,
             });
             
             if (commitsData.data && commitsData.data.length > 0) {
@@ -93,7 +100,7 @@ export default async function DeletedCogsPage() {
           <h1 className="text-3xl font-bold text-primary">Deleted Cogs</h1>
           <p className="text-muted-foreground">Cogs that have been moved to deletedCogs</p>
         </div>
-        <Link href="/myCogs">
+        <Link href={ROUTE_MY_COGS}>
           <Button variant="outline">Back to My Cogs</Button>
         </Link>
       </header>

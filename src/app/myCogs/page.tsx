@@ -1,6 +1,12 @@
 import { auth } from "@/auth";
 import { getCogmitDataStatus, getOctokit } from "@/lib/github";
 import { redirect } from "next/navigation";
+import {
+  ROUTE_LOGIN,
+  ROUTE_HOME,
+  ROUTE_NEW_COG,
+  FILE_COGS_INDEX,
+} from "@/constants";
 import Link from "next/link";
 import React from "react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +31,7 @@ type CogWithDetails = CogIndexEntry & {
 export default async function MyCogsPage() {
   const session = await auth();
   if (!session) {
-    redirect("/login");
+    redirect(ROUTE_LOGIN);
   }
 
   const status = await getCogmitDataStatus();
@@ -41,7 +47,7 @@ export default async function MyCogsPage() {
             <p className="text-muted-foreground mb-4">
               Your Cogmit data repository could not be found. It may have been deleted.
             </p>
-            <Link href="/">
+            <Link href={ROUTE_HOME}>
               <Button>Configure Repository</Button>
             </Link>
           </div>
@@ -61,7 +67,7 @@ export default async function MyCogsPage() {
             <p className="text-muted-foreground mb-4">
               Your configured repository does not contain the expected Cogmit structure.
             </p>
-            <Link href="/">
+            <Link href={ROUTE_HOME}>
               <Button>Configure Repository</Button>
             </Link>
           </div>
@@ -100,7 +106,7 @@ export default async function MyCogsPage() {
     const { data } = await octokit.rest.repos.getContent({
       owner: status.owner,
       repo: status.repo,
-      path: "cogsIndex.json",
+      path: FILE_COGS_INDEX,
     });
     if (data && !Array.isArray(data) && "content" in data) {
       const contentStr = Buffer.from(data.content, "base64").toString("utf-8");
@@ -145,7 +151,7 @@ export default async function MyCogsPage() {
           <h1 className="text-3xl font-bold text-primary">My Cogs</h1>
           <p className="text-muted-foreground">Your private Cog workspace</p>
         </div>
-        <Link href="/myCogs/new/editCog">
+        <Link href={ROUTE_NEW_COG}>
           <Button>+ Create Cog</Button>
         </Link>
       </header>
