@@ -190,9 +190,7 @@ export async function updateCogmitsIndex(
   title: string,
   description: string,
   cogmitId: string,
-  targetPath: string,
-  footerEnabled?: boolean,
-  footerContent?: string
+  targetPath: string
 ) {
   const session = await auth();
 
@@ -259,12 +257,6 @@ export async function updateCogmitsIndex(
     existingEntry.description = description;
     existingEntry.publishedAt = publishedAt;
     existingEntry.path = targetPath;
-    if (footerEnabled !== undefined) {
-      existingEntry.footerEnabled = footerEnabled;
-    }
-    if (footerContent !== undefined) {
-      existingEntry.footerContent = footerContent;
-    }
   } else {
     indexObj.cogmits.push({
       ownerId: owner,
@@ -274,8 +266,6 @@ export async function updateCogmitsIndex(
       description,
       publishedAt,
       path: targetPath,
-      ...(footerEnabled !== undefined ? { footerEnabled } : {}),
-      ...(footerContent !== undefined ? { footerContent } : {}),
     });
   }
 
@@ -311,9 +301,7 @@ message: ${getErrorMessage(error)}`);
 
 export async function updateSourceCogsIndexStatus(
   cogId: string,
-  cogmitId: string,
-  footerEnabled?: boolean,
-  footerContent?: string
+  cogmitId: string
 ) {
   const session = await auth();
 
@@ -397,12 +385,6 @@ export async function updateSourceCogsIndexStatus(
   delete indexCog.slug;
   indexCog.cogmitPublished =
     new Date().toISOString();
-  if (footerEnabled !== undefined) {
-    indexCog.footerEnabled = footerEnabled;
-  }
-  if (footerContent !== undefined) {
-    indexCog.footerContent = footerContent;
-  }
 
   try {
     await octokit.rest.repos.createOrUpdateFileContents({

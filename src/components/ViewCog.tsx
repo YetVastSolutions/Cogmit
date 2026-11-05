@@ -121,8 +121,6 @@ export interface ViewCogProps {
   cogmitId?: string;
   shareUrl?: string;
   isAuthor?: boolean;
-  footerEnabled?: boolean;
-  footerContent?: string;
 }
 
 export function ViewCog({
@@ -145,8 +143,6 @@ export function ViewCog({
   cogmitId,
   shareUrl,
   isAuthor = false,
-  footerEnabled = false,
-  footerContent = "",
 }: ViewCogProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);

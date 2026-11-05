@@ -116,8 +116,6 @@ export default async function ViewCogPage({ params }: { params: Promise<{ cogId:
       authorId={owner}
       cogmitId={cogIndexEntry?.cogmitId}
       description={extractDescription(content)}
-      footerEnabled={cogIndexEntry?.footerEnabled}
-      footerContent={cogIndexEntry?.footerContent}
     />
   );
 }

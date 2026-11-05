@@ -75,14 +75,7 @@ export async function createProjectAction(projectName: string) {
   }
 }
 
-export async function createNewRootCog(
-  title: string,
-  project: string,
-  content: string,
-  isPublic: boolean,
-  footerEnabled?: boolean,
-  footerContent?: string
-) {
+export async function createNewRootCog(title: string, project: string, content: string, isPublic: boolean) {
   const session = await auth();
   if (!session) {
     redirect(ROUTE_LOGIN);
@@ -151,9 +144,7 @@ export async function createNewRootCog(
         cogmitPublished: now.toISOString(),
         cogmitId: cogmitId,
         slug: slug
-      } : {}),
-      ...(footerEnabled !== undefined ? { footerEnabled } : {}),
-      ...(footerContent !== undefined ? { footerContent } : {})
+      } : {})
     });
 
     await octokit.rest.repos.createOrUpdateFileContents({

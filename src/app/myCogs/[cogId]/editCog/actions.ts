@@ -30,9 +30,7 @@ export async function saveRootCog(
   title: string,
   project: string,
   content: string,
-  isPublic: boolean,
-  footerEnabled?: boolean,
-  footerContent?: string
+  isPublic: boolean
 ) {
   const session = await auth();
   if (!session) {
@@ -113,14 +111,6 @@ export async function saveRootCog(
       const actualProject = project !== NO_PARENT_PROJECT ? project : undefined;
       if (indexCog.project !== actualProject) {
         indexCog.project = actualProject;
-        indexUpdated = true;
-      }
-      if (footerEnabled !== undefined && (indexCog as Record<string, unknown>).footerEnabled !== footerEnabled) {
-        (indexCog as Record<string, unknown>).footerEnabled = footerEnabled;
-        indexUpdated = true;
-      }
-      if (footerContent !== undefined && (indexCog as Record<string, unknown>).footerContent !== footerContent) {
-        (indexCog as Record<string, unknown>).footerContent = footerContent;
         indexUpdated = true;
       }
 
