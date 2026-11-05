@@ -137,6 +137,9 @@ export const TEMPLATE_VERSION = "1.8.0";
 /** Default Production Domain */
 export const DEFAULT_PRODUCTION_DOMAIN = "cogmit.com";
 
+/** Predefined Default Footer Content */
+export const DEFAULT_FOOTER_CONTENT = "Published with Cogmit";
+
 /** Yappout Speech Playback Speeds */
 export const SPEED_CYCLE = [1, 1.5, 2, 0.5, 0.75] as const;
 export const SPEED_LABELS = ['1×', '1.5×', '2×', '0.5×', '0.75×'] as const;

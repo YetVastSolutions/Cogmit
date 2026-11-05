@@ -24,6 +24,8 @@ export default async function NewEditCogPage() {
       initialProject={NO_PARENT_PROJECT}
       initialContent=""
       projects={projects}
+      initialFooterEnabled={false}
+      initialFooterContent=""
     />
   );
 }

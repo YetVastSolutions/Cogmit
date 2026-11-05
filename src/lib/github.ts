@@ -208,6 +208,8 @@ export interface CogIndexEntry {
   cogmitPublished?: string;
   cogmitId?: string;
   slug?: string;
+  footerEnabled?: boolean;
+  footerContent?: string;
 }
 
 export async function getRootCogIndexEntry(owner: string, repo: string, cogId: string): Promise<CogIndexEntry> {

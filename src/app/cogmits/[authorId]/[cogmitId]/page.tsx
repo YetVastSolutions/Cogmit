@@ -23,6 +23,8 @@ export interface PublishedCogmit {
   authorId: string;
   cogmitId: string;
   publishedAt?: string;
+  footerEnabled?: boolean;
+  footerContent?: string;
 }
 
 export async function getPublishedCogmit(
@@ -63,6 +65,8 @@ export async function getPublishedCogmit(
           authorId: decodedAuthorId,
           cogmitId: decodedCogmitId,
           publishedAt: cogInfo.publishedAt,
+          footerEnabled: cogInfo.footerEnabled,
+          footerContent: cogInfo.footerContent,
         };
       }
     }
@@ -103,7 +107,7 @@ export async function getPublishedCogmit(
 
   if (!targetRepo || !defaultBranch) return null;
 
-  let publicIndexObj = { cogmits: [] as { cogmitId?: string, id?: string, path?: string, title?: string, description?: string, image?: string, publishedAt?: string }[] };
+  let publicIndexObj = { cogmits: [] as { cogmitId?: string, id?: string, path?: string, title?: string, description?: string, image?: string, publishedAt?: string, footerEnabled?: boolean, footerContent?: string }[] };
   try {
     const { data } = await octokit.rest.repos.getContent({
       owner: decodedAuthorId,
@@ -151,6 +155,8 @@ export async function getPublishedCogmit(
     authorId: decodedAuthorId,
     cogmitId: decodedCogmitId,
     publishedAt: cogInfo.publishedAt,
+    footerEnabled: cogInfo.footerEnabled,
+    footerContent: cogInfo.footerContent,
   };
 }
 
@@ -258,6 +264,8 @@ export default async function CogmitPage({ params }: PublicCogmitPageProps) {
       cogmitId={cogmit.cogmitId}
       shareUrl={shareUrl}
       isAuthor={isAuthor}
+      footerEnabled={cogmit.footerEnabled}
+      footerContent={cogmit.footerContent}
     />
   );
 }

@@ -95,6 +95,8 @@ export default async function EditCogPage({ params }: { params: Promise<{ cogId:
       createdAt={createdAt}
       lastModified={lastModified}
       published={cogIndexEntry?.cogmitPublished}
+      initialFooterEnabled={cogIndexEntry?.footerEnabled}
+      initialFooterContent={cogIndexEntry?.footerContent}
     />
   );
 }
