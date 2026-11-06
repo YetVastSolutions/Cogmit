@@ -22,6 +22,7 @@ import {
   CARD_FONT_STACK,
   CARD_FONT_FAMILY,
   DEFAULT_CARD_FONT,
+  DEFAULT_FOOTER_CONTENT,
   CARD_FONTS,
   COLOR_INDIGO_VIOLET,
   COLOR_YELLOW,
@@ -61,6 +62,7 @@ export {
   CARD_FONT_STACK,
   CARD_FONT_FAMILY,
   DEFAULT_CARD_FONT,
+  DEFAULT_FOOTER_CONTENT,
   CARD_FONTS,
   COLOR_INDIGO_VIOLET,
   COLOR_YELLOW,
@@ -93,6 +95,11 @@ export interface CardTemplateOptions {
   /** Font family or font id to use when rendering the card. Default Arial in UI, fallback to CARD_FONT_FAMILY. */
   font?: string;
   fontFamily?: string;
+  /** Include footer section inside the Cogmit card. Default false. */
+  withFooter?: boolean;
+  footerEnabled?: boolean;
+  /** Custom footer content to render inside the footer. */
+  footerContent?: string;
   // width/height are derived from withDescription and content; kept for back-compat but ignored.
   width?: number;
   height?: number;
@@ -316,9 +323,13 @@ export function computeCardSourceHash(
   templateVersion: string = TEMPLATE_VERSION,
   withDescription = false,
   darkTheme = true,
-  font = DEFAULT_CARD_FONT
+  font = DEFAULT_CARD_FONT,
+  withFooter = false,
+  footerContent = ""
 ): string {
-  const payload = `${templateVersion}|${title}|${excerpt}|${url}|${authorId || ""}|desc:${withDescription}|dark:${darkTheme}|font:${font}`;
+  const isFooterActive = withFooter && footerContent && footerContent.trim().length > 0;
+  const normalizedFooter = isFooterActive ? footerContent.trim() : "";
+  const payload = `${templateVersion}|${title}|${excerpt}|${url}|${authorId || ""}|desc:${withDescription}|dark:${darkTheme}|font:${font}|footer:${withFooter}|fc:${normalizedFooter}`;
   let hash = 0;
   for (let i = 0; i < payload.length; i++) {
     hash = (hash << 5) - hash + payload.charCodeAt(i);
@@ -402,6 +413,7 @@ function buildStyles(c: ThemeColors, font: string = CARD_FONT_FAMILY): string {
       .cogmit-card-svg .description-container, .cogmit-card-svg .excerpt, .description-container, .excerpt { font-family: ${font}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.excerpt}; width: 100%; max-width: 100%; box-sizing: border-box; }
       .cogmit-card-svg .url-intro, .url-intro { font-family: ${font}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.urlIntro}; width: 100%; max-width: 100%; box-sizing: border-box; }
       .cogmit-card-svg .url-label, .url-label { font-family: ${font}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.urlLabel}; width: 100%; max-width: 100%; box-sizing: border-box; }
+      .cogmit-card-svg .footer-text, .footer-text { font-family: ${font}; font-size: ${FONT_BODY_SIZE}px; font-weight: ${FONT_BODY_WEIGHT}; fill: ${c.urlIntro}; width: 100%; max-width: 100%; box-sizing: border-box; }
       .cogmit-card-svg .divider, .divider { stroke: ${c.divider}; stroke-width: 1.5; stroke-opacity: ${c.dividerOpacity}; }`.trimStart();
 }
 
@@ -481,36 +493,51 @@ export function getCanonicalDomain(url?: string): string {
   return "cogmit.vercel.app";
 }
 
-// ─── Footer SVG fragment (single row: View & Listen full @  <domain>) ───────────────
+// ─── Footer SVG fragment ──────────────────────────────────────────────────────
 
 function buildFooter(
   paddingX: number,
   divider2Y: number,
   footerY: number,
   width: number,
-  displayDomain: string,
+  footerContent: string,
   font: string = CARD_FONT_FAMILY
 ): string {
-  const safeDomain = escapeXml(displayDomain);
+  const trimmed = footerContent.trim();
+  if (!trimmed) return "";
+
+  const usableWidth = width - paddingX * 2 - 16;
+  const lines = wrapTextByWidth(trimmed, usableWidth, FONT_BODY_SIZE, false, font);
+  if (lines.length === 0) return "";
+
+  const textContent =
+    lines.length === 1
+      ? escapeXml(lines[0])
+      : buildTspans(lines, paddingX, 44);
+
   return `
   <!-- Footer divider -->
   <line x1="${paddingX}" y1="${divider2Y}" x2="${width - paddingX}" y2="${divider2Y}" class="divider" />
 
-  <!-- Footer: View & Listen full @  domain (same line) -->
-  <text x="${paddingX}" y="${footerY}" class="url-intro" font-family="${font}">View & Listen full @  <tspan class="url-label">${safeDomain}</tspan></text>`;
+  <!-- Footer text -->
+  <text x="${paddingX}" y="${footerY}" class="url-intro footer-text" font-family="${font}">${textContent}</text>`;
 }
 
 // ─── Portrait card (3:4, with description) ────────────────────────────────────
 
 function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string {
-  const { title, excerpt, url, authorId } = opts;
+  const { title, excerpt, authorId } = opts;
   const font = resolveCardFontStack(opts.font || opts.fontFamily);
 
   const width = CARD_WIDTH_PORTRAIT;
   const height = CARD_HEIGHT_PORTRAIT;
 
   const safeUsername = escapeXml(authorId ? authorId.toLowerCase() : "");
-  const displayDomain = getCanonicalDomain(url);
+
+  const isFooterEnabled = opts.withFooter ?? opts.footerEnabled ?? false;
+  const rawFooterContent = opts.footerContent !== undefined ? opts.footerContent : (isFooterEnabled ? DEFAULT_FOOTER_CONTENT : "");
+  const trimmedFooterContent = rawFooterContent.trim();
+  const showFooter = isFooterEnabled && trimmedFooterContent.length > 0;
 
   // Geometry is scaled for the exact 969 × 1292 portrait canvas.
   const paddingX = 65;
@@ -600,21 +627,25 @@ function generatePortraitSvg(opts: CardTemplateOptions, c: ThemeColors): string 
   <text x="${paddingX}" y="${excerptStartY}" class="excerpt" clip-path="url(#portrait-excerpt-clip)" font-family="${font}">
     ${excerptTspans}
   </text>
-  ${buildFooter(paddingX, divider2Y, footerY, width, displayDomain, font)}
+  ${showFooter ? buildFooter(paddingX, divider2Y, footerY, width, trimmedFooterContent, font) : ""}
 </svg>`;
 }
 
 // ─── Landscape card (3:2, no description) ────────────────────────────────────
 
 function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string {
-  const { title, url, authorId } = opts;
+  const { title, authorId } = opts;
   const font = resolveCardFontStack(opts.font || opts.fontFamily);
 
   const width = CARD_WIDTH_LANDSCAPE;
   const height = CARD_HEIGHT_LANDSCAPE;
 
   const safeUsername = escapeXml(authorId ? authorId.toLowerCase() : "");
-  const displayDomain = getCanonicalDomain(url);
+
+  const isFooterEnabled = opts.withFooter ?? opts.footerEnabled ?? false;
+  const rawFooterContent = opts.footerContent !== undefined ? opts.footerContent : (isFooterEnabled ? DEFAULT_FOOTER_CONTENT : "");
+  const trimmedFooterContent = rawFooterContent.trim();
+  const showFooter = isFooterEnabled && trimmedFooterContent.length > 0;
 
   // Geometry is scaled for the exact 969 × 646 landscape canvas.
   const paddingX = 65;
@@ -675,7 +706,7 @@ function generateLandscapeSvg(opts: CardTemplateOptions, c: ThemeColors): string
     ${titleTspans}
   </text>
 
-  ${buildFooter(paddingX, divider2Y, footerY, width, displayDomain, font)}
+  ${showFooter ? buildFooter(paddingX, divider2Y, footerY, width, trimmedFooterContent, font) : ""}
 </svg>`;
 }
 

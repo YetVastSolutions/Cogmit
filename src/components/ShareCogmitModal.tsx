@@ -16,6 +16,7 @@ import {
   CARD_DESCRIPTION_MAX,
   CARD_FONTS,
   DEFAULT_CARD_FONT,
+  DEFAULT_FOOTER_CONTENT,
   MAX_ROOTCOG_TITLE_LENGTH,
   TEMPLATE_VERSION,
   FEEDBACK_TIMEOUT_COPIED_MS,
@@ -41,6 +42,8 @@ interface ShareCogmitModalProps {
   description?: string;
   shareUrl: string;
   content?: string;
+  footerEnabled?: boolean;
+  footerContent?: string;
 }
 
 export function ShareCogmitModal({
@@ -52,11 +55,17 @@ export function ShareCogmitModal({
   description,
   shareUrl,
   content,
+  footerEnabled,
+  footerContent: initialFooterContent,
 }: ShareCogmitModalProps) {
-  // Card generation options — defaults: withDescription=OFF, darkTheme=ON, font=Arial
+  // Card generation options — defaults: withDescription=OFF, darkTheme=ON, font=Arial, withFooter=OFF
   const [withDescription, setWithDescription] = useState(false);
   const [darkTheme, setDarkTheme] = useState(true);
   const [selectedFont, setSelectedFont] = useState<string>(DEFAULT_CARD_FONT);
+  const [withFooter, setWithFooter] = useState(footerEnabled ?? false);
+  const [footerContent, setFooterContent] = useState<string>(
+    initialFooterContent !== undefined ? initialFooterContent : DEFAULT_FOOTER_CONTENT
+  );
   const [isOptionsExpanded, setIsOptionsExpanded] = useState(false);
 
   // Whether the user has clicked "Generate Cogmit Card" in this session
@@ -99,12 +108,15 @@ export function ShareCogmitModal({
       TEMPLATE_VERSION,
       withDescription,
       darkTheme,
-      selectedFont
+      selectedFont,
+      withFooter,
+      footerContent
     );
-  }, [title, excerpt, shareUrl, authorId, withDescription, darkTheme, selectedFont]);
+  }, [title, excerpt, shareUrl, authorId, withDescription, darkTheme, selectedFont, withFooter, footerContent]);
 
   // Cache key includes options so each combination is independently cached
-  const cacheKey = `${shareUrl || `${authorId || "anon"}_${title}`}|desc:${withDescription}|dark:${darkTheme}|font:${selectedFont}`;
+  const effectiveFooter = withFooter && footerContent && footerContent.trim().length > 0 ? footerContent.trim() : "";
+  const cacheKey = `${shareUrl || `${authorId || "anon"}_${title}`}|desc:${withDescription}|dark:${darkTheme}|font:${selectedFont}|footer:${withFooter}|fc:${effectiveFooter}`;
 
   // Only generate the SVG once the user clicks "Generate Cogmit Card"
   const cardSvg = useMemo(() => {
@@ -123,6 +135,8 @@ export function ShareCogmitModal({
         withDescription,
         darkTheme,
         font: selectedFont,
+        withFooter,
+        footerContent: withFooter ? footerContent : undefined,
       });
 
       setCachedCard(cacheKey, {
@@ -139,7 +153,7 @@ export function ShareCogmitModal({
       console.error("Failed to generate card SVG:", err);
       return "";
     }
-  }, [open, cardGenerated, cacheKey, sourceHash, title, excerpt, shareUrl, authorId, published, withDescription, darkTheme, selectedFont]);
+  }, [open, cardGenerated, cacheKey, sourceHash, title, excerpt, shareUrl, authorId, published, withDescription, darkTheme, selectedFont, withFooter, footerContent]);
 
   // Convert generated SVG to previewable image data URL
   const previewUrl = useMemo(() => {
@@ -166,6 +180,8 @@ export function ShareCogmitModal({
         setWithDescription(false);
         setDarkTheme(true);
         setSelectedFont(DEFAULT_CARD_FONT);
+        setWithFooter(footerEnabled ?? false);
+        setFooterContent(initialFooterContent !== undefined ? initialFooterContent : DEFAULT_FOOTER_CONTENT);
         setIsOptionsExpanded(false);
         setCardGenerated(false);
         setIsGenerating(false);
@@ -178,7 +194,7 @@ export function ShareCogmitModal({
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [open]);
+  }, [open, footerEnabled, initialFooterContent]);
 
   if (!open) return null;
 
@@ -202,6 +218,8 @@ export function ShareCogmitModal({
         withDescription,
         darkTheme,
         font: selectedFont,
+        withFooter,
+        footerContent: withFooter ? footerContent : undefined,
       });
 
       if (!generatedSvg || typeof generatedSvg !== "string") {
@@ -241,6 +259,16 @@ export function ShareCogmitModal({
 
   const handleFontChange = (f: string) => {
     setSelectedFont(f);
+    setGenerationError(null);
+  };
+
+  const handleWithFooterChange = (v: boolean) => {
+    setWithFooter(v);
+    setGenerationError(null);
+  };
+
+  const handleFooterContentChange = (content: string) => {
+    setFooterContent(content);
     setGenerationError(null);
   };
 
@@ -556,9 +584,46 @@ export function ShareCogmitModal({
                     />
                     <span className="font-medium leading-none">Dark</span>
                   </button>
+
+                  {/* Option 3: Footer */}
+                  <button
+                    id="toggle-footer"
+                    data-id="toggle-with-footer"
+                    type="button"
+                    role="switch"
+                    aria-checked={withFooter}
+                    aria-label="Footer"
+                    onClick={() => handleWithFooterChange(!withFooter)}
+                    className={`flex items-center gap-2.5 text-sm text-white hover:text-white/90 cursor-pointer select-none px-2.5 py-1 text-left w-fit transition-colors rounded ${
+                      withFooter
+                        ? "border border-[#FFFF11] outline outline-1 outline-[#FFFF11]"
+                        : "border border-transparent outline-none"
+                    } focus-visible:ring-2 focus-visible:ring-[#FFFF11]`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`h-2.5 w-2.5 rounded-full shrink-0 transition-colors ${
+                        withFooter ? "bg-[#FFFF11]" : "bg-white"
+                      }`}
+                    />
+                    <span className="font-medium leading-none">Footer</span>
+                  </button>
+
+                  {/* Hidden alias to support querySelector('#toggle-with-footer') */}
+                  <button
+                    id="toggle-with-footer"
+                    type="button"
+                    role="switch"
+                    aria-checked={withFooter}
+                    aria-label="Footer"
+                    onClick={() => handleWithFooterChange(!withFooter)}
+                    className="sr-only hidden"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
                 </div>
 
-                {/* Option 3: Font */}
+                {/* Option 4: Font */}
                 <div className="flex items-center justify-between gap-3 pt-1 border-t border-[#4B0084]/40">
                   <label htmlFor="card-font-select" className="text-sm font-medium text-white select-none">
                     Font
@@ -577,6 +642,31 @@ export function ShareCogmitModal({
                     ))}
                   </select>
                 </div>
+
+                {/* Option 5: Footer Content (visible when Footer is enabled) */}
+                {withFooter && (
+                  <div
+                    id="card-footer-content-container"
+                    className="flex flex-col gap-1.5 pt-1 border-t border-[#4B0084]/40 transition-all animate-in fade-in duration-150"
+                  >
+                    <label
+                      htmlFor="card-footer-input"
+                      className="text-xs font-medium text-white select-none"
+                    >
+                      Footer Content
+                    </label>
+                    <textarea
+                      id="card-footer-input"
+                      data-testid="footer-content-textarea"
+                      aria-label="Footer Content"
+                      value={footerContent}
+                      onChange={(e) => handleFooterContentChange(e.target.value)}
+                      placeholder="Enter footer content..."
+                      rows={2}
+                      className="w-full bg-[#2D0052] text-white placeholder-white/50 border border-[#4B0084] rounded p-2 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-[#FFFF11] resize-none"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
